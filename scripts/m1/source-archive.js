@@ -1,0 +1,10 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+fs.mkdirSync('dist', { recursive: true });
+const status = spawnSync('git', ['status', '--porcelain'], { encoding: 'utf8', windowsHide: true });
+if (status.status !== 0 || status.stdout.trim()) throw new Error('Commit reviewed source changes before creating source archive.');
+const result = spawnSync('git', ['archive', '--format=zip', '--output=' + path.resolve('dist/AgentUsage-M1-source.zip'), 'HEAD'], { encoding: 'utf8', windowsHide: true });
+if (result.status !== 0) throw new Error('SOURCE_ARCHIVE_FAILED');
+console.log('Saved sanitized committed source snapshot: dist/AgentUsage-M1-source.zip');

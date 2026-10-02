@@ -8,7 +8,7 @@
     "start": "electron .",
     "dev": "electron .",
     "test": "node --test tests/m1/*.test.js",
-    "test:upstream": "node --test tests/**/*.test.js",
+    "test:upstream": "node --test tests/shared/usageDelta.test.js tests/shared/historyDayBoundary.test.js tests/shared/archiveHelpers.test.js tests/shared/tokscaleClientMapping.test.js",
     "lint": "eslint src/m1 scripts/m1 tests/m1",
     "verify": "npm run lint && npm test",
     "test:ui": "node scripts/m1/ui-test.js",
@@ -26,10 +26,12 @@
     },
     "files": [
       "src/m1/**/*",
-      "src/electron/widget.css",
+      "src/electron/renderer/styles.css",
       "assets/icon-win.png",
       "assets/icons/**/*",
-      "package.json"
+      "package.json",
+      "LICENSE",
+      "docs/m1/UPSTREAM.md"
     ],
     "asarUnpack": [
       "node_modules/@tokscale/**/*",
@@ -47,7 +49,8 @@
       "icon": "assets/icon-win.png",
       "signAndEditExecutable": false
     },
-    "publish": null
+    "publish": null,
+    "npmRebuild": false
   },
   "keywords": [
     "tokscale",
@@ -64,7 +67,6 @@
     "local-first",
     "self-hosted"
   ],
-  "author": "Javis",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -81,6 +83,7 @@
     "electron-updater": "6.8.9",
     "koffi": "^3.1.5",
     "semver": "^7.8.5",
+    "sql.js": "1.14.2",
     "tar": "^7.5.22",
     "tokscale": "4.17.0",
     "undici": "^7.29.0"
@@ -92,9 +95,12 @@
     "electron": "43.4.0",
     "electron-builder": "26.16.1",
     "eslint": "^10.8.0",
-    "globals": "^17.9.0"
+    "globals": "^17.9.0",
+    "playwright": "1.63.0"
   },
   "engines": {
     "node": ">=22.15.0"
-  }
+  },
+  "private": true,
+  "author": "Agent Usage M1 local project"
 }

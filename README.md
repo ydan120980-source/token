@@ -1,333 +1,63 @@
-<p align="right">
-   <strong>EN</strong> | <a href="./README.zh-CN.md">简</a> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <a href="./README.ja.md">JA</a>
-</p>
-<div align="center">
-    <img src=".github/assets/app.png" alt="Token Monitor logo" width="120">
-    <h1>Token Monitor</h1>
-</div>
+# Agent Usage M1
 
-<p align="center">
-    <em>One live dashboard for every AI coding tool, synced across every machine.</em>
-</p>
+Windows 本地 agent 用量统计，个人测试版 **0.1.0**。固定 token-monitor v0.65.0 与官方 Tokscale 4.17.0。默认简体中文。
 
-<p align="center">
-    <a href="https://github.com/Javis603/token-monitor/releases"><img src="https://img.shields.io/github/v/release/Javis603/token-monitor?include_prereleases&style=flat-square&label=release&color=22c55e" alt="Latest release" /></a>
-    <a href="https://github.com/Javis603/token-monitor/releases"><img src="https://img.shields.io/github/downloads/Javis603/token-monitor/total?style=flat-square&color=22c55e" alt="Total downloads" /></a>
-    <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square" alt="Windows 10 or later" />
-    <img src="https://img.shields.io/badge/macOS-12%2B-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS 12 or later" />
-    <img src="https://img.shields.io/badge/Linux-x64-64748b?style=flat-square&logo=linux&logoColor=white" alt="Linux x64" />
-    <a href="https://discord.gg/HmdNVVvw5P"><img src="https://img.shields.io/discord/1344259784219689031?color=5865F2&label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-A855F7?style=flat-square" alt="License: MIT" /></a>
-</p>
+## 运行已打包版本
 
-<div align="center">
-    <img src=".github/assets/demo.gif">
-</div>
+将 `AgentUsage-M1-Windows-x64.zip` 解压到一个普通本地目录，运行 `Agent Usage M1.exe`。不要只复制 exe；整个目录中的 resources、DLL 等文件都需要保留。
 
-## What is Token Monitor?
+默认启动读取五类本地用量来源；自己的状态放在 `%APPDATA%\AgentUsage-M1`。首次采集通常数秒。关闭窗口后保留托盘；托盘“退出并停止采集”或设置页退出才会结束进程。
 
-A desktop widget that shows live token usage and AI Tool Limits across 43+ AI coding tools — Claude Code, Codex, Cursor, GitHub Copilot, Cherry Studio, and more — with real-time multi-device sync, historical usage trends, and breakdowns by tool, device, model, session, or project.
+提供今日、最近 7 天、最近 30 天、累计；agent/model 筛选、每日趋势、来源状态、暂停/恢复、手动刷新、统计 JSON 导出和清空自己的统计。费用为 USD API 等价估算，未知价格/字段不算免费。
 
-## Supported Tools
+支持来源：Codex Desktop/CLI、Claude Code、OpenCode、WorkBuddy、MiMo Code/共享数据库中的 Desktop 入口。只有明确元数据才区分入口；显示“入口未知”是有效结果。Cursor、Trae 等留在后续目录。
 
-Token Monitor supports token usage, account-limit checks, and session details separately:
+只读取本机用量文件/数据库，源数据库只在内存解析。不读取认证，不修改 agent 配置，不上传统计。产品入口关闭账号、额度、切换、Hub/Worker、iCloud、Discord、汇率、更新和自动启动功能。
 
-| Logo | Tool | Data path | Token Usage | AI Tool Limits | Session Details |
-|:---:|------|-----------|:---:|:---:|:---:|
-| <img src=".github/assets/tools-icon/claude.png" width="28" alt="Claude Code" /> | Claude Code | `~/.claude/projects/`, `~/.claude/transcripts/` | ✅ | ✅ | ✅ |
-| <img src=".github/assets/tools-icon/codex.png" width="28" alt="Codex" /> | Codex | `~/.codex/` (`sessions/`, `archived_sessions/`) | ✅ | ✅ | ✅ |
-| <img src=".github/assets/tools-icon/opencode.png" width="28" alt="OpenCode" /> | OpenCode | `~/.local/share/opencode/` (`opencode*.db`, `storage/message/`) | ✅ | ✅ | ✅ |
-| <img src=".github/assets/tools-icon/hermes-agent.png" width="28" alt="Hermes Agent" /> | Hermes Agent | `~/.hermes/state.db` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/openclaw.png" width="28" alt="OpenClaw" /> | OpenClaw | `~/.openclaw/agents/` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/cursor.png" width="28" alt="Cursor" /> | Cursor IDE / Cursor CLI / Grok Bot | `~/.config/tokscale/cursor-cache/` (account-level usage export) | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/antigravity.png" width="28" alt="Antigravity" /> | Antigravity | `~/.gemini/` (`antigravity/`, `antigravity-ide/`, `antigravity-backup/`, `antigravity-cli/conversations/`) | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/cline.png" width="28" alt="Cline" /> | Cline | VS Code globalStorage tasks (`.../saoudrizwan.claude-dev/tasks/`), `~/.cline/data/sessions/` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/amp.png" width="28" alt="Amp" /> | Amp | `~/.local/share/amp/threads/` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/droid.png" width="28" alt="Factory Droid" /> | Factory Droid | `~/.factory/sessions/` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/kimi.png" width="28" alt="Kimi" /> | Kimi CLI / Kimi Code / Kimi Work | `~/.kimi/sessions/`, `~/.kimi-code/sessions/`, `<platform-app-data>/kimi-desktop/` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/qwen.png" width="28" alt="Qwen" /> | Qwen CLI | `~/.qwen/projects/` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/xai.png" width="28" alt="Grok Build" /> | Grok Build | `~/.grok/` (`sessions/`, `logs/unified.jsonl`) | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/copilot.png" width="28" alt="GitHub Copilot" /> | GitHub Copilot | VS Code `workspaceStorage/*/chatSessions/`, `~/.copilot/` (`otel/`, `data.db`, `session-store.db`) | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/pi.png" width="28" alt="Pi" /> | Pi | `~/.pi/agent/sessions/` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/omp.png" width="28" alt="Oh My Pi" /> | Oh My Pi | `~/.omp/agent/sessions/` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/zed.png" width="28" alt="Zed" /> | Zed | `~/.local/share/zed/threads/threads.db` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/kilo.png" width="28" alt="Kilo" /> | Kilo | `~/.local/share/kilo/kilo.db`; VS Code globalStorage tasks (`.../kilocode.kilo-code/tasks/`) — extension logs on Linux & remote/WSL only | ✅ | — | — |
-| <img src=".github/assets/tools-icon/commandcode.png" width="28" alt="Command Code" /> | Command Code | `~/.commandcode/projects/**/*.jsonl` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/mimo.png" width="28" alt="MiMo" /> | MiMo Code / MiMo Desktop | `~/.local/share/mimocode/mimocode.db` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/muse.png" width="28" alt="Muse Code" /> | Muse Code | `~/.local/share/muse/sessions/` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/zcode.png" width="28" alt="ZCode" /> | ZCode / GLM | `~/.zcode/` (`projects/`, `cli/db/db.sqlite`) | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/kiro.png" width="28" alt="Kiro" /> | Kiro | `~/.kiro/sessions/cli/`, Kiro IDE globalStorage & `kiro-cli` DB | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/codebuddy.png" width="28" alt="CodeBuddy" /> | CodeBuddy | `~/.codebuddy/projects/` + IDE / VS Code extension logs | ✅ | — | — |
-| <img src=".github/assets/tools-icon/workbuddy.png" width="28" alt="WorkBuddy" /> | WorkBuddy | `~/.workbuddy/projects/`, `~/.workbuddy/workbuddy.db` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/proma.png" width="28" alt="Proma" /> | Proma | `~/.proma/agent-sessions/*.jsonl` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/qoder.png" width="28" alt="Qoder" /> | Qoder | `~/.qoder-cn/projects/**/*.jsonl`, legacy `<platform-app-data>/QoderCN/SharedClientCache/cache/db/local.db` (CN only) | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/reasonix.png" width="28" alt="Reasonix" /> | Reasonix | `~/.reasonix/` (`stats/`, `sessions/`, `projects/*/sessions/`) | ✅ | — | — |
-| <img src=".github/assets/tools-icon/deepseek.png" width="28" alt="DeepSeek" /> | DeepSeek / DeepSeek Harness | `~/.dsh/sessions/` (`session.jsonl`, `session.jsonl.zstd`) | ✅ | ✅ | ✅ |
-| <img src=".github/assets/tools-icon/cherrystudio.png" width="28" alt="Cherry Studio" /> | Cherry Studio | `<platform-app-data>/CherryStudio/` (`Data/Agents/.claude/projects/` V2, `.claude/projects/` legacy) | ✅ | — | — |
-| <img src=".github/assets/tools-icon/lmstudio.png" width="28" alt="LM Studio" /> | LM Studio | `~/.lmstudio/server-logs/**/*.log` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/unsloth.png" width="28" alt="Unsloth" /> | Unsloth Studio | `~/.unsloth/studio/studio.db` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/devin.png" width="28" alt="Devin" /> | Devin CLI / Devin Desktop | `~/.local/share/devin/cli/sessions.db`, `<platform-app-data>/Devin/User/acp-events/` | ✅ | ✅ | — |
-| <img src=".github/assets/tools-icon/fx.png" width="28" alt="fx" /> | fx | `~/.fx/sessions/` | ✅ | — | — |
-| <img src=".github/assets/tools-icon/typesafe.png" width="28" alt="TypeSafe" /> | TypeSafe | TypeSafe Console Cookie (billing balance and estimated token spend via usage data) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/openrouter.png" width="28" alt="OpenRouter" /> | OpenRouter | OpenRouter API key (usage/key limit; balance when credits access is authorized, documented for Management keys) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/minimax.png" width="28" alt="Minimax" /> | Minimax | Minimax API key (Token Plan quota via Minimax API) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/volcengine.png" width="28" alt="Volcengine" /> | Volcengine | Ark API key or Volcengine AK/SK (Ark Coding Plan & Agent Plan quota via Volcengine API) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/ollama.png" width="28" alt="Ollama" /> | Ollama | Ollama Cloud cookie (session/weekly usage via ollama.com/settings) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/trae.png" width="28" alt="Trae CN" /> | Trae CN | Trae CN access token (Trae CN / SOLO credits via trae.cn) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/alibaba.png" width="28" alt="Alibaba Cloud" /> | Alibaba Cloud | Alibaba Cloud console cookie (Bailian / Model Studio Token Plan quota, Team & Personal) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/stepfun.png" width="28" alt="StepFun" /> | StepFun | StepFun Oasis-Token (Coding Plan / Token Plan quota) | — | ✅ | — |
-| <img src=".github/assets/tools-icon/thirdparty.gif" width="28" alt="Third-party APIs" /> | Third-party APIs | New API / Sub2API-compatible account presets (including compatible One API forks), a New API API-key preset, and a Custom balance endpoint | — | ✅ | — |
+本阶段没有 iPhone、外网同步或真实订阅额度。独立未签名本地构建，未公开发布。
 
-<details>
-<summary><strong>Notes, Custom balance endpoints, and data paths overridden by environment variables</strong></summary>
+## 源码运行与检查
 
-<br>
+Windows x64，Node 24、npm、Git。以下使用 `npm.cmd` 避免本机 PowerShell 的 npm.ps1 策略冲突。
 
-- Paths above are the defaults. Token Monitor follows the same environment overrides Tokscale does — `$XDG_DATA_HOME` for the `~/.local/share/` roots, and per-tool variables such as `$CODEX_HOME`, `$GROK_HOME`, `$HERMES_HOME`, `$KIMI_CODE_HOME`, `$UNSLOTH_STUDIO_HOME`, `$LM_STUDIO_HOME`, `$DSH_HOME`, `$REASONIX_STATE_HOME`, `$REASONIX_HOME` and the `$CLINE_*` family.
-- LM Studio tracking currently covers OpenAI-compatible `/v1/chat/completions` and `/v1/responses` requests recorded in server logs. Conversations started from LM Studio's built-in Chat UI and native `/api/v1/chat` requests are not included.
-- Unsloth Studio tracks inference usage from `studio.db`: Studio chats and its local API. Local inference has zero API cost; recognized metered providers use Tokscale's price estimates. Training tokens are not included. See [Unsloth source notes](docs/providers/unsloth.md).
-- Devin tracks Devin CLI sessions from the local `sessions.db` and Devin Desktop agent sessions from `acp-events` ACP logs; where both cover the same session the CLI database is authoritative. Desktop coverage depends on the connected ACP agent: only agents that write `usage_update` events locally are counted, and Devin Desktop's default `devin-cloud` agent meters its usage server-side, so a default Desktop setup reports no Desktop tokens. Session titles and project attribution come from the CLI database. See [Devin source notes](docs/providers/devin.md).
-
-- Command Code transcripts do not contain actual token counts or per-message model metadata. Token usage is estimated from transcript text, while model attribution and derived cost may reflect the currently configured model rather than the model historically used for each request.
-- The Cursor cache comes from Cursor's account-level usage export, so it covers usage from Cursor IDE, Cursor CLI, and Grok Bot. Token Monitor automatically detects accounts signed in through the Cursor desktop app and also supports adding accounts manually in Settings. The cache re-syncs automatically when stale, but newly finished sessions can take a few minutes to reach Cursor's dashboard, so usage updates on sync rather than instantly.
-
-- Custom maps numeric JSON fields from one GET balance endpoint; OpenAI or Anthropic compatibility alone is not enough.
-
-#### Qoder CN (local adapter)
-
-Qoder CN token usage is read from the app's local data, not an API — enable it in Settings → tools (opt-in, off by default). Current builds persist Claude-compatible JSONL transcripts in the Qoder config directory's `projects` tree (normally `~/.qoder-cn/projects`), while older builds wrote a SQLite database. The adapter reads both. The transcript path follows `TOKEN_MONITOR_QODER_CN_PROJECTS_PATH`, then `QODERCN_CONFIG_DIR/projects`, then the default; the legacy database is auto-detected per platform and can be overridden with `TOKEN_MONITOR_QODER_CN_DB_PATH`. See [Qoder source notes](docs/providers/qodercn.md).
-
-This is an advanced local integration: the JSONL path needs no extra runtime, but reading the legacy database needs a `sqlite3` CLI on PATH or a Node runtime with unflagged `node:sqlite` (Node ≥ 22.15; the Electron widget may need the CLI). Read failures retain the last complete snapshot. Only JSONL rows with reported token counts are included: current first-party plan-billed rows may expose credits and context occupancy but no reliable per-session context window, so their tokens cannot be reconstructed safely and are omitted from token totals. Their credits remain available in AI Tool Limits; BYOK/custom-model rows with measured tokens are counted normally.
-</details>
-
-## Showcase
-
-<table>
-<tr>
-<td width="290" align="center"><img src=".github/assets/home-view.png" width="250" alt="Home View"><br><sub>Customizable dashboard — choose which modules show and their order</sub></td>
-<td width="290" align="center"><img src=".github/assets/limits-view.png" width="250" alt="Limits View"><br><sub>Multiple accounts side by side, one-click switch of the active Codex account</sub></td>
-<td width="290" align="center"><img src=".github/assets/tools-view.png" width="250" alt="Tools View"><br><sub>Click any tool to expand input / output and cache-hit detail</sub></td>
-</tr>
-<tr>
-<td width="290" align="center"><img src=".github/assets/sessions-view.png" width="250" alt="Session View"><br><sub>Open a single session to break each prompt into tokens and tools used</sub></td>
-<td width="290" align="center"><img src=".github/assets/models-view.png" width="250" alt="Models View"><br><sub>Every model's usage and cost, aggregated across tools</sub></td>
-<td width="290" align="center"><img src=".github/assets/devices-view.png" width="250" alt="Devices View"><br><sub>Each device's usage, cost, and sync status — expand for per-machine detail</sub></td>
-</tr>
-</table>
-
-<table>
-<tr>
-<td width="435" align="center"><img src=".github/assets/dashboard-overview.png" width="400" alt="Usage Dashboard Overview"><br><sub>A year of activity heatmap and streaks, aggregated across all devices</sub></td>
-<td width="435" align="center"><img src=".github/assets/dashboard-trends.png" width="400" alt="Usage Dashboard Trends"><br><sub>A year of daily trends, stacked by tool / model, with K-line</sub></td>
-</tr>
-</table>
-
-## Why Token Monitor?
-
-Most usage monitors are useful on the machine they run on. Token Monitor is built for multi-device work: each device watches its own local logs, sends summary updates to your hub, and every connected widget sees token changes almost immediately.
-
-## Features
-
-### Tracking usage
-
-- **Live token tracking** — Claude Code, Codex, Cursor, GitHub Copilot, Antigravity, OpenCode, and 34+ AI tools, with the UI updating within seconds of each turn (full list in the table above)
-- **Live token rate** — an optional live readout of generation speed in `tok/s` or total burn in `tok/min`
-- **Per-session detail** — open a session to see tokens per prompt, expandable to each reply's exact token split and tools used (read on-demand from local transcripts or databases, never synced)
-- **Cache hit statistics** — click any tool or model to expand a detailed breakdown of input tokens (cache hit vs miss), output tokens, and hit-rate percentages
-- **Cost & currency** — cost alongside token counts, shown in USD, TWD, HKD, or CNY; exchange rates auto-update daily and can be manually overridden in Settings
-- **Custom scan paths** — point a tool at extra session folders when yours live outside the defaults
-- **WSL usage (Windows)** — file-based usage from a running WSL distro is detected automatically and merged about every 5 minutes; SQLite-backed tools such as OpenCode and Hermes may require a [headless agent inside WSL](docs/wsl-sqlite-setup.md)
-
-### Limits, trends & export
-
-- **AI Tool Limits detection** — provider-specific session, daily, weekly, billing, and credits windows for Claude Code, Codex, Cursor, OpenRouter, third-party APIs, GLM, Kimi, and 28+ providers, including multiple OpenRouter/third-party profiles and balance-style accounts (Claude credits, DeepSeek prepaid balance and spend history, third-party balances)
-- **Multiple accounts & Codex switching** — track several accounts per provider, each with its own limits; a tracked Codex account can be switched as the active local account in one click, without re-authenticating
-- **Codex reset forecast** — an optional third-party forecast below Codex limits, showing the expected reset time, the reset type (Regular or Banked), and when the window last reset
-- **Preserve deleted session usage** — many tools prune old sessions (Claude Code drops transcripts after 30 days by default), losing that history. When enabled, Token Monitor archives observed daily tool/model usage locally so the heatmap and trends survive even after the source files are gone (see [Session data retention](#session-data-retention) below)
-- **Usage Trends & Dashboard** — a home-screen activity heatmap and trend chart, plus a dedicated dashboard window with streaks and stacked per-tool/per-model history (bar and K-line views) across all your devices
-- **Fixed usage ranges** — switch between This week, Last 7 days, and Last 30 days alongside the native day, month, and total periods
-- **Optional Status view** — Claude, OpenAI, Cursor, and DeepSeek status pages, with manual or interval re-checks
-- **Data export** — export usage as tool-agnostic CSV + JSON, manually or auto-written to a folder, for spreadsheets, Obsidian, Grafana, or scripts; see [docs/export.md](docs/export.md)
-- **Subscription records** — record by hand what each AI account actually costs; the plan label's tooltip then reports the price, the next renewal or end date, time subscribed, and the month's usage cost as a multiple of what the plan costs, for recurring plans and top-up ledgers alike
-
-### Multi-device & deployment
-
-- **Real-time multi-device sync** — hub-backed sync uses Server-Sent Events to push updates to other devices within seconds; iCloud Drive sync is eventually consistent
-- **Local-first** — no servers needed for single-device use
-- **Self-hosted sync backend** — in-widget hub, Node CLI hub, or Cloudflare Worker
-- **iOS widget support** — Widgy and Scriptable through the Worker hub
-- **Privacy-first** — prompts, responses, source code, and file contents stay on your machine
-
-### Interface & surfaces
-
-- **Breakdown views** — grouped by tool, device, model, session, project, or account limits
-- **Menu bar (macOS) and system tray (Windows) popover** — live cost, tokens, or the closest-to-empty provider limit % next to the icon
-- **Floating Bubble mode** — collapses the widget into a draggable mini-window with click or hover preview and tray-style content
-- **Edge Dock (macOS & Windows)** — keeps quotas and usage at the screen edge, with auto-hide, always-visible, or fullscreen auto-hide modes. Hover cards show account limits, recent sessions, and token usage. Choose, reorder, and configure items in Settings, and toggle it from the menu bar or system tray
-- **Menu bar layout composer** — the menu bar and the floating bubble can use a built-in preset or a layout you build yourself: pick "Custom…" to add AI tool icons, quota bars, percentages, reset times, cost, the live token rate, or custom text, drag to reorder against a live preview, and give each item its own AI tool, account, quota window, and typeface
-- **Appearance controls** — interface theme switching (incl. a light mode), per-tool vendor colours, glass opacity, blur, transparent window mode, and custom fonts
-- **Native macOS Widgets** — View token usage and cost, trends, AI tool quota remaining and reset times, activity heatmaps, and breakdowns by tool or model in Small, Medium, and Large layouts on macOS 14+
-- **Customizable tool list** — hide, pin, and reorder tools in the main dashboard without changing what gets tracked
-- **Recordable global shortcut** — show or hide the window from anywhere
-- **Discord Rich Presence** — broadcast today's tokens, cost, and top client (opt-in)
-
-## Installation
-
-On macOS, install through the official [Homebrew Cask](https://formulae.brew.sh/cask/token-monitor):
-
-```bash
-brew install --cask token-monitor
+```powershell
+npm.cmd ci --ignore-scripts --no-audit --no-fund
+node node_modules/electron/install.js
+npm.cmd run verify
+npm.cmd run test:native
+npm.cmd run test:upstream
+npm.cmd run experiment:crypto
+npm.cmd run test:ui
+npm.cmd start
 ```
 
-Or download from [GitHub Releases](https://github.com/Javis603/token-monitor/releases).
+安装 Electron 与依赖需要联网；运行应用时不联网。不执行上游 vendored Tokscale 覆盖/更新脚本。`node:sqlite` 只用于生成合成测试库；产品读库使用 sql.js，仍不新增业务 SQLite 存储。
 
-- **macOS (Apple Silicon)** — `.dmg`, signed and notarized
-- **macOS (Intel)** — x64 `.dmg`, signed and notarized
-- **Windows 10/11** — setup and portable `.exe`, [code-signed](docs/code-signing.md)
-- **Linux x64** — `.AppImage`
+真实来源验收已经在开发机完成；重新验证时先运行 verify/test:native，再运行 `npm.cmd run validate:local`。只输出脱敏统计，并将验收标记写入自身目录；它不会复制原始输入。尚未通过本机样本验证的其他机器默认显示未验证。
 
-Packaged builds check GitHub Releases automatically. When an update is available, the app shows an update indicator; supported platforms can also install from Settings → General.
+打包：
 
-### First run
-
-Local mode is the default: launch the app and it starts tracking this device. No hub, agent, or config required.
-
-## Multi-device sync
-
-Pick ONE multi-device sync backend for your devices (and any headless agents). On each device, open the widget and pick a mode under Settings → Multi-device Sync. The widget contributes this device's usage automatically; run `npm run agent` only on machines without a widget. iCloud Drive is a macOS-widget-only option and does not support headless agents.
-
-#### Option A — Host the hub from the widget (easiest, no CLI)
-
-In the widget on one always-on machine, open Settings → Multi-device Sync and pick **Host hub on this device**. The widget generates a random secret and lists the LAN URLs other devices can connect to (Tailscale or ZeroTier addresses appear here too). On every other device, pick **Connect to a hub** and paste the URL + secret.
-
-The hub runs while Token Monitor is running — quitting (not just closing the window) stops it for all connected devices.
-
-#### Option B — Self-hosted Node hub (always-on headless machine)
-
-```bash
-# on the always-on machine
-cp .env.example .env
-# set TOKEN_MONITOR_SECRET to something private, then:
-npm run hub
+```powershell
+npm.cmd run dist:win:dir
+$env:M1_PACKAGED_EXE = (Resolve-Path 'dist/win-unpacked/Agent Usage M1.exe').Path
+npm.cmd run test:ui
+Remove-Item Env:M1_PACKAGED_EXE
 ```
 
-#### Option C — Cloudflare Worker hub (across networks, including iPhone)
+应用目录在 `dist/win-unpacked`。源码 ZIP 使用提交后的 Git archive，不包含 node_modules、dist、真实输入、日志、缓存、规划临时文件或测试产物。
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Javis603/token-monitor/tree/main/worker)
+治理检查使用本机 bundled Python：
 
-One-click deploy — Cloudflare will prompt for the `TOKEN_MONITOR_SECRET` during setup. Or deploy manually:
-
-```bash
-cd worker
-npm install
-npx wrangler login
-npx wrangler secret put TOKEN_MONITOR_SECRET
-npx wrangler deploy
+```powershell
+& 'C:/Users/yudan/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe' -X utf8 scripts/m1/governance.py
 ```
 
-Paste the deployed URL into each device's widget at Settings → Multi-device Sync. See [worker/README.md](worker/README.md) for the iOS widget recipe and endpoint reference, or [docs/API.md](docs/API.md) for the hub HTTP API.
+## 文档与评审
 
-#### Option D — iCloud Drive (macOS, no Hub server)
+- [验收记录与未执行项](docs/m1/ACCEPTANCE.md)
+- [统计合同与去重](docs/m1/DATA-CONTRACT.md)
+- [来源固定与实现调整](docs/m1/UPSTREAM.md)
+- [本地加密实验](docs/m1/CRYPTO-EXPERIMENT.md)
+- 研究资料保存在 `research/agent-usage/`，不因实现阶段覆盖。
 
-On each Mac signed into the same Apple ID, choose **iCloud Drive** in Settings → Multi-device Sync. This is an opt-in macOS-only path: Token Monitor writes one atomic snapshot per device and one subscription snapshot per writer under `iCloud Drive/Token Monitor/sync-v1/`, then each Mac aggregates the valid files locally. It uses no Token Monitor server, CloudKit, or credentials; provider API keys, cookies, and tokens stay local. iCloud Drive is eventually consistent, so another Mac may take a moment to appear or update, and a missing or malformed file never clears the last-good aggregate.
-
-## App data
-
-App state lives in the OS user-data dir — delete it along with the app to fully uninstall.
-
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/Token Monitor/` |
-| Windows | `%APPDATA%/Token Monitor/` |
-| Linux | `~/.config/Token Monitor/` |
-
-## Build from source
-
-To build your own installer, use Node.js 22.15+ on the **target** OS (electron-builder can't cross-build a macOS `.dmg` on Windows, or vice-versa).
-
-```bash
-npm install
-npm run dist:mac     # macOS arm64 .dmg           → dist/
-npm run dist:mac:x64 # macOS Intel x64 .dmg       → dist/
-npm run dist:win     # Windows x64 installer .exe → dist/
-npm run dist:linux   # Linux x64 AppImage         → dist/
-npm run pack         # unpacked app dir (no installer), for quick local testing
-```
-
-Output lands in `dist/`. Windows and Linux use the matching `dist:*` script above on the target OS. Packaging the macOS release build requires a local Developer ID Application signing identity; use `npm start` for local development or unsupported platforms.
-
-Runtime and packaging scripts explicitly ensure the pinned tokscale binary on the four vendored targets. Other source platforms keep the npm binary and filter clients it does not support; `npm install`, lint, and tests do not download it.
-
-## How it works
-
-```text
-Mode A — Local (default, no setup)
-    widget (Electron) ──▶ tokscale ──▶ ~/.claude, ~/.codex, $HERMES_HOME
-
-Mode B — Sync (opt-in, multi-device)
-    device A agent ──▶
-    device B agent ──▶  hub  ──▶  widget on any device
-    device C agent ──▶
-```
-
-The widget chooses local vs sync mode based on Settings → Multi-device Sync. The hub itself can run as a separate `npm run hub` process, a Cloudflare Worker, or directly inside one of the widgets (Host mode). In Hub Client and Host modes, the hub pushes aggregated stats to every connected widget over Server-Sent Events, so updates on one device usually appear on the others within a few seconds. iCloud Drive mode syncs files directly; propagation is eventually consistent and may take longer.
-
-## Session data retention
-
-With **Preserve deleted session usage** enabled (Settings → Collection), Token Monitor archives observed daily tool/model usage locally with no time limit — so even after a source tool prunes its own sessions, the heatmap and trends are unaffected.
-
-<details>
-<summary><strong>Advanced: extend the source tool's own retention</strong></summary>
-
-<br>
-
-The heatmap and sync payload use a rolling 370-day window (older observations remain available locally for future views). **Claude Code keeps only 30 days of transcripts by default** (`cleanupPeriodDays`); to keep the full rolling year before the archive kicks in, raise it in `~/.claude/settings.json` before the window passes:
-
-```json
-{
-  "cleanupPeriodDays": 370
-}
-```
-
-A larger value keeps more, at the cost of transcripts living on disk for as long as you set. tokscale's [Session Data Retention](https://github.com/junhoyeo/tokscale#session-data-retention) table covers the other tools' defaults and config paths.
-
-This archive only covers days Token Monitor has already observed; data deleted before it started tracking cannot be recovered.
-
-</details>
-
-## Settings
-
-There are two places to configure Token Monitor; day-to-day use only needs the first:
-
-- **Widget (GUI)** — click the `⚙` button in the bottom-right corner. Sections, in order: General (language, launch at login, updates), Main (Home modules and display currency), Window (window behavior, menu bar and floating-bubble layout, tray mode, shortcut), Appearance (theme and vendor colours), Collection (tracked tools, collection cadence, Preserve deleted session usage, data export), AI Tool Limits (provider selection, limits, and credentials), Subscriptions (what you pay per account), and Multi-device Sync. The `⇧` button in the title bar cycles the window behavior.
-- **Headless agent & hub** — no UI; configured with a `.env` file at the project root (copy from `.env.example`), precedence CLI flag → env var → built-in default.
-
-See the [configuration reference](docs/configuration.md) for every setting and all environment variables.
-
-## Privacy
-
-Token Monitor processes usage logs locally and sends no analytics or telemetry to the project maintainer. Network access occurs only for documented or user-enabled features. See the [privacy policy](docs/privacy.md) for the data used by updates, provider integrations, Discord Rich Presence, and optional multi-device sync.
-
-## Star History
-
-<a href="https://github.com/Javis603/token-monitor/tree/star-history">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Javis603/token-monitor/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Javis603/token-monitor/star-history/star-history.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Javis603/token-monitor/star-history/star-history.svg" />
- </picture>
-</a>
-
-## Contributing
-
-Issues and PRs are welcome. Project conventions, architecture notes, and the command reference live in [AGENTS.md](AGENTS.md) — written for coding agents, but it doubles as the contributor guide.
-
-## Acknowledgments
-
-- [tokscale](https://github.com/junhoyeo/tokscale) for log parsing and token accounting.
-- [CodexBar](https://github.com/steipete/CodexBar) for AI Tool Limits research.
-- [Code signing policy](docs/code-signing.md): Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
-
-## License
-
-[MIT](LICENSE) © [@Javis](https://github.com/Javis603)
+原上游源码仍在仓库供参考；运行入口和打包清单仅包含 M1 安全路径。请使用这里列出的命令，不启动旧的 account/sync/hub/worker 入口。M1 交付后停在用户评审点。
