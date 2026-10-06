@@ -2,7 +2,7 @@
 
 Scope authority: the user's approved M1-WINDOWS-LOCAL plan plus the dated user authorizations in `docs/SCOPE-LEDGER.md` (newest first). Planning records mirror them and cannot authorize later stages. Record every new user authorization at the top of that ledger, not here.
 
-Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, OpenCode, WorkBuddy, MiMo Code, Gemini CLI, Cursor, ZCode, DeepSeek Harness) under `docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md`; account quota remains Codex only. Mainline branch `m2/agents-r4`; Claude Code is the main developer (2026-10-06). Latest candidate `dist/agents-20261006-r5`; results in `docs/m2/AGENT-INTEGRATION-RESULTS-R5-20261006.md`. The user replaced the fourth independent review with order-invariance tests.
+Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, OpenCode, WorkBuddy, MiMo Code, Gemini CLI, Cursor, ZCode, DeepSeek Harness) under `docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md`; account quota remains Codex only. Mainline branch `m2/agents-r4`; Claude Code is the main developer (2026-10-06). Latest candidate `dist/agents-20261006-r5`; results in `docs/m2/AGENT-INTEGRATION-RESULTS-R5-20261006.md`. The user replaced the fourth independent review with order-invariance tests. In progress after r5: the 2026-10-06 UI refinement in `docs/SCOPE-LEDGER.md` (hourly single-day trend from snapshot `hourly` rows, range calendar, rebuilt used-model pricing panel, `polish.css` layer).
 
 ## Boundaries
 
