@@ -56,7 +56,8 @@ const { fixtures } = require('../../tests/m1/fixtures');
         assert.equal(Number(await page.locator('#totalCost button').getAttribute('data-cost-lower')), lower);
         assert.equal(Number(await page.locator('#totalCost button').getAttribute('data-cost-upper')), upper);
         assert.match(await page.locator('#totalCost .cost-lower').textContent(), /^\$[\d,.]+$/);
-        for (const id of ['scopeSummary', 'profileBio', 'trendNote', 'mixIncomplete', 'modelCount', 'dataBadge']) assert.equal(await page.locator('#' + id).isVisible(), false);
+        // trendNote is intentionally visible since 2026-10-05: it explains the unrecorded-date bridges.
+        for (const id of ['scopeSummary', 'profileBio', 'mixIncomplete', 'modelCount', 'dataBadge']) assert.equal(await page.locator('#' + id).isVisible(), false);
         assert.equal(await page.locator('#dayDetail').isVisible(), false);
         await page.screenshot({ path: path.join(output, 'usage-' + scale + '.png') });
         await page.locator('#totalCost button').hover(); await settle(page);

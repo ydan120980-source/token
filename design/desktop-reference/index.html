@@ -43,10 +43,11 @@
     </section>
     <section id="usage" data-motion-surface="page">
       <header class="profile">
-        <div class="profile-left"><button id="profileAvatar" class="profile-avatar" aria-label="更换头像"><span>YD</span></button><div><div class="profile-title"><h1 id="profileName">ydan120980</h1><span class="small-tag">Windows</span><button id="editProfile" class="text-button">编辑资料</button></div><p id="profileBio" hidden>记录每一次 AI 协作</p><p class="profile-meta" hidden>历史覆盖 <span id="historyStart"></span><span>·</span><span id="updated">最近采集 14:32</span></p></div></div>
-        <div class="profile-actions"><button id="refresh" class="primary"><img src="assets/ui/refresh.svg" alt="">刷新</button><button data-export><img src="assets/ui/download.svg" alt="">导出</button></div>
+        <div class="profile-left"><button id="profileAvatar" class="profile-avatar" aria-label="更换头像"><span>YD</span></button><div><div class="profile-title"><h1 id="profileName">ydan120980</h1><span class="small-tag">Windows</span><button id="editProfile" class="icon-button profile-edit" aria-label="编辑资料" title="编辑资料"><img src="assets/ui/pencil.svg" alt=""></button></div><p id="profileBio" hidden>记录每一次 AI 协作</p><p class="profile-meta" hidden>历史覆盖 <span id="historyStart"></span><span>·</span><span id="updated">最近采集 14:32</span></p></div></div>
+        <div class="profile-tools"><div id="periods" class="range-tabs" role="group" aria-label="统计时间范围"><button data-period="all" aria-pressed="true">累计</button><button data-period="30" aria-pressed="false">30 天</button><button data-period="7" aria-pressed="false">7 天</button><button data-period="today" aria-pressed="false">今日</button></div>
+        <div class="profile-actions"><button id="refresh" class="icon-action" aria-label="刷新统计" title="刷新统计"><img src="assets/ui/refresh.svg" alt=""><span class="sr-only">刷新统计</span></button><button data-export class="icon-action" aria-label="导出统计" title="导出统计"><img src="assets/ui/download.svg" alt=""><span class="sr-only">导出</span></button></div></div>
       </header>
-      <div class="detail-toolbar"><span id="rangeTitle" class="range-title">累计</span><div id="periods" class="range-tabs" role="group" aria-label="统计时间范围"><button data-period="all" aria-pressed="true">累计</button><button data-period="30" aria-pressed="false">最近 30 天</button><button data-period="7" aria-pressed="false">最近 7 天</button><button data-period="today" aria-pressed="false">今日</button></div></div>
+      <div class="detail-toolbar" hidden><span id="rangeTitle" class="range-title">累计</span></div>
       <div id="scopeSummary" hidden class="scope-summary" role="status" aria-live="polite"></div>
       <div class="overview-card usage-overview" data-motion-surface="statistics">
         <div class="overview-scope"><span id="scopeContext" role="status" aria-live="polite"></span><button id="resetUsageScope" class="text-button" hidden>查看全部</button></div>

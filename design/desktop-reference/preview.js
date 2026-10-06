@@ -50,7 +50,7 @@ function costHtml(a, label = 'API 等价估算') {
     escapeHtml(label) +
     '" aria-label="' +
     escapeHtml(note) +
-    '"><span class="cost-lower">' +
+    '"><span class="cost-scale"><span class="cost-lower">' +
     (value.lower === null ? '未定价' : window.displayValues.usd(value.lower)) +
     '</span>' +
     (hasRange ? '<span class="cost-extension"><span class="cost-separator" aria-hidden="true"></span><span class="cost-upper" style="--upper-width:' +
@@ -59,7 +59,7 @@ function costHtml(a, label = 'API 等价估算') {
     window.displayValues.usd(value.upper) +
     '</span></span>' : '') +
     (value.partial && value.lower !== null ? '<span class="cost-plus">+</span>' : '') +
-    '</button>';
+    '</span></button>';
 }
 function escapeHtml(value) { return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function icon(name) { return '<img src="assets/' + name + '.svg" alt="">'; }
@@ -75,9 +75,11 @@ for (let offset = 0; !realData && !bootstrapFailed && offset < 181; offset++) {
     const cacheWrite = offset === 0 ? 0 : Math.round(totalTokens * .005);
     const cacheRead = totalTokens - inputUncached - output - cacheWrite;
     const reasoning = offset === 0 ? 3000 : Math.round(output * .23);
-    const cost = agent === 'workbuddy' && offset % 5 === 0 ? null : offset === 0 ? .76 : totalTokens / 1e6 * [.24, .2, .13, .54, .09][index];
+    const cost = agent === 'workbuddy' && offset % 5 === 0 ? null : offset === 0 ? .76 : totalTokens / 1e6 * [.24, .2, .13, .54, .09][index % 5];
     templates.push({ date: day, agent, entry: 'unknown', provider: 'synthetic', model: '示例模型 · ' +
-      meta.name, totalTokens, inputUncached, output, cacheRead, cacheWrite, reasoning, records: offset === 0 ? 11 : Math.max(1, Math.round(totalTokens / 65000)), estimatedCostUsd: cost, pricedTokens: cost === null ? 0 : totalTokens });
+      meta.name, totalTokens, inputUncached, output, cacheRead, cacheWrite, reasoning, records: offset === 0 ? 11 : Math.max(1, Math.round(totalTokens / 65000)), estimatedCostUsd: cost, pricedTokens: cost === null ? 0 : totalTokens,
+      // Like real Codex logs, unreported cache writes leave a bounded estimate.
+      estimatedCostUpperUsd: cost === null ? null : agent === 'codex' ? cost * 1.08 : cost, boundedTokens: cost !== null && agent === 'codex' ? totalTokens : 0 });
   }
 }
 if (realData) templates.push(...localSnapshot.daily);
@@ -190,7 +192,14 @@ function renderOverview(rows) {
   $('scopeContext').textContent = scope.join(' · ') + ' · ' + (period === 'all' ? '累计' : period === 'today' ? '今天' : '最近 ' + period + ' 天');
   $('resetUsageScope').hidden = ['agentFilter','sourceFilter','modelFilter'].every(id => $(id).value === 'all');
   const recordedDays = new Set(scoped.map(r => r.date)).size, average = recordedDays ? a.total / recordedDays : 0;
-  $('dailyComparison').textContent = daily.length && average > 0 && period !== 'today' ? '今日为区间已记录日均的 ' + (t.total / average).toFixed(1) + ' 倍' : '';
+  // Average over recorded days only; today is still in progress, so the delta is "so far".
+  const comparison = $('dailyComparison');
+  if (period !== 'today' && recordedDays > 1 && average > 0) {
+    const change = daily.length ? t.total / average - 1 : null, percent = change === null ? '' : (change >= 0 ? '+' : '−') + Math.abs(change * 100).toFixed(0) + '%';
+    const note = '区间日均 ' + short(Math.round(average)) + ' Token（按 ' + recordedDays + ' 个有记录日计算）' + (change === null ? '；今日暂无记录' : '；今日至今 ' + short(t.total) + '，较日均 ' + percent);
+    comparison.innerHTML = '日均 <strong>' + short(Math.round(average)) + '</strong>' + (change === null ? '' : '<span class="fact-delta" data-direction="' + (change >= 0 ? 'up' : 'down') + '">今日 ' + percent + '</span>');
+    comparison.title = note; comparison.setAttribute('aria-label', note); comparison.hidden = false;
+  } else { comparison.textContent = ''; comparison.removeAttribute('title'); comparison.removeAttribute('aria-label'); comparison.hidden = true; }
   const week = dates(shift(today,-6),today), observed = new Set(rows.map(r => r.date)), dayTotals = new Map();
   for (const row of filtered) dayTotals.set(row.date,(dayTotals.get(row.date) || 0) + row.totalTokens);
   const maximum = Math.max(1,...week.map(day => dayTotals.get(day) || 0));
@@ -604,7 +613,7 @@ function fillModels() { const previous = $('modelFilter').value, list = [...new 
   '">' +
   escapeHtml(displayModel(m)) +
   '</option>').join(''); $('modelFilter').value = list.includes(previous) ? previous : 'all'; }
-$('agentFilter').innerHTML = '<option value="all">全部 Agent</option>' + Object.entries(agents).map(([key, a]) => '<option value="' + key + '">' + a.name + '</option>').join(''); fillSources(); fillModels(); renderSources();
+$('agentFilter').innerHTML = '<option value="all">全部 Agent</option>' + Object.entries(agents).map(([key, a]) => '<option value="' + key + '">' + a.name + '</option>').join(''); fillSources(); fillModels(); renderSources(); publishAgentUsage();
 $('heatRange').innerHTML = '<option value="365">最近一年</option><option value="' + today.slice(0, 4) + '">' + today.slice(0, 4) + ' 年</option>';
 if (realData) $('display').value = 'daily';
 let restoredView = 'usage';
@@ -743,18 +752,23 @@ $('download').addEventListener('click', async () => {
     '记录）。';
 });
 Chart.defaults.font.family = 'Segoe UI'; render(); if (restoredView !== 'usage') view(restoredView);
+// The Agent picker orders and dims its chips by recorded usage across all dates.
+function publishAgentUsage() {
+  const totals = {}; for (const row of templates) totals[row.agent] = (totals[row.agent] || 0) + row.totalTokens;
+  window.agentUsageTotals = totals; window.dispatchEvent(new CustomEvent('agent-usage', { detail: totals }));
+}
 function applyUsageState(state) {
   const changed = sequence !== state.snapshot.sequence, previousDay = today;
   const snapshotChanged = !Number.isSafeInteger(state.snapshotRevision) || usageRevision !== state.snapshotRevision;
   usageRevision = state.snapshotRevision;
   localSnapshot = state.snapshot; syncCalendar(); usageStatus = state; sequence = localSnapshot.sequence; enabled = state.enabled; coverageStart = localSnapshot.coverageStart || today;
-  if (snapshotChanged) { templates.length = 0; for (const row of localSnapshot.daily) templates.push(row); fillSources(); fillModels(); renderSources(); }
+  if (snapshotChanged) { templates.length = 0; for (const row of localSnapshot.daily) templates.push(row); fillSources(); fillModels(); renderSources(); publishAgentUsage(); }
   updateCollection();
   window.uiSelect?.syncAll();
   $('dataBadge').textContent = state.error || (state.collecting ? '正在读取本地统计…' : '本机离线统计 · 已更新');
   $('dataBadge').hidden = !state.error;
   $('dataBadge').setAttribute('role', 'status');
-  $('refresh').disabled = state.collecting; window.uiMotion.busy($('refresh'), state.collecting); window.uiMotion.busy($('sourceRefresh'), state.collecting); $('refresh').innerHTML = icon('ui/refresh') + (state.collecting ? '采集中…' : '刷新统计');
+  $('refresh').disabled = state.collecting; window.uiMotion.busy($('refresh'), state.collecting); window.uiMotion.busy($('sourceRefresh'), state.collecting); const refreshLabel = state.collecting ? '正在采集…' : '刷新统计'; $('refresh').innerHTML = icon('ui/refresh') + '<span class="sr-only">' + refreshLabel + '</span>'; $('refresh').title = refreshLabel; $('refresh').setAttribute('aria-label', refreshLabel);
   if ($('main').dataset.currentView === 'usage') {
     if (snapshotChanged || previousDay !== today) render(changed);
     else if ($('todayClients').querySelector('.today-empty')) $('todayClients').innerHTML = todayEmptyHtml();

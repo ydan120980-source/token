@@ -166,3 +166,54 @@ body.dark .agent-picker button[data-agent="cursor"] img { filter:invert(.85); }
 #trend .trend-controls { grid-template-columns:minmax(180px,1.65fr) repeat(4,minmax(0,1fr)); }
 #trend .trend-controls > select[hidden] { display:none; }
 @media(max-width:1000px) { #trend .trend-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }.agent-picker { grid-column:1/-1; justify-self:start; }.trend-controls > .select-shell:nth-child(4),.trend-controls > button { grid-column:auto; } }
+/* 2026-10-06: the hero button keeps a stable, unscaled hit area and only its inner
+   visual shrinks. Scaling the button itself pulled the trailing "+" out from under
+   the pointer, which collapsed and re-expanded the range in a loop. */
+#totalCost .cost-value,#totalCost .cost-value.cost-expanded { transform:none; transition:color 180ms; }
+.cost-scale { display:inline-flex; align-items:inherit; max-width:100%; transform-origin:left center; }
+#totalCost .cost-scale { transform:scale(1); transition:transform 400ms cubic-bezier(.22,.7,.2,1); }
+#totalCost .cost-value.cost-expanded .cost-scale { transform:scale(var(--range-fit,.84)); }
+body[data-motion="reduced"] #totalCost .cost-value .cost-scale,body[data-motion="off"] #totalCost .cost-value .cost-scale,body[data-motion="reduced"] #totalCost .cost-value.cost-expanded .cost-scale,body[data-motion="off"] #totalCost .cost-value.cost-expanded .cost-scale { transition:none; transform:none; }
+@media(max-width:850px) { #totalCost .cost-value.cost-expanded .cost-scale { transform:scale(.78); } }
+/* Expanding must never narrow the hover target: the "+" keeps its slot and fades,
+   instead of display:none while the range is still growing from zero width. */
+.cost-value .cost-plus { transition:opacity 160ms var(--motion-ease); }
+.cost-value.cost-expanded .cost-plus { display:inline; opacity:0; }
+/* 2026-10-06 compact header: profile, range and icon actions share one row. */
+.profile { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px 20px; padding-bottom:20px; border:0; }
+.profile-left { gap:12px; align-items:center; min-width:0; }
+.profile-avatar { width:38px; height:38px; border-radius:50%; }
+.profile-avatar span { font-size:14px; letter-spacing:-.2px; }
+.profile-title { gap:4px; }
+.profile-title h1 { font-size:18px; font-weight:600; letter-spacing:-.2px; }
+.profile-title .profile-edit { display:grid; place-items:center; width:28px; height:28px; min-height:28px; padding:0; border:0; border-radius:8px; background:transparent; opacity:.5; }
+.profile-title .profile-edit:hover,.profile-title .profile-edit:focus-visible { opacity:1; background:var(--soft); }
+.profile-title .profile-edit img { width:15px; height:15px; }
+.profile-tools { display:flex; align-items:center; gap:10px; margin-left:auto; }
+.profile-tools .range-tabs { margin:0; }
+.profile-actions { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--soft); }
+.profile-actions .icon-action { display:grid; place-items:center; width:34px; height:34px; min-height:34px; padding:0; border:0; border-radius:9px; background:transparent; color:var(--text); }
+.profile-actions .icon-action:hover:not(:disabled) { background:var(--card); }
+.profile-actions .icon-action img { width:17px; height:17px; margin:0; }
+.sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+body.dark .profile-title .profile-edit img { filter:invert(.85); }
+/* Daily average reads like the other facts; today's in-progress delta is a quiet pill. */
+#dailyComparison { display:inline-flex; align-items:baseline; gap:6px; font-size:14px; }
+.fact-delta { align-self:center; margin-left:4px; padding:1px 8px; border-radius:999px; background:var(--soft); color:var(--muted); font-size:12px; line-height:18px; font-variant-numeric:tabular-nums; }
+/* Trend filters: Agent chips are the primary row and wrap; secondary filters sit below. */
+#trend .trend-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+#trend .agent-picker { flex:1 1 100%; flex-wrap:wrap; gap:6px; min-height:0; margin-bottom:4px; padding:0; overflow:visible; background:transparent; border-radius:0; }
+#trend .agent-picker button { display:inline-flex; align-items:center; gap:7px; width:auto; height:34px; min-height:34px; padding:0 13px 0 10px; border:1px solid transparent; border-radius:999px; background:var(--soft); color:var(--text); font-size:13px; font-weight:500; opacity:1; box-shadow:none; }
+#trend .agent-picker button:hover { background:color-mix(in srgb,var(--soft) 55%,var(--line)); }
+#trend .agent-picker button[aria-pressed="true"] { background:var(--card); border-color:var(--line); box-shadow:0 1px 5px #00000014; font-weight:600; }
+#trend .agent-picker button.is-empty { color:var(--muted); }
+#trend .agent-picker button.is-empty img { opacity:.45; }
+#trend .agent-picker button img { width:18px; height:18px; }
+#trend .agent-picker button[data-agent="mimo"] { width:auto; }
+#trend .agent-picker button[data-agent="mimo"] img { width:30px; height:16px; }
+#trend .trend-controls > .select-shell { flex:0 1 190px; width:auto; }
+#trend .trend-controls > #trendRangeButton { flex:0 1 150px; }
+#trend .trend-controls > .select-shell:has(#usageInterval) { order:5; flex-basis:150px; margin-left:auto; }
+#trend .trend-controls .select-trigger,#trend .trend-controls > button:not(.agent-picker button) { min-height:36px; padding:8px 12px; }
+@media(max-width:700px) { .profile-tools { width:100%; justify-content:space-between; margin-left:0; } #trend .trend-controls > .select-shell,#trend .trend-controls > #trendRangeButton { flex:1 1 140px; } #trend .trend-controls > .select-shell:has(#usageInterval) { margin-left:0; } }
+#trend .trend-controls > #trendRangeButton { display:flex; justify-content:flex-start; align-items:center; text-align:left; }
