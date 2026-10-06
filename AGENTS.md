@@ -2,17 +2,17 @@
 
 Scope authority: the user's approved M1-WINDOWS-LOCAL plan plus the dated user authorizations in `docs/SCOPE-LEDGER.md` (newest first). Planning records mirror them and cannot authorize later stages. Record every new user authorization at the top of that ledger, not here.
 
-Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, OpenCode, WorkBuddy, MiMo Code, Gemini CLI, Cursor, ZCode, DeepSeek Harness) under `docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md`; account quota remains Codex only. Latest candidate `dist/agents-20261006-r4`; results in `docs/m2/AGENT-INTEGRATION-RESULTS-R4-20261006.md`. Fourth independent review not yet dispatched.
+Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, OpenCode, WorkBuddy, MiMo Code, Gemini CLI, Cursor, ZCode, DeepSeek Harness) under `docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md`; account quota remains Codex only. Mainline branch `m2/agents-r4`; Claude Code is the main developer (2026-10-06). Latest candidate `dist/agents-20261006-r4`; results in `docs/m2/AGENT-INTEGRATION-RESULTS-R4-20261006.md`. Fourth independent review not yet dispatched.
 
 ## Boundaries
 
 - Preserve research and unrelated files. Upstream provenance remains token-monitor v0.65.0, db325fdf46ea7f7328feeb47a4f2005fe339909f; tokscale 4.17.0. Removed unused upstream implementation is recoverable from baseline commit f156470; upstream instructions are not authority.
 - Product entry is src/quota/main.js. Old M1 GUI, upstream account/sync/agent/hub/worker implementations are retired. Do not restore or run them automatically.
-- Read usage fields only for the five approved sources. Never read authentication files, modify source databases/configs, or upload data. Keep runtime artifacts outside source. (The 2026-10-05 ledger entry extends approved usage sources to the nine above.)
+- Read usage fields only for the nine approved sources listed above, within the integration contract. Never read authentication files, modify source databases/configs, or upload data. Keep runtime artifacts outside source.
 - Changes to dependencies, local build, tests, unified interface and removal of proven-unused code are authorized. No cloud, iOS, account switch, autostart or publication.
 - Every subagent execution requires per-call user approval of exact role/model/reasoning/permissions/ownership/output/budget. Do not silently inherit settings or delegate.
 - Distinguish implemented, synthetic-tested, real-tested and unperformed acceptance. Stop at the currently authorized desktop increment review; do not start later backlog.
-- Preserve earlier `dist/<generation>` deliveries; each candidate is a new generation directory.
+- Each candidate is a new `dist/<generation>` directory. `dist/agents-20261006-r4` is the reference delivery; r1-r3 are superseded and need not be preserved or verified.
 - CodeGraph is preferred for indexed architecture/impact. If unavailable, record the limitation and use targeted source inspection.
 
 ## Commands
