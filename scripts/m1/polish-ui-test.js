@@ -1,7 +1,7 @@
 'use strict';
 /* global document, requestAnimationFrame, getComputedStyle, innerWidth, PointerEvent, DOMMatrixReadOnly */
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
-const {_electron:electron}=require('playwright'),{settle}=require('./ui-settle');
+const {_electron:electron}=require('playwright'),{settle,until}=require('./ui-settle');
 const {Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../src/m1/normalize'),{fixtures}=require('../../tests/m1/fixtures');
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'agent-usage-polish-')), results=[],output=process.env.POLISH_EVIDENCE_DIR||'artifacts/polish/source';fs.mkdirSync(output,{recursive:true});
@@ -44,8 +44,8 @@ const {Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../sr
     await list.evaluate(e=>{e.scrollTop=e.scrollHeight;});const bottomStart=await page.evaluate(()=>window.scrollY);await page.mouse.wheel(0,240);await page.waitForFunction(y=>window.scrollY>y+5,bottomStart);
     await list.scrollIntoViewIfNeeded();await list.evaluate(e=>{e.scrollTop=0;});await list.hover();const topStart=await page.evaluate(()=>window.scrollY);await page.mouse.wheel(0,-180);await page.waitForFunction(y=>window.scrollY<y-5,topStart);
     await app.evaluate(({Menu,BrowserWindow})=>Menu.getApplicationMenu().getMenuItemById('appearance').submenu.items.find(i=>i.label==='切换深浅外观').click(null,BrowserWindow.getAllWindows()[0]));await page.waitForFunction(()=>document.body.classList.contains('dark'));await settle(page);
-    await page.locator('#windowBack').click();await settle(page);await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.maximize();});await page.waitForFunction(async()=> (await window.windowBridge.state()).maximized);await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].unmaximize());
-    await page.waitForFunction(async()=> !(await window.windowBridge.state()).maximized);
+    await page.locator('#windowBack').click();await settle(page);await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.maximize();});await until(page,async()=> (await window.windowBridge.state()).maximized);await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].unmaximize());
+    await until(page,async()=> !(await window.windowBridge.state()).maximized);
     await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(800,600));await page.waitForFunction(()=>innerWidth===800);await settle(page);
     // Read native resize geometry and CSS layout in the same rendering frame.
     const geometry=await page.evaluate(()=>({header:document.querySelector('.app-titlebar-inner').getBoundingClientRect().toJSON(),width:innerWidth,area:window.navigator.windowControlsOverlay?.getTitlebarAreaRect().toJSON()}));

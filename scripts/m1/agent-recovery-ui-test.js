@@ -1,8 +1,19 @@
 'use strict';
+/* global document */
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {DatabaseSync}=require('node:sqlite'),{_electron:electron}=require('playwright');
-const {Store}=require('../../src/m1/store'),{roots}=require('../../src/m1/policy'),{scanSources}=require('../../src/m1/sources'),{verifyProjection}=require('../../src/m1/native'),{settle}=require('./ui-settle');
+const {Store}=require('../../src/m1/store'),{roots}=require('../../src/m1/policy'),{scanSources}=require('../../src/m1/sources'),{verifyProjection}=require('../../src/m1/native'),{settle,until}=require('./ui-settle');
 const output=path.resolve(process.env.RECOVERY_EVIDENCE_DIR||'artifacts/m2-agents-r4/recovery-ui');
+// The window opens on usage while its top bar is still laying out; a click during
+// that shift can land on the neighbouring tab. Settle first and confirm the view.
+async function showUsage(page) {
+  for (let attempt=0;attempt<3;attempt++) {
+    await settle(page);
+    if (await page.evaluate(()=>document.getElementById('main').dataset.currentView)==='usage') break;
+    await page.locator('[data-view="usage"]').click();
+  }
+  await page.waitForFunction(()=>document.getElementById('main').dataset.currentView==='usage',{},{timeout:5000});await settle(page);
+}
 async function run(first,scale) {
   const work=fs.mkdtempSync(path.join(os.tmpdir(),'agent-recovery-ui-'));
   try {
@@ -21,8 +32,8 @@ async function run(first,scale) {
     const app=await electron.launch({executablePath:process.env.QUOTA_PACKAGED_EXE||require('electron'),args:[...(process.env.QUOTA_PACKAGED_EXE?[]:['src/quota/main.js']),'--usage-data-dir',usage,'--quota-data-dir',path.join(work,'quota'),'--m1-fixture-root',home,'--force-device-scale-factor='+scale],timeout:60000});
     try {
       const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-      await page.waitForFunction(async()=>{const s=await window.usageBridge.get();return !s.collecting&&s.snapshot.daily.some(r=>r.totalTokens===140);},{},{timeout:60000});
-      await page.locator('[data-view="usage"]').click();await settle(page);
+      await until(page,async()=>{const s=await window.usageBridge.get();return !s.collecting&&s.snapshot.daily.some(r=>r.totalTokens===140);},60000);
+      await showUsage(page);
       const state=await page.evaluate(()=>window.usageBridge.get()),row=state.snapshot.daily[0];assert.equal(row.agent,first);assert.equal(row.totalTokens,140);assert.equal(row.inputUncached,100);assert.equal(row.output,40);assert(Math.abs(row.estimatedCostUsd-1.8)<1e-12);assert.equal(Number(await page.locator('#totalCost .cost-value').getAttribute('data-cost-lower')),1.8);
       const label=await page.locator('#totalCost .cost-value').getAttribute('aria-label');assert(!label.includes('未定价'));assert(label.includes('1.80'));assert.deepEqual(hashes(),before);
       await page.locator('#totalCost').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,first+'-'+scale+'.png')});assert.deepEqual(errors,[]);

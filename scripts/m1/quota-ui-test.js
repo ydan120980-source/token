@@ -7,7 +7,7 @@ const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright');
-const { settle } = require('./ui-settle');
+const { settle, until } = require('./ui-settle');
 const { fixtures } = require('../../tests/m1/fixtures');
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-usage-quota-ui-'));
 (async () => {
@@ -76,7 +76,7 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-usage-quota-ui-')
       await page.locator('#quotaCards article').last().getByRole('button', { name: '刷新', exact: true }).click();
       await page.locator('#quotaCards article').last().getByText('已更新', { exact: true }).waitFor();
       await page.locator('#quotaInterval').selectOption('60000');
-      await page.waitForFunction(async () => (await window.quotaBridge.get()).state.autoRefresh === '1min');
+      await until(page,async () => (await window.quotaBridge.get()).state.autoRefresh === '1min');
       await app.evaluate(() => { const req = process.mainModule.require.bind(process.mainModule); Object.values(req('node:module')._cache).find(m => /[/\\]src[/\\]quota[/\\]service\.js$/.test(m.filename)).exports.QuotaService.prototype.testFixture.mode = 'error'; });
       await page.locator('#quotaRefreshAll').click();
       await page.waitForFunction(() => document.getElementById('quotaSummary').textContent.includes('失败 2'));
