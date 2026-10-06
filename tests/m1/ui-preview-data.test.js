@@ -64,3 +64,19 @@ test('distribution follows an independent disjoint ledger and excludes inconsist
   assert.deepEqual(missing.displayValues, [100, null, 10, 0, null]);
   assert.equal(missing.coverage, 0);
 });
+test('hourly rows cover only the last seven local days, split by local hour, and survive the whitelist', t => {
+  const { Store } = require('../../src/m1/store');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'm1-hourly-')); t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const store = new Store(directory, {}), now = new Date(), base = { agent: 'codex', entry: 'cli', provider: 'openai', model: 'gpt-4.1', quality: 'measured', inputUncached: 90, output: 10, cacheRead: 0, cacheWrite: 0, reasoning: 0, totalTokens: 100 };
+  const at = (days, hour) => { const value = new Date(now); value.setDate(value.getDate() - days); value.setHours(hour, 5, 0, 0); return value.toISOString(); };
+  store.state.records = { a: { ...base, timestamp: at(0, 0) }, b: { ...base, timestamp: at(0, 0), totalTokens: 50, inputUncached: 40 }, c: { ...base, timestamp: at(1, 13) }, d: { ...base, timestamp: at(10, 9) } };
+  store.state.sequence = 1;
+  const snapshot = store.snapshot(), today = snapshot.today;
+  assert.equal(snapshot.daily.reduce((sum, row) => sum + row.totalTokens, 0), 350);
+  assert.deepEqual(snapshot.hourly.map(row => [row.date === today, row.hour, row.totalTokens, row.records]), [[false, 13, 100, 1], [true, 0, 150, 2]]);
+  const selected = selectSnapshot(snapshot);
+  assert.equal(selected.today, today); assert.deepEqual(selected.hourly.map(row => row.hour), [13, 0]);
+  assert.deepEqual(selectSnapshot(selected), selected);
+  assert.throws(() => selectSnapshot({ ...snapshot, hourly: [{ ...snapshot.hourly[0], hour: 24 }] }), /INVALID_USAGE_ROW/);
+  assert.equal(selectSnapshot({ ...snapshot, hourly: undefined }).hourly.length, 0);
+});
