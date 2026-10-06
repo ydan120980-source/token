@@ -96,7 +96,7 @@
   document.addEventListener('close', () => close(),true);
   window.addEventListener('resize', () => close(true)); window.addEventListener('scroll', () => { if (current && window.scrollY !== anchorScroll) close(true); },{passive:true});
   document.addEventListener('visibilitychange', () => { if (document.hidden) close(); });
-  function scan(root=document) { syncAll(); root.querySelectorAll('select:not([data-agent-control]),input[list]').forEach(enhance); }
+  function scan(root=document) { syncAll(); root.querySelectorAll('select:not([data-agent-control]):not([data-custom-control]),input[list]').forEach(enhance); }
   scan();
   window.uiSelect = Object.freeze({ syncAll, close, scan });
 })();

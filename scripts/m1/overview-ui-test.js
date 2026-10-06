@@ -36,7 +36,7 @@ const {settle}=require('./ui-settle');
    const date=await page.locator('#overviewWeek .is-today').getAttribute('data-habit-date');
    await page.locator('#overviewWeek .is-today').click();await settle(page);await page.locator('#dayDetail').scrollIntoViewIfNeeded();
    assert.equal(await page.locator('#dayDetail .model-name').filter({hasText:'模型未记录'}).count(),0);
-   assert.equal(await page.locator('#dayDetail .day-categories').getByText('缓存写入',{exact:true}).count(),0);assert.match(await page.locator('#dayDetail .mix-unreported').textContent(),/缓存写入/);
+   assert.equal(await page.locator('#dayDetail .day-categories .is-unreported').textContent(),'缓存写入未报告');assert.equal(await page.locator('#dayDetail .mix-unreported').count(),0);
    const ledger=JSON.parse(fs.readFileSync(path.join(usage,'statistics.json'),'utf8'));assert.equal(ledger.records[empty.id].totalTokens,0);assert.equal(ledger.records[empty.id].cacheWrite,null);
    await page.screenshot({path:path.join(output,'day-detail-'+scale+'.png')});
    await page.locator('#closeDay').click();await page.locator('#overviewWeek [data-habit-date="'+require('../../design/desktop-reference/usage-math').shift(date,-1)+'"]').click();await settle(page);

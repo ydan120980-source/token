@@ -15,104 +15,78 @@ test('pricing data marks which origins are actually priced and which are estimat
   assert.equal(pricing.scope(row('anthropic', 'claude-sonnet-4-5', { inputUncached: 3, output: 15 }, 'reference-unverified')), 'unverified');
   assert.equal(pricing.scope(row('zai', 'glm-4.6', {}, 'unpriced')), 'unpriced');
   assert.equal(pricing.scope(row('vendor', 'unknown-model', {}, 'brand-new-tier')), 'unpriced');
-  assert.equal(pricing.isOfficial(row('openai', 'gpt-4.1', {}, 'official-thirdparty-unverified')), true);
-  assert.equal(pricing.isOfficial(row('openai', 'gpt-4.1', {}, 'manual')), false);
+  assert.equal(pricing.priced(row('openai', 'gpt-4.1', { inputUncached: 0, output: 0 }, 'manual')), true, 'a documented free tier is priced');
 });
 
-test('pricing data filters and groups without losing or duplicating models', () => {
-  const models = [
-    row('openai', 'gpt-4.1', { inputUncached: 2, output: 8 }, 'official-current-standard'),
-    row('openai', 'gpt-6.1-sol', { inputUncached: 5, output: 30 }, 'official-current-standard'),
-    row('openai', 'mystery', {}, 'unpriced'),
-    row('anthropic', 'claude-sonnet-4-5', { inputUncached: 3, output: 15 }, 'reference-unverified')
-  ];
-  assert.equal(pricing.filter(models, {}).length, 4);
-  assert.equal(pricing.filter(models, { scope: 'priced' }).length, 2);
-  assert.equal(pricing.filter(models, { scope: 'unverified' }).length, 1);
-  assert.equal(pricing.filter(models, { scope: 'unpriced' }).length, 1);
-  assert.equal(pricing.filter(models, { query: 'GPT-4.1' }).length, 1, 'the search is case-insensitive');
-  assert.equal(pricing.filter(models, { query: 'mimo' }).length, 0);
-  const groups = pricing.groups(models, {});
-  assert.deepEqual(groups.map(group => group.provider), ['anthropic', 'openai'], 'providers are ordered and stable');
-  assert.equal(groups.reduce((sum, group) => sum + group.rows.length, 0), 4);
-  const openai = groups.find(group => group.provider === 'openai');
-  assert.equal(openai.unpriced, 1); assert.equal(openai.unverified, 0);
+const usage = {
+  'openai/gpt-4.1': { tokens: 600, pricedTokens: 600, agents: ['codex'], reasons: { exact: 6 } },
+  'route/auto': { tokens: 300, pricedTokens: 0, agents: ['opencode', 'codex'], reasons: { 'model-unpriced': 3 } },
+  'vendor/half': { tokens: 100, pricedTokens: 40, agents: ['mimo'], reasons: { exact: 1, 'usage-incomplete': 1 } }
+};
+const observed = [{ provider: 'vendor', model: 'half', target: 'vendor/half' }, { provider: 'route', model: 'auto', target: null }, { provider: 'openai', model: 'gpt-4.1', target: 'openai/gpt-4.1' }];
+const catalog = [row('openai', 'gpt-4.1', { inputUncached: 2, output: 8, cacheRead: .5, cacheWrite: null }, 'official-current-standard'), row('vendor', 'half', { inputUncached: 1, output: 2, cacheRead: 0, cacheWrite: 0 }, 'manual')];
+
+test('used models join observed identifiers with their price row and weight, heaviest first', () => {
+  const models = pricing.usedModels(observed, catalog, usage, { mappings: { 'route/auto': 'openai/gpt-4.1' } }, { codex: 'Codex', opencode: 'OpenCode' });
+  assert.deepEqual(models.map(item => item.key), ['openai/gpt-4.1', 'route/auto', 'vendor/half']);
+  assert.deepEqual(models[1].agents, ['OpenCode', 'Codex']);
+  assert.equal(models[1].row.origin, 'unpriced', 'an identifier missing from the catalog stays unpriced, never zero');
+  assert.equal(models[1].mapped, true); assert.equal(models[2].manual, true);
+  assert.equal(models[0].share, .6);
+  assert.deepEqual(pricing.usedModels([], catalog, usage, {}, {}), []);
 });
 
-test('pricing gaps report the collected records that fell back, not just absent models', () => {
-  const gaps = pricing.gaps([
-    { provider: 'openai', model: 'gpt-4.1', records: 2, pricingReasons: { exact: 2 } },
-    { provider: 'openai', model: 'ghost', records: 3, pricingReasons: { 'model-unpriced': 3 } },
-    { provider: 'anthropic', model: 'claude-sonnet-4-5', records: 1, pricingReasons: { 'price-unverified': 1, exact: 0 } }
-  ]);
-  assert.equal(gaps.records, 6);
-  assert.deepEqual(gaps.reasons.map(entry => entry.reason), ['model-unpriced', 'price-unverified'], 'largest gap first, exact excluded');
-  assert.equal(gaps.reasons[0].label, '模型 / provider 无规则');
-  assert.deepEqual(gaps.unpriced, [{ key: 'openai/ghost', count: 3 }]);
-  assert.equal(pricing.gaps([]).records, 0);
-});
-
-test('probe text states impact, current basis and the dry-run result', () => {
-  const text = pricing.probeText({ affectedRecords: 12, affectedTokens: 3400, previous: { inputUncached: 2, output: 8 }, origin: 'official-current-standard', sample: { reason: 'exact', lower: 0.0102, upper: 0.0102 } });
-  assert.match(text, /将影响 12 条已保存记录（3,400 token）/);
-  assert.match(text, /当前依据：官方当前 Standard/);
-  assert.match(text, /试算：桶字段已匹配，0.010200 USD/);
-  assert.match(text, /试算不写入任何文件/);
-  assert.match(pricing.probeText({ affectedRecords: 0, affectedTokens: 0, previous: null, origin: 'unpriced', sample: null }), /当前没有已保存记录使用该模型/);
-  assert.equal(pricing.probeText(null), '');
-  // A blocked reason carries a null estimate; Number(null) would print 0.000000.
-  const blocked = pricing.probeText({ affectedRecords: 2, affectedTokens: 2000, previous: { inputUncached: 2, output: 8 }, origin: 'official-current-standard', sample: { reason: 'usage-incomplete', lower: null, upper: null } });
-  assert.match(blocked, /试算：用量字段不完整或冲突，无语义金额/);
-  assert.equal(/0\.000000/.test(blocked), false, 'a blocked probe must not read as a zero-dollar estimate');
+test('only gaps a pricing decision can close become actions; incomplete usage stays informational', () => {
+  const gaps = pricing.pricingGaps(pricing.usedModels(observed, catalog, usage, {}, {}));
+  assert.deepEqual(gaps, [{ key: 'route/auto', tokens: 300, reasons: ['model-unpriced'] }]);
+  const value = pricing.coverage(usage);
+  assert.equal(value.tokens, 1000); assert.equal(value.priced, 640); assert.equal(value.ratio, .64);
+  assert.equal(pricing.coverage({}).ratio, null, 'no usage reports unknown coverage, not 0% or 100%');
+  assert.equal(pricing.REASONS['model-unpriced'], '价格目录中没有此模型');
 });
 
 test('the editor builds a backend-shaped entry and keeps blanks as unknown', () => {
   assert.deepEqual(pricing.entry(' openai ', ' gpt-4.1 ', { inputUncached: '5', output: '8', cacheRead: '', cacheWrite: '0' }),
     { provider: 'openai', model: 'gpt-4.1', inputUncached: 5, output: 8, cacheRead: null, cacheWrite: 0 });
-  assert.equal(pricing.formatRate(null), '未知 / 未单列');
-  assert.equal(pricing.formatRate(0), '0', 'a documented free tier must not look unknown');
 });
 
-test('panel markup keeps every id the UI contract depends on', () => {
+test('panel markup keeps every id the UI contract depends on and no full catalog table', () => {
   const html = view.panelHtml(pricing);
-  for (const id of ['pricingPanel', 'priceSearch', 'priceScope', 'priceRows', 'priceEditor', 'priceForm', 'priceProvider', 'priceModel',
-    'price-inputUncached', 'price-output', 'price-cacheRead', 'price-cacheWrite', 'savePrice', 'resetPrice', 'priceResult', 'priceProbe', 'priceCatalogLine']) {
+  for (const id of ['pricingPanel', 'priceSearch', 'priceRows', 'priceGaps', 'priceAttention', 'priceCoverageValue', 'priceEditor', 'priceForm', 'mappingForm', 'mappingTo', 'unmapPrice', 'priceProvider', 'priceModel',
+    'price-inputUncached', 'price-output', 'price-cacheRead', 'price-cacheWrite', 'savePrice', 'resetPrice', 'priceResult', 'priceProbe', 'priceCatalogLine', 'billingRows', 'saveBilling', 'priceAuto', 'priceSyncNow']) {
     assert.ok(html.includes('id="' + id + '"'), id + ' must exist in the panel');
   }
-  for (const field of pricing.FIELDS) assert.ok(html.includes('id="price-' + field + '"'));
-  assert.equal(html.includes('未定价明细'),false);
-  assert.equal(html.includes('id="pricingGaps"'),false);
+  for (const gone of ['priceScope', 'priceObserved', 'priceMore', 'mappingRows', 'priceTabCatalog', 'mappingFrom']) assert.equal(html.includes('id="' + gone + '"'), false, gone + ' was removed with the catalog table');
   assert.equal(/[<>]script/.test(view.escape('<script>')), false);
   assert.equal(view.escape('a"b<c>&d'), 'a&quot;b&lt;c&gt;&amp;d');
 });
 
-test('rows render provider groups, known/unknown rates and only manual reset buttons', () => {
-  const models = [
-    row('openai', 'gpt-4.1', { inputUncached: 2, output: 8, cacheRead: null, cacheWrite: null }, 'official-current-standard'),
-    row('openai', 'manual-model', { inputUncached: 5, output: 9, cacheRead: 0, cacheWrite: 0 }, 'manual'),
-    row('openai', 'ghost', {}, 'unpriced')
-  ];
-  const html = view.rowsHtml(pricing.groups(models, {}), {}, pricing);
-  assert.match(html, /data-edit-price="openai\/gpt-4\.1"/);
-  assert.match(html, /data-edit-price="openai\/manual-model"/);
-  assert.match(html, /data-reset-price="openai\/manual-model"/);
-  assert.equal(/data-reset-price="openai\/gpt-4\.1"/.test(html), false, 'a catalog price cannot be reset like a manual rule');
-  assert.match(html, /未知 \/ 未单列/);
-  assert.match(html, /3 个模型 · 未定价 1/);
-  assert.match(view.rowsHtml([], { empty: '没有匹配的模型。' }, pricing), /没有匹配的模型/);
+test('used-model rows show billing basis, known/unknown rates and reset only for manual rules', () => {
+  const models = pricing.usedModels(observed, catalog, usage, {}, {});
+  const html = view.rowsHtml(models, {}, pricing);
+  for (const key of ['openai/gpt-4.1', 'route/auto', 'vendor/half']) assert.ok(html.includes('data-edit-price="' + key + '"'), key);
+  assert.ok(html.includes('data-reset-price="vendor/half"'));
+  assert.equal(html.includes('data-reset-price="openai/gpt-4.1"'), false, 'a catalog price cannot be reset like a manual rule');
+  assert.ok(html.includes('$2<i> · </i>$8<i> · </i>$0.5<i> · </i>—'), 'an unknown write rate shows as unknown, not $0');
+  assert.ok(html.includes('$1<i> · </i>$2<i> · </i>$0<i> · </i>$0'), 'a documented free rate shows as $0');
+  assert.ok(html.includes('pc-rates is-empty">未定价'));
+  assert.match(view.rowsHtml([], { empty: '没有匹配的已用模型。' }, pricing), /没有匹配的已用模型/);
+  const routed = view.rowsHtml([{ ...models[0], key: 'route/auto', model: 'auto', provider: 'route', target: 'openai/gpt-4.1' }], {}, pricing);
+  assert.ok(routed.includes('按 openai/gpt-4.1'));
 });
 
-test('catalog and gap lines expose version drift and never fabricate coverage', () => {
-  const data = { version: 'official-review-2026-10-04', obtainedAt: '2026-10-03T14:11:58.758Z', sha256: 'abcdef0123456789', overrideSha256: '99887766aabbccdd', counts: { models: 100, priced: 94, unpriced: 3, manual: 3 } };
-  const line = view.catalogLine(data, [], pricing);
-  assert.match(line, /official-review-2026-10-04/);
-  assert.match(line, /abcdef0123/);
-  assert.match(line, /模型 100 · 已定价 94 · 未定价 3 · 手动 3/);
-  assert.equal(view.catalogLine(null, [], pricing), '');
-  assert.equal(view.countsText(data, []), '94 / 100 已定价');
-  assert.match(view.gapsHtml({ records: 0, reasons: [], unpriced: [] }, pricing), /没有已保存记录/);
-  assert.match(view.gapsHtml({ records: 9, reasons: [{ reason: 'price-unverified', label: '参考费率未核实 · 不计入估算', count: 9 }], unpriced: [] }, pricing), /全部按当前规则计价|缺口/);
-  assert.match(view.gapsHtml({ records: 9, reasons: [{ reason: 'model-unpriced', label: '模型 / provider 无规则', count: 9 }], unpriced: [{ key: 'openai/ghost', count: 9 }] }, pricing), /data-edit-price="openai\/ghost"/);
+test('gap actions, catalog provenance and counts never fabricate coverage', () => {
+  const gaps = [{ key: 'route/auto', tokens: 3e6, reasons: ['model-unpriced'] }];
+  assert.ok(view.gapsHtml(gaps, pricing).includes('data-edit-price="route/auto"'));
+  assert.ok(view.gapsHtml(gaps, pricing).includes('价格目录中没有此模型 · 未定价 3.0M Token'));
+  assert.equal(view.gapsHtml([], pricing), '');
+  const data = { version: 'official-review-2026-10-04+models-dev/1', obtainedAt: '2026-10-03T14:11:58.758Z', sha256: 'abcdef0123456789', overrideSha256: '99887766aabbccdd', counts: { models: 100 } };
+  assert.match(view.catalogLine(data, pricing), /models\.dev 与官方价目 · 更新于 .* · 100 个模型/);
+  assert.equal(/abcdef/.test(view.catalogLine(data, pricing)), false, 'digests stay out of the sentence');
+  assert.match(view.catalogTitle(data), /目录 abcdef0123 · 手动规则 99887766aa/);
+  assert.equal(view.catalogLine(null, pricing), '');
+  assert.equal(view.countsText([{}, {}], gaps), '2 个已用模型 · 1 个待处理');
+  assert.equal(view.countsText([{}], []), '1 个已用模型 · 全部已定价');
 });
 
 test('template options only offer usable catalog and manual prices', () => {
@@ -121,14 +95,12 @@ test('template options only offer usable catalog and manual prices', () => {
     row('openai', 'manual-model', { inputUncached: 5, output: 9 }, 'manual'),
     row('anthropic', 'claude-sonnet-4-5', { inputUncached: 3, output: 15 }, 'reference-unverified')
   ];
-  const options = view.templateOptions(models, 'openai/gpt-4.1', pricing);
+  const options = view.templateOptions(models, 'openai/gpt-4.1');
   assert.match(options.html, /value="openai\/gpt-4\.1"/);
   assert.match(options.html, /value="openai\/manual-model"/);
   assert.equal(/reference-unverified|claude-sonnet/.test(options.html), false, 'an unverified price is not a template');
   assert.equal(options.selected, 'openai/gpt-4.1');
-  assert.equal(view.templateOptions(models, 'openai/dropped-model', pricing).selected, '', 'a dropped model cannot stay selected');
-  assert.equal(view.filterResult(4, 4), '4 个模型');
-  assert.equal(view.filterResult(1, 4), '筛选后 1 / 4 个模型');
+  assert.equal(view.templateOptions(models, 'openai/dropped-model').selected, '', 'a dropped model cannot stay selected');
 });
 
 test('every script and stylesheet the page loads is served by the design server', () => {
@@ -145,7 +117,7 @@ test('every script and stylesheet the page loads is served by the design server'
   assert.ok(dynamic, 'usage-data.js must stay served by the bootstrap route');
   assert.ok(referenced.length > 5);
   for (const file of referenced) assert.ok(listed.includes(file), file + ' must be in the serve.js whitelist');
-  for (const file of ['pricing-data.js', 'pricing-view.js', 'pricing-controller.js', 'codex-maintenance.js', 'maintenance-ui.js']) {
+  for (const file of ['pricing-data.js', 'pricing-view.js', 'pricing-controller.js', 'codex-maintenance.js', 'maintenance-ui.js', 'segmented.js', 'date-range.js']) {
     assert.ok(fs.existsSync(path.join(DESIGN, file)), file + ' must exist');
     assert.ok(listed.includes(file), file + ' must be served');
   }

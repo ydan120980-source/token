@@ -83,6 +83,33 @@ for (let offset = 0; !realData && !bootstrapFailed && offset < 181; offset++) {
   }
 }
 if (realData) templates.push(...localSnapshot.daily);
+// Hourly rows exist for the last seven local days; a single-day trend plots them by hour.
+const hourlyTemplates = [];
+function currentHour() { return Number(new Intl.DateTimeFormat('en-GB', { timeZone: realData ? localSnapshot.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date())); }
+function hourlyReady(date) { return date >= shift(today, -6) && date <= today && (!realData || Array.isArray(localSnapshot.hourly)); }
+function loadHourly() {
+  hourlyTemplates.length = 0;
+  if (realData) { hourlyTemplates.push(...(localSnapshot.hourly || [])); return; }
+  // Synthetic demo: split each recent day across working hours, exact to the token.
+  const fields = ['totalTokens', 'inputUncached', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'records', 'estimatedCostUsd', 'estimatedCostUpperUsd', 'pricedTokens', 'boundedTokens'];
+  for (const row of templates) {
+    if (row.date < shift(today, -6)) continue;
+    const last = row.date === today ? currentHour() : 23, hours = [9, 10, 11, 14, 15, 16, 17, 20, 21, 22].filter(hour => hour <= last);
+    if (!hours.length) hours.push(last);
+    const weights = hours.map((hour, i) => 1 + (hour * 7 + i * 3 + row.totalTokens) % 5), weight = weights.reduce((a, b) => a + b, 0);
+    const parts = hours.map(hour => ({ ...row, hour }));
+    for (const field of fields) {
+      if (row[field] === null || row[field] === undefined) continue;
+      const exact = Number.isInteger(row[field]); let used = 0;
+      parts.forEach((part, i) => { const value = i === parts.length - 1 ? row[field] - used : exact ? Math.floor(row[field] * weights[i] / weight) : row[field] * weights[i] / weight; part[field] = value; used += value; });
+    }
+    hourlyTemplates.push(...parts);
+  }
+}
+loadHourly();
+function hourlyData() { return !realData && $('demoState').value === 'empty' ? [] : hourlyTemplates; }
+const pad = hour => String(hour).padStart(2, '0');
+let trendHourly = false;
 function displayModel(model) { return model === 'unknown' ? '模型未记录' : model; }
 function modelColor(model) { let hash = 0; for (const c of model) hash = (hash * 31 + c.charCodeAt(0)) >>> 0; return ['#5d8dcc', '#599981', '#c18b53', '#bd796a', '#9172b2', '#57a2b4', '#af8e41', '#888fac', '#a1778f', '#72964a'][hash % 10]; }
 function entryName(rows) { const entries = new Set(rows.map(r => r.entry)); return entries.size !== 1 ? '多个入口' : ({ desktop: 'Desktop', cli: 'CLI', sdk: 'SDK', export: '用量导出', harness: 'Harness', unknown: '入口未知' }[[...entries][0]] || '入口未知'); }
@@ -111,15 +138,15 @@ function mixHtml(rows) {
     short(m.values[i]) +
     '"></span>').join('') : '') +
     '</div><div class="mix-legend">' +
-    categories.map(([, label], i) => m.displayValues[i] === null ? '' : '<span><i class="swatch" style="background:' +
+    categories.map(([, label], i) => m.displayValues[i] === null ? '<span class="is-unreported" title="这些记录没有报告' + label + '"><i class="swatch"></i>' + label + '<b>未报告</b></span>' : '<span><i class="swatch" style="background:' +
     categoryColor(i) +
     '"></i>' +
     label +
     '<b>' +
-    (m.partialValues[i] && m.displayValues[i] !== null ? '≥ ' : '') +
+    (m.partialValues[i] ? '≥ ' : '') +
     short(m.displayValues[i]) +
     '</b></span>').join('') +
-    '</div>' + (m.displayValues.some(v => v === null) ? '<p class="mix-unreported">未报告：' + categories.filter((_, i) => m.displayValues[i] === null).map(([, label]) => label).join('、') + '</p>' : '');
+    '</div>';
 }
 function clientHtml(rows, detail = false) {
   if (!rows.length) return '<p class="empty-message">此日暂无用量记录。</p>';
@@ -148,15 +175,7 @@ function clientHtml(rows, detail = false) {
         (detail ? '<span class="model-cost">' +
         costHtml(g, displayModel(model) +
         ' 估算') +
-        '</span></div><p class="model-line">输入 ' +
-        short(group.some(r => r.inputUncached === null) ? null : sum(group, 'inputUncached')) +
-        ' · 输出 ' +
-        short(group.some(r => r.output === null) ? null : sum(group, 'output')) +
-        '（含推理） · 缓存读取 ' +
-        short(group.some(r => r.cacheRead === null) ? null : sum(group, 'cacheRead')) +
-        ' · 推理 ' +
-        short(group.some(r => r.reasoning === null) ? null : sum(group, 'reasoning')) +
-        '</p>' : '<div class="share-line"><span style="width:' +
+        '</span></div>' + modelMetrics(group) : '<div class="share-line"><span style="width:' +
         (totals.total ? g.total / totals.total * 100 : 0) +
         '%"></span></div><span class="share">' +
         (totals.total ? g.total / totals.total * 100 : 0).toFixed(0) +
@@ -165,6 +184,11 @@ function clientHtml(rows, detail = false) {
         '</span></div>');
     }).join('') + '</div>';
   }).join('');
+}
+// Same disjoint buckets as the category tiles above, so the two never disagree.
+function modelMetrics(group) {
+  const m = mix(group);
+  return '<p class="model-metrics">' + categories.map(([, label], i) => '<span' + (m.displayValues[i] === null ? ' class="is-unreported"' : '') + '>' + label.replace(/（.*）/, '') + (i === 1 ? '<em>不含推理</em>' : '') + ' <b>' + (m.displayValues[i] === null ? '未报告' : (m.partialValues[i] ? '≥ ' : '') + short(m.displayValues[i])) + '</b></span>').join('') + '</p>';
 }
 function filterRows(rows) { const agent = $('agentFilter').value, source = $('sourceFilter').value, model = $('modelFilter').value; return rows.filter(r => (agent === 'all' || r.agent === agent) && (source === 'all' || (r.provider || 'unknown') === source) && (model === 'all' || r.model === model)); }
 function rangeStart() { return window.usageMath.startFor(today, period, coverageStart); }
@@ -242,19 +266,16 @@ function renderHeat(rows) {
   const months = []; for (let i = 0; i < monthCount; i++) { const date = new Date(firstMonth); date.setUTCMonth(date.getUTCMonth() + i); months.push((date.getUTCMonth() + 1) + '月'); }
   const columns = Math.ceil((allDates.length + leading) / 7);
   $('heatmap').style.setProperty('--heat-columns', String(columns));
-  const monthLabels = new Map();
-  months.forEach((m, i) => { const month = new Date(firstMonth); month.setUTCMonth(month.getUTCMonth() +
-    i); const key = month.toISOString().slice(0, 7); const first = allDates.findIndex(d => d.startsWith(key)); const column = Math.max(1, Math.floor(((first < 0 ? 0 : first) +
-    leading) / 7) +
-    1); monthLabels.set(column, '<span style="grid-column:' +
-    column +
-    ' / span ' +
-    Math.min(4, columns - column +
-    1) +
-    '">' +
-    m +
-    '</span>'); });
-  $('heatMonths').innerHTML = [...monthLabels.values()].join('');
+  // Each label spans to the next month's column. A partial first month too
+  // narrow for its label is dropped; a partial current month borrows one column.
+  const labels = [];
+  months.forEach((text, i) => { const month = new Date(firstMonth); month.setUTCMonth(month.getUTCMonth() + i); const first = allDates.findIndex(d => d.startsWith(month.toISOString().slice(0, 7)));
+    const column = Math.max(1, Math.floor(((first < 0 ? 0 : first) + leading) / 7) + 1); if (labels.at(-1)?.column === column) labels.pop(); labels.push({ text, column }); });
+  labels.forEach((label, i) => { label.span = (labels[i + 1]?.column ?? columns + 1) - label.column; });
+  if (labels.length > 1 && labels[0].span < 2) labels.shift();
+  const last = labels.at(-1);
+  if (last && last.span < 2 && labels.length > 1) { last.column = Math.max(1, columns - 1); last.span = columns + 1 - last.column; const previous = labels.at(-2); previous.span = last.column - previous.column; if (previous.span < 2) labels.splice(-2, 1); }
+  $('heatMonths').innerHTML = labels.map(label => '<span style="grid-column:' + label.column + ' / span ' + Math.max(1, label.span) + '">' + label.text + '</span>').join('');
   $('heatMonths').style.gridTemplateColumns = 'repeat(' + columns + ',minmax(10px,16px))';
   $('heatMonths').hidden = false;
   $('heatActive').textContent = [...daily].filter(([d, value]) => d >= start && d <= today && value > 0).length + ' 个活跃日';
@@ -285,13 +306,13 @@ function renderDay(rows) {
   $('dayDetail').dataset.date = selectedDay;
   const subset = filterRows(rows).filter(r => r.date === selectedDay), a = aggregate(subset), observed = realData ? rows.some(r => r.date === selectedDay) : selectedDay >= coverageStart && rows.length > 0, m = mix(subset);
   const dayCategories = '<h4 class="day-subtitle">Token 分类</h4><div class="day-categories">' +
-    categories.map(([, label], i) => subset.length && m.displayValues[i] === null ? '' : '<div><small>' +
+    categories.map(([, label], i) => subset.length && m.displayValues[i] === null ? '<div class="is-unreported" title="这一天的记录没有报告' + label + '，不按零计算"><small>' + label + '</small><b>未报告</b></div>' : '<div><small>' +
     label +
     '</small><b>' +
     (subset.length ? (m.partialValues[i] && m.displayValues[i] !== null ? '≥ ' : '') +
     short(m.displayValues[i]) : '—') +
     '</b></div>').join('') +
-    '</div>' + (subset.length && m.displayValues.some(v => v === null) ? '<p class="mix-unreported">未报告：' + categories.filter((_, i) => m.displayValues[i] === null).map(([, label]) => label).join('、') + '</p>' : '') + '<h4 class="day-subtitle">Agent 与模型</h4>';
+    '</div><h4 class="day-subtitle">Agent 与模型</h4>';
   $('dayDetail').innerHTML = '<header><div><span class="eyebrow">当日明细</span><h3>' +
     selectedDay +
     '</h3></div><button id="closeDay" class="icon-button" aria-label="关闭当日明细">' +
@@ -323,6 +344,7 @@ trendTooltip.setAttribute('role', 'tooltip'); trendTooltip.setAttribute('aria-la
 $('trendCanvas').parentElement.append(trendTooltip);
 $('trendCanvas').parentElement.addEventListener('pointerleave', () => { trendTooltip.hidden = true; if(trendChart){trendChart.$hoverIndex=null;trendChart.draw();} });
 window.addEventListener('scroll', () => { trendTooltip.hidden = true; }, { passive: true });
+function bucketTitle(b) { return !b ? '' : b.hour !== undefined ? b.start.slice(5) + ' ' + pad(b.hour) + ':00 – ' + pad(b.hour + 1) + ':00' : b.start === b.end ? b.start : b.start + ' 至 ' + b.end; }
 function renderTrendTooltip({ chart, tooltip }) {
   if (tooltip.opacity === 0) { trendTooltip.hidden = true; return; }
   const index=chart.$hoverIndex??tooltip.dataPoints?.[0]?.dataIndex, bucket=trendBuckets[index];
@@ -333,7 +355,7 @@ function renderTrendTooltip({ chart, tooltip }) {
   const costPoint = metric==='tokens' ? points.find(point=>point.unit==='cost') : null;
   const value = number => metric === 'cost' ? money(number) : short(number) + ' token';
   trendTooltip.innerHTML = '<div class="chart-tooltip-heading"><strong>' +
-    escapeHtml((()=>{const b=bucket;return b?b.start===b.end?b.start:b.start+' 至 '+b.end:tooltip.title?.[0]||'';})()) +
+    escapeHtml(bucketTitle(bucket)||tooltip.title?.[0]||'') +
     '</strong><span>' +
     (missing?'未记录':summary.total===null?'数值未知':'合计 '+value(summary.total)) +
     '</span></div><div class="chart-tooltip-list">' +
@@ -345,7 +367,7 @@ function renderTrendTooltip({ chart, tooltip }) {
     value(point.value) +
     '</b></div>').join('') +
     (costPoint && !missing?'<div class="chart-tooltip-row"><i style="background:'+costPoint.color+'"></i><span>已定价估算</span><b>'+money(costPoint.value)+'</b></div>':'') +
-    (summary.entries.length ? '' : '<p>'+(missing?'此日期没有记录，淡线仅连接前后记录。':summary.total===null?'记录存在，但用量或价格未报告。':'此日期的已记录值为零。')+'</p>') +
+    (summary.entries.length ? '' : '<p>'+(missing?'此日期没有记录，淡线仅连接前后记录。':summary.total===null?'记录存在，但用量或价格未报告。':(trendHourly?'此时段没有用量记录。':'此日期的已记录值为零。'))+'</p>') +
     '</div><div class="chart-tooltip-note">' +
     (summary.entries.length > 6 ? '另有 ' + (summary.entries.length - 6) + ' 个模型，可在模型明细查看；' : '') +
     (summary.zeroCount ? summary.zeroCount +
@@ -353,10 +375,10 @@ function renderTrendTooltip({ chart, tooltip }) {
     (summary.unknownCount ? summary.unknownCount +
     ' 个值未知；' : '') +
     (partial?'当前聚合含未记录日期；':'') +
-    ($('display').value === 'total' ? '当前区间累计值' : $('display').value === 'average' ? '30 日平均值' : '每日记录值') +
+    ($('display').value === 'total' ? '当前区间累计值' : trendHourly ? '每小时记录值 · 本地时间' : $('display').value === 'average' ? '30 日平均值' : '每日记录值') +
     (metric === 'cost' ? ' · 已定价部分' : '') +
     '</div>';
-  if(missing)trendTooltip.innerHTML='<div class="chart-tooltip-heading"><strong>'+escapeHtml(bucket.start===bucket.end?bucket.start:bucket.start+' 至 '+bucket.end)+'</strong><span>未记录</span></div><p>淡线仅连接前后记录，没有此日期的用量数值。</p>';
+  if(missing)trendTooltip.innerHTML='<div class="chart-tooltip-heading"><strong>'+escapeHtml(bucketTitle(bucket))+'</strong><span>未记录</span></div><p>淡线仅连接前后记录，没有此日期的用量数值。</p>';
   const entering = trendTooltip.hidden; trendTooltip.hidden = false; if (entering) window.uiMotion.enter(trendTooltip, 'tooltip');
   const plot = chart.canvas.parentElement, point = { x: chart.canvas.offsetLeft + tooltip.caretX, y: chart.canvas.offsetTop + tooltip.caretY };
   const position = window.chartUi.positionTooltip({ width: plot.clientWidth, height: plot.clientHeight }, { width: trendTooltip.offsetWidth, height: trendTooltip.offsetHeight }, point);
@@ -385,28 +407,36 @@ function renderTrend(rows) {
   const byModel = [...weights].sort((a,b)=>b[1]-a[1]).map(([model])=>model);
   const series = window.usageMath.seriesByModel($('display').value==='total'?subset:grouped,byModel,chronological,$('display').value,metric,coverageStart,realData?new Set(rows.map(r=>r.date)):null);
   const add = lists => chronological.map((_,i)=>{const known=lists.map(v=>v[i]).filter(Number.isFinite);return known.length?known.reduce((s,v)=>s+v,0):null;});
-  const total = add([...series.values()]);
-  let selected = trendMode==='models' ? byModel.slice(0,5).map(model=>({key:model,label:displayModel(model),values:series.get(model),color:modelColor(model)})) : [{key:'total',label:metric==='cost'?'已定价估算':'总量',values:total,color:document.body.classList.contains('dark')?'#9aabff':'#796be7',unit:metric}];
+  // One local day plots by hour: hours without records are zero, a recorded
+  // hour whose field is unreported stays unknown, exactly like daily buckets.
+  const hourly = trendHourly = start === end && hourlyReady(start);
+  const hours = hourly ? Array.from({length:(start===today?currentHour():23)+1},(_,hour)=>hour) : [];
+  const hourRows = hourly ? filterRows(hourlyData()).filter(r=>r.date===start) : [];
+  const perHour = (pick, keep = () => true) => { let running = 0, known = false; return hours.map(hour => { const items = hourRows.filter(r=>r.hour===hour&&keep(r)), values = items.map(pick).filter(Number.isFinite), value = items.length && !values.length ? null : values.reduce((s,v)=>s+v,0); if ($('display').value !== 'total') return value; if (value !== null) { running += value; known = true; } return known || metric !== 'cost' ? running : null; }); };
+  const pick = r => metric==='cost' ? r.estimatedCostUsd : r.totalTokens;
+  const total = hourly ? perHour(pick) : add([...series.values()]);
+  const modelValues = model => hourly ? perHour(pick, r=>r.model===model) : series.get(model);
+  let selected = trendMode==='models' ? byModel.slice(0,5).map(model=>({key:model,label:displayModel(model),values:modelValues(model),color:modelColor(model)})) : [{key:'total',label:metric==='cost'?'已定价估算':'总量',values:total,color:document.body.classList.contains('dark')?'#9aabff':'#796be7',unit:metric}];
   if (trendMode==='flow' && metric==='tokens') {
     const fields=[['inputUncached','输入','#5998e0'],['output','输出（含推理）','#63ad95'],['cacheRead','缓存读取','#9575df'],['cacheWrite','缓存写入','#d9ab59']];
-    selected=fields.map(([field,label,color])=>({key:field,label,color,unit:'tokens',values:window.usageMath.seriesByModel(($('display').value==='total'?subset:grouped).map(r=>({...r,model:field,estimatedCostUsd:r[field]??null})),[field],chronological,$('display').value,'cost',coverageStart,realData?new Set(rows.map(r=>r.date)):null).get(field)}));
-    const costs=window.usageMath.seriesByModel(($('display').value==='total'?subset:grouped).map(r=>({...r,model:'cost'})),['cost'],chronological,$('display').value,'cost',coverageStart,realData?new Set(rows.map(r=>r.date)):null).get('cost');
+    selected=fields.map(([field,label,color])=>({key:field,label,color,unit:'tokens',values:hourly?perHour(r=>r[field]):window.usageMath.seriesByModel(($('display').value==='total'?subset:grouped).map(r=>({...r,model:field,estimatedCostUsd:r[field]??null})),[field],chronological,$('display').value,'cost',coverageStart,realData?new Set(rows.map(r=>r.date)):null).get(field)}));
+    const costs=hourly?perHour(r=>r.estimatedCostUsd):window.usageMath.seriesByModel(($('display').value==='total'?subset:grouped).map(r=>({...r,model:'cost'})),['cost'],chronological,$('display').value,'cost',coverageStart,realData?new Set(rows.map(r=>r.date)):null).get('cost');
     selected.push({key:'cost',label:'估算费用',color:'#dd7b84',unit:'cost',values:costs});
   }
-  if (trendMode==='models' && byModel.length>5) selected.push({key:'other',label:'其他 '+(byModel.length-5)+' 个模型',values:add(byModel.slice(5).map(m=>series.get(m))),color:'#a3abb8'});
-  const bucket = values => window.chartUi.bucketSeries(chronological,values,grain,$('display').value);
+  if (trendMode==='models' && byModel.length>5) selected.push({key:'other',label:'其他 '+(byModel.length-5)+' 个模型',values:hourly?perHour(pick,r=>!byModel.slice(0,5).includes(r.model)):add(byModel.slice(5).map(m=>series.get(m))),color:'#a3abb8'});
+  const bucket = hourly ? values => hours.map((hour,i)=>({label:pad(hour)+':00',start,end,hour,value:values[i],partial:false})) : values => window.chartUi.bucketSeries(chronological,values,grain,$('display').value);
   trendBuckets = bucket(total); if($('newest').checked) trendBuckets.reverse();
   keyboardTrendIndex = Math.max(0,Math.min(keyboardTrendIndex,trendBuckets.length-1));
-  const dayList = trendBuckets.map(b=>b.start), theme=colors();
+  const dayList = trendBuckets.map(b=>hourly?b.label:b.start), theme=colors();
   const observedDates=new Set(rows.map(row=>row.date));
-  const datasets = selected.map(entry=>{const buckets=bucket(entry.values);if($('newest').checked)buckets.reverse();const values=buckets.map(b=>b.value),blocked=window.chartUi.gapPlan(buckets,values,observedDates,coverageStart,$('display').value);
+  const datasets = selected.map(entry=>{const buckets=bucket(entry.values);if($('newest').checked)buckets.reverse();const values=buckets.map(b=>b.value),blocked=hourly?values.reduce((list,v)=>(list.push(list.at(-1)+Number(!Number.isFinite(v))),list),[0]):window.chartUi.gapPlan(buckets,values,observedDates,coverageStart,$('display').value);
     const kind=context=>window.chartUi.segmentKind(context.p0DataIndex,context.p1DataIndex,blocked,values);
     const secondary=metric==='tokens'&&entry.unit==='cost';return {label:entry.label,usageMetric:entry.unit||metric,yAxisID:secondary?'yCost':'y',data:values,usageBuckets:buckets,borderColor:entry.color,borderDash:secondary?[5,5]:[],backgroundColor:context=>{const area=context.chart.chartArea;if(!area)return entry.color+'20';const fill=context.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);fill.addColorStop(0,entry.color+(trendMode==='total'?'40':'24'));fill.addColorStop(1,entry.color+'00');return fill;},borderWidth:secondary?2:2.4,fill:secondary?false:'origin',pointRadius:dayList.length===1?4:0,pointHoverRadius:5,pointHoverBorderWidth:2,pointHoverBackgroundColor:entry.color,cubicInterpolationMode:'monotone',tension:.35,spanGaps:true,segment:{borderColor:context=>kind(context)==='unknown'?'transparent':kind(context)==='bridge'?entry.color+'66':entry.color,borderDash:context=>kind(context)==='bridge'?[2,4]:secondary?[5,5]:[],backgroundColor:context=>kind(context)==='recorded'?undefined:'transparent'}};});
   trendTooltip.hidden=true;if(trendChart)trendChart.$hoverIndex=null;
   const crosshair={id:'usageCrosshair',afterDraw(chart){const active=chart.tooltip?.getActiveElements();if(chart.$hoverIndex==null&&!active?.length)return;const x=chart.$hoverIndex!=null?chart.scales.x.getPixelForValue(chart.$hoverIndex):active[0].element.x,{ctx,chartArea:area}=chart;ctx.save();ctx.strokeStyle=theme.text+'66';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x,area.top);ctx.lineTo(x,area.bottom);ctx.stroke();ctx.restore();}};
   const gapHover={id:'gapHover',afterEvent(chart,args){const event=args.event,a=chart.chartArea;if(event.type==='mouseout'){chart.$hoverIndex=null;return;}if(event.type!=='mousemove'||event.x<a.left||event.x>a.right||event.y<a.top||event.y>a.bottom)return;const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(chart.scales.x.getValueForPixel(event.x))));chart.$hoverIndex=index;const active=chart.data.datasets.flatMap((d,i)=>chart.isDatasetVisible(i)&&Number.isFinite(d.data[index])?[{datasetIndex:i,index}]:[]);chart.setActiveElements(active);chart.tooltip.setActiveElements(active,{x:event.x,y:event.y});args.changed=true;renderTrendTooltip({chart,tooltip:{opacity:1,caretX:event.x,caretY:event.y,dataPoints:[{dataIndex:index}]}});}};
   const animation=window.uiMotion.mode==='full'?{duration:650,easing:'easeOutQuart'}:false;
-  const config={type:'line',data:{labels:dayList,datasets},plugins:[crosshair,curveReveal,gapHover],options:{animation,responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},onClick:(event)=>{if(trendDragged)return;const area=trendChart.chartArea;if(event.x>=area.left&&event.x<=area.right&&event.y>=area.top&&event.y<=area.bottom){const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(trendChart.scales.x.getValueForPixel(event.x)))),b=trendBuckets[index];if(grain==='day')goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}}},plugins:{legend:{display:false},tooltip:{enabled:false,external:renderTrendTooltip}},scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8,color:theme.text,font:{size:12},callback:(_v,i)=>dayList[i]?.slice(5)}},y:{beginAtZero:true,grid:{color:theme.grid+'90',lineWidth:1},border:{display:false},ticks:{maxTicksLimit:5,color:theme.text,font:{size:12},callback:v=>metric==='cost'?'$'+v:short(v)}},yCost:{display:metric==='tokens'&&trendMode==='flow',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},border:{display:false},ticks:{maxTicksLimit:5,color:'#c8757e',font:{size:12},callback:v=>'$'+v}}}}};
+  const config={type:'line',data:{labels:dayList,datasets},plugins:[crosshair,curveReveal,gapHover],options:{animation,responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},onClick:(event)=>{if(trendDragged)return;const area=trendChart.chartArea;if(event.x>=area.left&&event.x<=area.right&&event.y>=area.top&&event.y<=area.bottom){const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(trendChart.scales.x.getValueForPixel(event.x)))),b=trendBuckets[index];if(grain==='day'||hourly)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}}},plugins:{legend:{display:false},tooltip:{enabled:false,external:renderTrendTooltip}},scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8,color:theme.text,font:{size:12},callback:(_v,i)=>hourly?dayList[i]:dayList[i]?.slice(5)}},y:{beginAtZero:true,grid:{color:theme.grid+'90',lineWidth:1},border:{display:false},ticks:{maxTicksLimit:5,color:theme.text,font:{size:12},callback:v=>metric==='cost'?'$'+v:short(v)}},yCost:{display:metric==='tokens'&&trendMode==='flow',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},border:{display:false},ticks:{maxTicksLimit:5,color:'#c8757e',font:{size:12},callback:v=>'$'+v}}}}};
   for(let i=0;i<datasets.length;i++) datasets[i].usageKey=selected[i].key;
   if(trendChart){
     // Keep both the chart and matching datasets: Chart.js retains presented
@@ -423,23 +453,24 @@ function renderTrend(rows) {
   $('trendScope').textContent = ($('agentFilter').value === 'all' ? '全部 Agent' : agents[$('agentFilter').value].name) + ' · ' + (trendRange ? '自定义范围 · 仅此图' : period === 'all' ? '累计用量' : period === 'today' ? '今日用量' : '最近 ' + period + ' 天用量');
   $('trendTotal').innerHTML=subset.length?metric==='cost'?costHtml(a,'区间估算'):short(a.total):'—';
   window.uiDetail.number(metric==='cost'?$('trendTotal').querySelector('.cost-lower'):$('trendTotal'),'trend-'+metric,subset.length?metric==='cost'?a.cost:a.total:null,v=>v===null?'—':metric==='cost'?window.displayValues.usd(v):short(Math.round(v)));
-  const dayTotals=new Map();for(const row of subset){const v=metric==='cost'?row.estimatedCostUsd:row.totalTokens;if(Number.isFinite(v))dayTotals.set(row.date,(dayTotals.get(row.date)||0)+v);}
-  const peak=[...dayTotals].sort((a,b)=>b[1]-a[1])[0],format=v=>metric==='cost'?window.displayValues.usd(v):short(Math.round(v));
-  $('trendAverage').textContent=dayTotals.size?format([...dayTotals.values()].reduce((s,v)=>s+v,0)/dayTotals.size):'—';
-  $('trendPeak').textContent=peak?format(peak[1])+' · '+peak[0].slice(5):'—';$('trendPeak').disabled=!peak;$('trendPeak').dataset.habitDate=peak?.[0]||'';
-  $('trendActive').textContent=[...new Set(subset.filter(r=>r.totalTokens>0).map(r=>r.date))].length+' 天';
+  // Facts follow the plotted unit: recorded days, or active hours of one day.
+  const unitTotals=new Map();for(const row of hourly?hourRows:subset){const v=pick(row);if(Number.isFinite(v)){const key=hourly?row.hour:row.date;unitTotals.set(key,(unitTotals.get(key)||0)+v);}}
+  const peak=[...unitTotals].sort((a,b)=>b[1]-a[1])[0],format=v=>metric==='cost'?window.displayValues.usd(v):short(Math.round(v));
+  const [averageLabel,peakLabel,activeLabel]=document.querySelectorAll('.trend-insights span');
+  averageLabel.textContent=hourly?'活跃小时均值':'已记录日均';peakLabel.textContent=hourly?'峰值时段':'峰值日';activeLabel.textContent=hourly?'活跃小时':'活跃天数';
+  $('trendAverage').textContent=unitTotals.size?format([...unitTotals.values()].reduce((s,v)=>s+v,0)/unitTotals.size):'—';
+  $('trendPeak').textContent=peak?format(peak[1])+' · '+(hourly?pad(peak[0])+':00':peak[0].slice(5)):'—';$('trendPeak').disabled=!peak;$('trendPeak').dataset.habitDate=peak?hourly?start:peak[0]:'';
+  $('trendActive').textContent=new Set((hourly?hourRows:subset).filter(r=>r.totalTokens>0).map(r=>hourly?r.hour:r.date)).size+(hourly?' 小时':' 天');
   $('trendFrom').value=start;$('trendTo').value=end;$('trendRangeReset').hidden=!trendRange;
-  $('trendRangeButton').textContent=trendRange?start.slice(5)+' – '+end.slice(5):period==='all'?'累计':period==='today'?'今天':'最近 '+period+' 天';$('trendRangeButton').title=start+' 至 '+end;
-  $('trendNote').hidden=false;$('trendNote').textContent=(grain==='week'?'按周':grain==='month'?'按月':'按日')+($('display').value==='average'?' · 30 日均值':$('display').value==='total'?' · 区间累计':' · 已记录用量')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+' · 淡线连接未记录日期';
+  $('trendRangeLabel').textContent=trendRange?start===end?start.slice(5):start.slice(5)+' – '+end.slice(5):period==='all'?'累计':period==='today'?'今天':'最近 '+period+' 天';$('trendRangeButton').title=start===end?start:start+' 至 '+end;$('trendRangeButton').setAttribute('aria-label','趋势时间范围：'+$('trendRangeButton').title);
+  $('trendNote').hidden=false;$('trendNote').textContent=hourly?'按小时 · 本地时间'+($('display').value==='total'?' · 当日累计':'')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===today?' · 截至 '+pad(currentHour())+':00 时段':''):(grain==='week'?'按周':grain==='month'?'按月':'按日')+($('display').value==='average'?' · 30 日均值':$('display').value==='total'?' · 区间累计':' · 已记录用量')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===end?' · 7 天前的单日仅有日汇总':' · 淡线连接未记录日期');
   $('chartLegend').innerHTML=selected.map(entry=>'<button data-trend-series="'+escapeHtml(entry.key)+'" aria-pressed="true"><i class="swatch" style="background:'+entry.color+'"></i>'+escapeHtml(entry.label)+'</button>').join('');
   window.uiMotion.indicators();
 }
 $('trendModes').addEventListener('click',event=>{const b=event.target.closest('[data-trend-mode]');if(!b||trendMode===b.dataset.trendMode)return;trendMode=b.dataset.trendMode;for(const el of $('trendModes').children){if(!el.dataset.trendMode)continue;el.classList.toggle('active',el===b);el.setAttribute('aria-pressed',String(el===b));}renderTrend(data());});
 $('trendGrain').addEventListener('change',()=>renderTrend(data()));
-$('trendRangeForm').addEventListener('submit',event=>{event.preventDefault();const start=$('trendFrom').value,end=$('trendTo').value;$('trendTo').setCustomValidity(start>end?'结束日期不能早于开始日期':datesLimited(start,end)?'':'最多查看 10 年');if(!$('trendTo').reportValidity())return;trendRange={start,end};$('trendRangePopover').hidePopover();renderTrend(data());});
+$('trendRangeForm').addEventListener('submit',event=>{event.preventDefault();const start=$('trendFrom').value,end=$('trendTo').value;if(!start||!end||start>end||!datesLimited(start,end)){window.uiRangeCalendar?.warn(!start||!end?'请选择日期':start>end?'结束日期不能早于开始日期':'最多查看 10 年');return;}trendRange={start,end};$('trendRangePopover').hidePopover();renderTrend(data());});
 function datesLimited(start,end){return (Date.parse(end)-Date.parse(start))/86400000<=3660;}
-$('trendTo').addEventListener('input',()=>$('trendTo').setCustomValidity(''));
-$('trendFrom').addEventListener('input',()=>$('trendTo').setCustomValidity(''));
 $('trendRangeReset').addEventListener('click',()=>{trendRange=null;$('trendRangePopover').hidePopover();renderTrend(data());});
 $('trendRangePopover').addEventListener('click',event=>{const button=event.target.closest('[data-trend-preset]');if(!button)return;trendRange=null;period=button.dataset.trendPreset;for(const b of document.querySelectorAll('[data-period]'))b.setAttribute('aria-pressed',String(b.dataset.period===period));$('trendRangePopover').hidePopover();render();});
 $('chartLegend').addEventListener('click',event=>{const b=event.target.closest('[data-trend-series]');if(!b)return;const buttons=[...$('chartLegend').querySelectorAll('[data-trend-series]')],index=buttons.indexOf(b),visible=!trendChart.isDatasetVisible(index);trendChart.setDatasetVisibility(index,visible);b.setAttribute('aria-pressed',String(visible));trendChart.update(window.uiMotion.mode==='full'?undefined:'none');});
@@ -453,20 +484,11 @@ window.addEventListener('ui-motion-change',()=>{cancelAnimationFrame(revealFrame
 function renderMix(rows) {
   const subset = rangeRows(rows), m = mix(subset);
   $('mixBar').innerHTML = m.total ? categories.map(([, label], i) => '<span style="background:' + categoryColor(i) + ';width:' + m.values[i] / m.total * 100 + '%" title="' + label + ' ' + short(m.values[i]) + '"></span>').join('') : '';
-  $('mixList').innerHTML = categories.map(([, label], i) => '<div style="border-left-color:' +
-    categoryColor(i) +
-    '"><dt><i class="swatch" style="background:' +
-    categoryColor(i) +
-    '"></i>' +
-    label +
-    '</dt><dd>' +
-    (subset.length ? (m.partialValues[i] && m.displayValues[i] !== null ? '≥ ' : '') +
-    short(m.displayValues[i]) : '—') +
-    '</dd><dd>' +
-    (m.total && !m.incomplete ? (m.values[i] / m.total * 100).toFixed(1) +
-    '%' : '—') +
-    '</dd></div>').join('');
-  $('mixIncomplete').textContent = m.incomplete ? '分类字段覆盖 ' + ((m.coverage ?? 0) * 100).toFixed(1) + '%；分布条仅统计完整记录，≥ 表示已知部分。分类不全时不显示全量占比。' : subset.length ? '' : '暂无可用分类数据。';
+  $('mixList').innerHTML = categories.map(([, label], i) => { const unknown = subset.length && m.displayValues[i] === null;
+    return '<div class="mix-item' + (unknown ? ' is-unreported' : '') + '" style="--swatch:' + categoryColor(i) + '"><dt><i class="swatch"></i>' + label + '</dt><dd class="mix-value">' +
+      (!subset.length ? '—' : unknown ? '未报告' : (m.partialValues[i] ? '≥ ' : '') + short(m.displayValues[i])) + '</dd>' +
+      (m.total && !m.incomplete ? '<dd class="mix-share">' + (m.values[i] / m.total * 100).toFixed(1) + '%</dd>' : '') + '</div>'; }).join('');
+  $('mixIncomplete').textContent = m.incomplete ? '部分记录缺少分类字段：分布条只统计完整记录（占 ' + ((m.coverage ?? 0) * 100).toFixed(1) + '%），≥ 表示已报告部分的下限。' : subset.length ? '' : '暂无可用分类数据。';
 }
 function renderHabits(rows) {
   const subset = rangeRows(rows), weekdays = [0, 0, 0, 0, 0, 0, 0], daily = new Map(), names = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
@@ -590,8 +612,8 @@ function updateCollection() { const interval=usageStatus.refreshIntervalMs??1500
  $('settingsPause').disabled = realData && !usageBridge; $('settingsPause').textContent = usageBridge ? enabled ? '暂停采集' : '恢复采集' : realData ? '只读快照' : enabled ? '暂停演示采集' : '恢复演示采集';
  // The pause control is a switch, so its state must be exposed with the label.
  $('settingsPause').setAttribute('role', 'switch'); $('settingsPause').setAttribute('aria-checked', String(Boolean(enabled))); }
-function render() { syncCalendar(); const rows = data(); renderOverview(rows); renderHeat(rows); renderTrend(rows); renderMix(rows);
- renderHabits(rows); renderModels(rows); updateCollection(); window.uiSelect?.syncAll(); window.uiMotion.indicators(); }
+function render() { syncCalendar(); const rows = data(); window.usageCalendar = { today, min: coverageStart, recorded: new Set(filterRows(rows).map(r => r.date)) }; renderOverview(rows); renderHeat(rows); renderTrend(rows); renderMix(rows);
+ renderHabits(rows); renderModels(rows); updateCollection(); window.uiSelect?.syncAll(); window.uiSegments?.syncAll(); window.uiMotion.indicators(); }
 function view(name) {
   if ($('main').dataset.currentView === name) return;
   // Save the actual presentation position before hiding a long page clamps scrollY.
@@ -605,7 +627,7 @@ function view(name) {
   window.dispatchEvent(new CustomEvent('ui-view-change',{detail:name}));
   window.uiDetail.scrollTo(0); window.uiMotion.indicators(); window.uiMotion.enter($(name), 'page');
 }
-function setTheme(value) { document.body.classList.toggle('dark', value === 'dark'); $('themeSelect').value = value; $('theme').setAttribute('aria-label', value === 'dark' ? '切换浅色外观' : '切换深色外观'); $('theme').innerHTML = icon(value === 'dark' ? 'ui/moon' : 'ui/sun'); render(); }
+function setTheme(value) { document.body.classList.toggle('dark', value === 'dark'); $('themeSelect').value = value; $('theme').setAttribute('aria-label', value === 'dark' ? '切换浅色外观' : '切换深色外观'); $('theme').innerHTML = icon(value === 'dark' ? 'ui/moon' : 'ui/sun'); applyHeatPalette(); render(); }
 function fillSources() { const previous=$('sourceFilter').value,list=[...new Set(templates.filter(r=>$('agentFilter').value==='all'||r.agent===$('agentFilter').value).map(r=>r.provider||'unknown'))].sort();$('sourceFilter').innerHTML='<option value="all">全部来源</option>'+list.map(value=>'<option value="'+escapeHtml(value)+'">'+escapeHtml(value==='unknown'?'来源未报告':value)+'</option>').join('');$('sourceFilter').value=list.includes(previous)?previous:'all'; }
 function fillModels() { const previous = $('modelFilter').value, list = [...new Set(templates.filter(r => ($('agentFilter').value === 'all' || r.agent === $('agentFilter').value) && ($('sourceFilter').value==='all'||(r.provider||'unknown')===$('sourceFilter').value)).map(r => r.model))].sort(); $('modelFilter').innerHTML = '<option value="all">全部模型</option>' +
   list.map(m => '<option value="' +
@@ -708,10 +730,15 @@ $('agentFilter').addEventListener('change', () => { window.uiMotion.cleanup(); f
 $('resetUsageScope').addEventListener('click', () => { $('agentFilter').value = 'all'; $('sourceFilter').value = 'all'; $('modelFilter').value = 'all'; $('agentFilter').dispatchEvent(new Event('change')); });
 $('sourceFilter').addEventListener('change', () => { window.uiMotion.cleanup(); fillModels(); render(true); });
 $('usageInterval').addEventListener('change',async()=>{if(!usageBridge)return;try{applyUsageState(await usageBridge.setRefreshInterval(Number($('usageInterval').value)));toast(enabled?'自动刷新设置已保存。':'频率已保存；采集暂停中，恢复采集后生效。');}catch{toast('刷新设置未保存。');updateCollection();window.uiSelect?.syncAll();}});
-$('heatColor').addEventListener('change', () => { const palette = { orange: ['#f3c29e', '#e8955d', '#ce713b', '#914b28'], blue: ['#afc8e5', '#789cc9', '#506fa7', '#304d80'],
- green: ['#bcd5c3', '#8cb498', '#5c8e6c', '#386349'], mono: ['#dadcde', '#a8adb2', '#6d747d', '#333a43'] }[$('heatColor').value]; palette.forEach((color, i) => document.documentElement.style.setProperty('--heat' +
+function applyHeatPalette() { const palette = { orange: ['#f3c29e', '#e8955d', '#ce713b', '#914b28'], blue: ['#afc8e5', '#789cc9', '#506fa7', '#304d80'],
+ green: ['#bcd5c3', '#8cb498', '#5c8e6c', '#386349'], mono: ['#dadcde', '#a8adb2', '#6d747d', '#333a43'] }[$('heatColor').value];
+  // Higher usage always reads as more contrast: dark on light, bright on dark.
+  if (document.body.classList.contains('dark')) palette.reverse();
+  palette.forEach((color, i) => document.documentElement.style.setProperty('--heat' +
   (i +
-  1), color)); });
+  1), color)); }
+try { const saved = localStorage.getItem('agentusage.heatColor'); if ([...$('heatColor').options].some(o => o.value === saved)) $('heatColor').value = saved; } catch { /* Default palette. */ }
+$('heatColor').addEventListener('change', () => { applyHeatPalette(); try { localStorage.setItem('agentusage.heatColor', $('heatColor').value); } catch { /* Not remembered. */ } }); applyHeatPalette();
 $('settingsPause').addEventListener('click', async () => { if (usageBridge) { try { applyUsageState(await usageBridge.setEnabled(!enabled)); } catch { toast('采集状态更新失败。'); } return; } if (realData) return; enabled = !enabled; render(); toast(enabled ? '演示采集状态已恢复。' : '演示采集状态已暂停；历史仍可查看。'); });
 async function refreshPreview() { if (realData) { try { sessionStorage.setItem('agentusage-preview.reload.v1', JSON.stringify({ period, metric, selectedDay,
  agent: $('agentFilter').value, source:$('sourceFilter').value, model: $('modelFilter').value, display: $('display').value, newest: $('newest').checked,
@@ -754,15 +781,24 @@ $('download').addEventListener('click', async () => {
 Chart.defaults.font.family = 'Segoe UI'; render(); if (restoredView !== 'usage') view(restoredView);
 // The Agent picker orders and dims its chips by recorded usage across all dates.
 function publishAgentUsage() {
-  const totals = {}; for (const row of templates) totals[row.agent] = (totals[row.agent] || 0) + row.totalTokens;
-  window.agentUsageTotals = totals; window.dispatchEvent(new CustomEvent('agent-usage', { detail: totals }));
+  const totals = {}, models = {};
+  for (const row of templates) {
+    totals[row.agent] = (totals[row.agent] || 0) + row.totalTokens;
+    // The pricing panel weighs each used model by its recorded and priced tokens.
+    const key = (row.provider || 'unknown') + '/' + row.model, stats = models[key] ||= { tokens: 0, pricedTokens: 0, records: 0, agents: [], reasons: {} };
+    stats.tokens += row.totalTokens; stats.pricedTokens += row.pricedTokens || 0; stats.records += row.records || 0;
+    if (!stats.agents.includes(row.agent)) stats.agents.push(row.agent);
+    for (const [reason, count] of Object.entries(row.pricingReasons || {})) stats.reasons[reason] = (stats.reasons[reason] || 0) + count;
+  }
+  window.agentUsageTotals = totals; window.usageModels = models;
+  window.dispatchEvent(new CustomEvent('agent-usage', { detail: totals })); window.dispatchEvent(new CustomEvent('usage-models', { detail: models }));
 }
 function applyUsageState(state) {
   const changed = sequence !== state.snapshot.sequence, previousDay = today;
   const snapshotChanged = !Number.isSafeInteger(state.snapshotRevision) || usageRevision !== state.snapshotRevision;
   usageRevision = state.snapshotRevision;
   localSnapshot = state.snapshot; syncCalendar(); usageStatus = state; sequence = localSnapshot.sequence; enabled = state.enabled; coverageStart = localSnapshot.coverageStart || today;
-  if (snapshotChanged) { templates.length = 0; for (const row of localSnapshot.daily) templates.push(row); fillSources(); fillModels(); renderSources(); publishAgentUsage(); }
+  if (snapshotChanged) { templates.length = 0; for (const row of localSnapshot.daily) templates.push(row); loadHourly(); fillSources(); fillModels(); renderSources(); publishAgentUsage(); }
   updateCollection();
   window.uiSelect?.syncAll();
   $('dataBadge').textContent = state.error || (state.collecting ? '正在读取本地统计…' : '本机离线统计 · 已更新');

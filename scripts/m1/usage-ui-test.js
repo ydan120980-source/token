@@ -44,13 +44,13 @@ async function state(page, predicate) {
       await state(page, s => s.enabled && !s.collecting); await page.locator('#settingsPause').click(); await state(page, s => !s.enabled && !s.collecting);
       await page.locator('[data-view="usage"]').click(); await page.locator('#refresh').click(); await state(page, s => !s.collecting);
       await page.locator('[data-view="settings"]').click(); await page.locator('#pricingPanel').evaluate(element => { element.open = true; });
-      await page.locator('#priceSearch').fill('gpt-4.1'); await page.locator('[data-edit-price="openai/gpt-4.1"]').click();
+      await page.locator('#priceSearch').fill('gpt-4.1'); await page.locator('#priceRows [data-edit-price="openai/gpt-4.1"]').click(); await page.locator('[data-editor-mode="manual"]').click();
       await page.locator('#price-inputUncached').fill('5'); await page.locator('#price-output').fill('8'); await page.locator('#price-cacheRead').fill('.5'); await page.locator('#price-cacheWrite').fill('0');
       await page.locator('#savePrice').click(); await page.getByText('手动规则已保存，全部历史按新规则重算。').waitFor();
       assert.equal((await page.evaluate(() => window.usageBridge.pricing())).models.find(r => r.provider === 'openai' && r.model === 'gpt-4.1').rates.inputUncached, 5);
       const repriced = await page.evaluate(() => window.usageBridge.get());
       const codexCost = repriced.snapshot.daily.find(r => r.agent === 'codex').estimatedCostUsd; assert(Math.abs(codexCost - .000765) < 1e-12);
-      await page.locator('[data-edit-price="openai/gpt-4.1"]').click();await page.locator('#resetPrice').click(); await page.getByText(/手动规则已撤销/).waitFor();
+      await page.locator('#priceRows [data-edit-price="openai/gpt-4.1"]').click();await page.locator('#resetPrice').click(); await page.getByText(/手动规则已撤销/).waitFor();
       await page.locator('#codexMaintenance').evaluate(element => { element.open = true; });
       await page.locator('#codexPreview').click(); await page.locator('#codexApply').waitFor({ state: 'visible' }); await page.waitForFunction(() => !document.getElementById('codexApply').disabled);
       assert.match(await page.locator('#codexPreviewResult').textContent(), /180 → 180 token/);

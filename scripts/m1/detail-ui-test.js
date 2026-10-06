@@ -54,7 +54,7 @@ const {fixtures} = require('../../tests/m1/fixtures'), {settle} = require('./ui-
         assert.equal(await page.locator('#modelFilter').inputValue(),'model-99'); assert.equal(await page.locator('#modelFilter-trigger').evaluate(b=>document.activeElement===b),true);
         await page.locator('#modelFilter-trigger').click(); await page.locator('#selectPanel input').fill('不存在的模型'); assert.equal(await page.locator('#selectOptions [role="option"]').count(),0); await page.locator('#selectPanel input').press('Escape');
         await page.locator('#modelFilter').selectOption('all'); await settle(page);
-        await page.locator('#heatColor-trigger').click(); await page.locator('#selectOptions').press('End'); await page.locator('#selectOptions').press('Enter');
+        await page.locator('.heat-palette [aria-checked="true"]').focus(); await page.keyboard.press('End'); assert.equal(await page.locator('.heat-palette [data-value="mono"]').evaluate(button => button === document.activeElement), true);
         assert.equal(await page.locator('#heatColor').inputValue(),'mono');
         await page.locator('#modelFilter-trigger').click(); await settle(page);
         const bounds = await page.locator('#selectPanel').boundingBox(); assert(bounds.height <= 360.1 && bounds.y >= 8); assert(bounds.y+bounds.height <= await page.evaluate(()=>innerHeight)-8);

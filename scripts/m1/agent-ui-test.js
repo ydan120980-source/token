@@ -44,7 +44,7 @@ async function collected(page) {
         await page.locator('[data-view="sources"]').click(); await settle(page); assert.equal(await page.locator('#sourceRows .source-row').count(),9);
         assert(/runs\.ndjson|index\.db/.test(await page.locator('#sourceRows').innerText())); await page.screenshot({path:path.join(output,'sources-'+scale+'.png')});
         await page.locator('[data-view="settings"]').click(); await page.locator('#pricingPanel').evaluate(e => {e.open = true;});
-        await page.locator('#priceTabBilling').click(); await settle(page); assert.equal(await page.locator('#billingRows article').count(),9);
+        await page.locator('#billingSection > summary').click(); await settle(page); assert.equal(await page.locator('#billingRows article').count(),9);
         await page.locator('#saveBilling').click(); await settle(page); state = await page.evaluate(() => window.usageBridge.pricing());
         assert.equal(Object.keys(state.billing.defaults).length,9); for (const config of Object.values(state.billing.defaults)) assert.equal(config.mode,'actual');
         await page.screenshot({path:path.join(output,'billing-'+scale+'.png')});

@@ -13,4 +13,15 @@ async function until(page, predicate, timeout = 30000) {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 }
-module.exports = { settle, until };
+// The desktop window opens on quota: quota-ui.js clicks that tab while the page is
+// still loading. Wait for load, settle, then switch and confirm the view.
+async function showView(page, name) {
+  await page.waitForFunction(() => document.readyState === 'complete', null, { timeout: 30000 });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await settle(page);
+    if (await page.evaluate(() => document.getElementById('main').dataset.currentView) === name) break;
+    await page.locator('[data-view="' + name + '"]').click();
+  }
+  await page.waitForFunction(view => document.getElementById('main').dataset.currentView === view, name, { timeout: 5000 }); await settle(page);
+}
+module.exports = { settle, until, showView };
