@@ -2,15 +2,18 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const SOURCES = ['codex', 'claude', 'opencode', 'workbuddy', 'mimo'];
-const LABELS = { codex: 'Codex Desktop / CLI', claude: 'Claude Code', opencode: 'OpenCode', workbuddy: 'WorkBuddy', mimo: 'MiMo Code / Desktop' };
+const {sources: SOURCES, labels: LABELS} = require('../../design/desktop-reference/agent-catalog');
 function roots(home = os.homedir()) {
   return {
     codex: [path.join(home, '.codex/sessions'), path.join(home, '.codex/archived_sessions')],
     claude: [path.join(home, '.claude/projects'), path.join(home, '.claude/transcripts')],
     opencode: [path.join(home, '.local/share/opencode')],
     workbuddy: [path.join(home, '.workbuddy/projects'), path.join(home, '.workbuddy/workbuddy.db'), path.join(home, '.workbuddy-ai/projects'), path.join(home, '.workbuddy-ai/workbuddy.db')],
-    mimo: [path.join(home, '.local/share/mimocode')]
+    mimo: [path.join(home, '.local/share/mimocode')],
+    gemini: [path.join(home, '.gemini/tmp')],
+    cursor: [path.join(home,'.cursor/projects')], // Only SDK index.db/runs.ndjson/usage CSV are read.
+    zcode: [path.join(home, '.zcode/cli/db/db.sqlite')],
+    deepseek: [path.join(home, '.dsh/sessions'), path.join(home, '.dsh/profiles/desktop/sessions')]
   };
 }
 function localPath(value) {
@@ -23,7 +26,12 @@ function allowedFile(agent, file) {
   if (agent === 'codex' || agent === 'claude') return base.endsWith('.jsonl');
   if (agent === 'workbuddy') return base.endsWith('.jsonl') || base === 'workbuddy.db';
   if (agent === 'mimo') return /^mimocode(?:[-\w]*)\.db$/.test(base);
-  return (base.endsWith('.json') && file.split(path.sep).includes('message')) || /^opencode(?:[-\w]*)\.db$/.test(base);
+  if (agent === 'gemini') return /^(?:session-[\w.-]+|[a-f0-9-]{8,})\.(?:json|jsonl)$/.test(base) && file.split(path.sep).includes('chats');
+  if (agent === 'cursor') return base === 'index.db' || base.toLowerCase() === 'runs.ndjson' || /\.csv$/i.test(base);
+  if (agent === 'zcode') return base === 'db.sqlite';
+  if (agent === 'deepseek') return /^session(?:\.v[1-9]\d*)?\.jsonl(?:\.zstd)?$/.test(base);
+  if (agent === 'opencode') return (base.endsWith('.json') && file.split(path.sep).includes('message')) || /^opencode(?:[-\w]*)\.db$/.test(base);
+  return false;
 }
 function filesUnder(agent, root, audit, output = [], depth = 0) {
   if (depth > 16 || output.length > 100000) throw new Error('SOURCE_LIMIT');

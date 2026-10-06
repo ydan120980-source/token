@@ -1,0 +1,42 @@
+/* Nowdex demo: 160ms icons / 250ms disclosures. Other values are Apple-inspired. */
+:root { --motion-feedback: 160ms; --motion-selection: 180ms; --motion-disclosure: 250ms; --motion-theme: 180ms; --motion-ease: cubic-bezier(.23,1,.32,1); --motion-expand: cubic-bezier(.2,.9,.3,1); }
+button, select, .avatar-file-field, a { transition: background-color 120ms var(--motion-ease), color 120ms var(--motion-ease), opacity var(--motion-feedback) var(--motion-ease), transform var(--motion-feedback) var(--motion-ease); }
+button:active:not(:disabled):not([data-date]):not(.cost-value), .avatar-file-field:active { transform: scale(.98); transition-duration: 0ms; }
+button:focus-visible, select:focus-visible, summary:focus-visible { outline-offset: 3px; }
+.motion-group { position: relative; isolation: isolate; }
+.motion-indicator { position: absolute; top: 0; left: 0; pointer-events: none; z-index: -1; border-radius: 8px; background: var(--card); box-shadow: 0 1px 3px #00000012; transition: transform var(--motion-selection) var(--motion-ease), width var(--motion-selection) var(--motion-ease), height var(--motion-selection) var(--motion-ease); }
+.topbar nav .motion-indicator { background: var(--nav-selected); box-shadow: none; }
+.motion-group > button[aria-current='page'], .motion-group > button[aria-pressed='true'] { background: transparent !important; box-shadow: none !important; }
+#heatmap button { transition: transform 140ms var(--motion-ease), box-shadow 140ms var(--motion-ease), opacity 140ms var(--motion-ease); }
+.heat-tooltip { transform: none !important; transition: opacity 100ms var(--motion-ease), visibility 100ms; }
+.chart-tooltip { transition: none; }
+dialog { pointer-events: none; opacity: 0; transform: translateY(8px) scale(.98); transition: opacity 180ms var(--motion-ease), transform 180ms var(--motion-ease), display 180ms allow-discrete, overlay 180ms allow-discrete; }
+dialog[open] { pointer-events: auto; opacity: 1; transform: none; transition-duration: 280ms; }
+dialog::backdrop { pointer-events: none; opacity: 0; transition: opacity 160ms var(--motion-ease), display 160ms allow-discrete, overlay 160ms allow-discrete; }
+dialog[open]::backdrop { pointer-events: auto; opacity: 1; }
+@starting-style { dialog[open] { opacity: 0; transform: translateY(8px) scale(.98); } dialog[open]::backdrop { opacity: 0; } }
+@supports (interpolate-size: allow-keywords) and (transition-behavior: allow-discrete) {
+  details::details-content { interpolate-size: allow-keywords; height: 0; opacity: 0; overflow: clip; transition: height var(--motion-disclosure) var(--motion-expand), opacity 200ms var(--motion-ease), content-visibility var(--motion-disclosure) allow-discrete; }
+  details[open]::details-content { height: auto; opacity: 1; }
+}
+details > summary img[src*='chevron'] { transition: transform var(--motion-disclosure) var(--motion-expand); }
+details[open] > summary img[src*='chevron'] { transform: rotate(180deg); }
+details > summary::marker { content: ''; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary:not(:has(img[src*='chevron']))::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 10px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform var(--motion-disclosure) var(--motion-expand); }
+details[open] > summary:not(:has(img[src*='chevron']))::after { transform: rotate(225deg); }
+body, .topbar, .card, .overview-card, .setting-list, button, input, select, dialog { transition-property: background-color, color, border-color, opacity, transform; }
+body, .topbar, .card, .overview-card, .setting-list, input { transition: background-color var(--motion-theme) var(--motion-ease), color var(--motion-theme) var(--motion-ease), border-color var(--motion-theme) var(--motion-ease); }
+/* Keep discrete top-layer transitions despite the theme rule above. */
+dialog { transition-property: opacity, transform, display, overlay; }
+#toast { transition: opacity 120ms var(--motion-ease), display 120ms allow-discrete; }
+#toast[hidden] { opacity: 0; }
+@keyframes usage-refresh { to { transform: rotate(360deg); } }
+body[data-motion='full'] [data-busy] img[src*='refresh'] { animation: usage-refresh 900ms linear infinite; }
+body[data-page-hidden] [data-busy] img[src*='refresh'] { animation: none !important; }
+body[data-motion='reduced'] *, body[data-motion='reduced'] *::before, body[data-motion='reduced'] *::after { animation: none !important; transition-duration: 0ms !important; scroll-behavior: auto !important; }
+body[data-motion='reduced'] dialog, body[data-motion='reduced'] dialog::backdrop, body[data-motion='reduced'] .heat-tooltip { transform: none !important; transition: opacity 80ms var(--motion-ease), display 80ms allow-discrete, overlay 80ms allow-discrete !important; }
+body[data-motion='reduced'] #heatmap button:hover, body[data-motion='reduced'] #heatmap button:focus-visible, body[data-motion='reduced'] button:active { transform: none; }
+body[data-motion='off'] *, body[data-motion='off'] *::before, body[data-motion='off'] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+body[data-motion='off'] button:active, body[data-motion='off'] .heat-tooltip { transform: none; }
+@media (prefers-reduced-motion: reduce) { dialog, dialog[open], dialog::backdrop, button:active, #heatmap button:hover, #heatmap button:focus-visible { transform: none !important; } }

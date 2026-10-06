@@ -8,6 +8,6 @@ disableNetwork(audit);
 (async () => {
   const scan = await scanSources(workerData.roots, workerData.salt, audit);
   const records = Object.values(scan).flatMap(s => s.records);
-  const native = await verifyProjection(records, workerData.dir, pid => parentPort.postMessage({ childPid: pid }));
+  const native = workerData.maintenance ? { status: 'not-run-maintenance-preview' } : await verifyProjection(records, workerData.dir, pid => parentPort.postMessage({ childPid: pid }));
   parentPort.postMessage({ scan, native, audit });
 })().catch(error => parentPort.postMessage({ error: /^[A-Z_]+$/.test(error.message) ? error.message : 'COLLECTION_FAILED', audit }));

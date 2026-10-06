@@ -1,0 +1,30 @@
+.quota-eyebrow { font-size: 11px; letter-spacing: 1.5px; margin-bottom: 4px; }
+.quota-toolbar { display: flex; gap: 12px; align-items: center; margin: 24px 0 12px; flex-wrap: wrap; }
+.quota-toolbar > span { flex: 1; color: var(--muted); }
+.quota-toolbar label { display: flex; gap: 8px; align-items: center; color: var(--muted); }
+.quota-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.quota-card { padding: 24px; }
+.quota-card > header { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
+.quota-card header img { width: 30px; height: 30px; }
+.quota-card h2 { margin: 0; font-size: 20px; }
+.quota-card h2 span { font-size: 14px; font-weight: 400; display: block; color: var(--muted); }
+.quota-card header p { margin: 2px 0 0; }
+.quota-status { font-size: 11px; color: var(--muted); margin-left: auto; text-align: right; max-width: 100px; }
+.quota-window { margin: 20px 0; }
+.quota-window > div:first-child { display: flex; justify-content: space-between; gap: 12px; }
+.quota-window strong { font-size: 16px; }
+.quota-meter { height: 8px; background: var(--soft); border-radius: 6px; overflow: hidden; margin: 9px 0; }
+.quota-meter i { display: block; height: 100%; background: #518bbb; border-radius: 6px; }
+.quota-meter i.low { background: #d78e4b; }
+.quota-window p { font-size: 11px; display: flex; gap: 10px; justify-content: space-between; color: var(--muted); flex-wrap: wrap; }
+.quota-card details { border-top: 1px solid var(--line); padding-top: 15px; }
+.quota-card summary { cursor: pointer; color: var(--muted); }
+.quota-card dl > div { display: flex; justify-content: space-between; gap: 12px; margin: 10px 0; }
+.quota-card dt { color: var(--muted); }.quota-card dd { margin: 0; text-align: right; }
+.quota-card footer { border: 0; margin: 20px 0 0; padding: 0; gap: 8px; flex-wrap: wrap; }
+.quota-card footer span { flex: 1 1 100%; font-size: 11px; }
+.quota-empty { text-align: center; padding: 50px 28px; }.quota-empty > img { width: 44px; height: 44px; }
+.quota-empty p { max-width: 540px; margin: 12px auto; }.quota-bottom { display: flex; align-items: center; gap: 12px; margin: 24px 0; flex-wrap: wrap; }
+.quota-bottom span,.quota-no-data { color: var(--muted); }#quotaError { color: #b45335; }
+@media(max-width:1000px) { .quota-grid { grid-template-columns: 1fr; } }
+@media(max-width:600px) { .quota-card { padding: 20px; }.quota-toolbar > span { flex-basis: 100%; }.page-heading { flex-wrap: wrap; gap: 16px; } }

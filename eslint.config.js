@@ -8,16 +8,13 @@ const { includeIgnoreFile } = require('@eslint/compat');
 module.exports = [
   // Respect .gitignore (node_modules, dist, build, tmp, _site, .agents, .claude, data, …)
   includeIgnoreFile(path.resolve(__dirname, '.gitignore')),
-  // site/ is a standalone GitHub Pages property with its own browser conventions
-  // worker/src/shared/ is generated (vendored CommonJS); linted at its src/shared/ source
-  { ignores: ['site/**', 'worker/src/shared/**'] },
+  // Third-party chart distribution stays unchanged and outside application lint.
+  { ignores: ['design/desktop-reference/assets/**'] },
 
   js.configs.recommended,
 
   {
-    // Default: Node CommonJS — src/**, hub, agent, scripts, tests, this config.
-    // window/self are readonly because shared modules (currency, trayText,
-    // windowShortcut) feature-detect them in their UMD export wrapper.
+    // Node CommonJS modules and UMD helpers.
     languageOptions: {
       sourceType: 'commonjs',
       globals: { ...globals.node, window: 'readonly', self: 'readonly' },
@@ -26,19 +23,10 @@ module.exports = [
 
   {
     // Renderer runs in the browser; UMD modules also touch module/window
-    files: ['src/electron/renderer/**/*.js'],
+    files: ['design/desktop-reference/*.js'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: { ...globals.node, ...globals.browser },
-    },
-  },
-
-  {
-    // Cloudflare Worker is ESM with service-worker runtime globals
-    files: ['worker/**/*.js'],
-    languageOptions: {
-      sourceType: 'module',
-      globals: { ...globals.serviceworker, ...globals.browser },
     },
   },
 

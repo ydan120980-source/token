@@ -21,6 +21,9 @@ test('partial JSONL preserves valid lines; source error retained; pause, overlap
   await Promise.all([service.refresh(), service.refresh()]); assert.equal(service.store.state.sequence, 1);
   await service.setEnabled(false); assert.equal(service.get().enabled, false); assert.equal(service.timer?._destroyed ?? true, true);
   const second = new Service(path.join(dir, 'app')); assert.equal(second.get().enabled, false); assert.equal(second.get().snapshot.daily.reduce((s, r) => s + r.totalTokens, 0), f.total); await second.close();
+  const audit = service.audit, sequence = service.store.state.sequence;
+  await service.close(); await service.refresh();
+  assert.equal(service.audit, audit); assert.equal(service.store.state.sequence, sequence); assert.equal(service.worker, null);
 });
 test('worker timeout retains statistics and backoff follows 30/60/120 seconds', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-timeout-')), f = fixtures(path.join(dir, 'home')), service = new Service(path.join(dir, 'app'), f.roots);

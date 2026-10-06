@@ -73,11 +73,11 @@ test('SQLite committed WAL is read in memory without writes or checkpoints', asy
 });
 test('UNC and auth paths rejected', () => { assert.throws(() => localPath('\\\\server\\share')); assert.throws(() => localPath(path.resolve('auth.json'))); });
 test('calendar ranges include today and respect month/year boundaries', () => {
-  const { since } = require('../../src/m1/calendar');
-  assert.equal(since('2026-01-03', '7'), '2025-12-28');
-  assert.equal(since('2026-03-01', '30'), '2026-01-31');
-  assert.equal(since('2026-10-02', 'today'), '2026-10-02');
-  assert.equal(since('2026-10-02', 'all'), '0000-00-00');
+  const { startFor } = require('../../design/desktop-reference/usage-math');
+  assert.equal(startFor('2026-01-03', '7'), '2025-12-28');
+  assert.equal(startFor('2026-03-01', '30'), '2026-01-31');
+  assert.equal(startFor('2026-10-02', 'today'), '2026-10-02');
+  assert.equal(startFor('2026-10-02', 'all', '2025-01-01'), '2025-01-01');
 });
 test('OpenCode/MiMo reasoning is disjoint at source and part of normalized output', () => {
   const r = normalize('opencode', { input: 100, output: 10, reasoning: 5, cache: { read: 20, write: 0 } }, { model: 'gpt-4.1', time: '2026-10-01', id: 'a' }, 's', 'exclusive');

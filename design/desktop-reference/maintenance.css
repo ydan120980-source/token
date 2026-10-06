@@ -1,0 +1,22 @@
+.pricing-card { padding: 24px; }
+.pricing-card > p { color: var(--muted); line-height: 1.7; }
+.price-table { max-height: 420px; margin-bottom: 20px; }
+.price-table td { white-space: nowrap; }
+.price-table td:first-child small, .price-table td:last-child small { display: block; }
+.price-group td { background: var(--soft); font-size: 11px; font-weight: 600; letter-spacing: .3px; }
+.price-group small, .price-table td:first-child small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+.price-empty td { color: var(--muted); text-align: center; padding: 24px 0; }
+.price-origin { color: var(--muted); }
+.price-origin-unpriced { color: #a35c3a; }
+.price-filters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 20px; margin-bottom: 14px; }
+.price-filters input, .price-filters select { width: 100%; }
+.price-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 20px; }
+.price-grid input { width: 100%; }
+#priceCatalogLine { margin-bottom: 16px; overflow-wrap: anywhere; }
+#priceFilterResult { margin: 8px 0 0; color: var(--muted); }
+#priceProbe { color: var(--muted); }
+#pricingGaps button { font-size: 12px; padding: 2px 8px; }
+#usageMaintenance summary { cursor: pointer; font-size: 20px; font-weight: 600; padding: 16px 0; }
+#usageMaintenance summary .muted { font-size: 13px; font-weight: 400; margin-left: 12px; }
+#totalCost { font-size: clamp(20px,2.6vw,32px); overflow-wrap: anywhere; }
+@media (max-width: 900px) { .price-grid, .price-filters { grid-template-columns: 1fr; } }

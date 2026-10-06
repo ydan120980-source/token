@@ -1,0 +1,61 @@
+/* Targeted refinement of the existing Nowdex surfaces. */
+.select-shell { display: inline-flex; position: relative; min-width: 0; max-width: 100%; vertical-align: middle; }
+.select-native { position: absolute; width: 1px !important; height: 1px !important; padding: 0 !important; opacity: 0; pointer-events: none; }
+.select-trigger { justify-content: space-between; min-width: 100px; width: 100%; min-height: 36px; padding: 8px 12px; gap: 14px; background: var(--soft); border: 1px solid transparent; }
+.select-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; min-width: 0; }
+.select-trigger i { width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); flex-shrink: 0; transition: transform 180ms var(--motion-ease); }
+.select-trigger[aria-expanded='true'] { background: var(--card); border-color: var(--line); }
+.select-trigger[aria-expanded='true'] i { transform: rotate(225deg); }
+.select-panel { position: fixed; inset: auto; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--text); box-shadow: 0 12px 40px #0002; overflow: hidden; opacity: 0; transform: translateY(4px) scale(.98); transition: opacity 140ms var(--motion-ease), transform 180ms var(--motion-ease), display 180ms allow-discrete, overlay 180ms allow-discrete; }
+.select-panel { pointer-events: none; }
+.select-panel:popover-open { display: flex; flex-direction: column; opacity: 1; transform: none; pointer-events: auto; }
+@starting-style { .select-panel:popover-open { opacity: 0; transform: translateY(4px) scale(.98); } }
+.select-panel input { width: 100%; flex-shrink: 0; min-height: 36px; padding: 8px 10px; background: var(--soft); border: 1px solid transparent; border-radius: 9px; font-size: 13px; margin-bottom: 5px; }
+.select-options { position: relative; overflow-y: auto; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; outline-offset: -2px; }
+.select-options button { display: flex; justify-content: flex-start; min-height: 34px; width: 100%; border: 0; border-radius: 7px; padding: 8px 11px; font-size: 13px; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.select-options button[aria-selected='true'] { font-weight: 600; color: var(--blue); }
+.select-options button[aria-selected='true']::after { content: '✓'; margin-left: auto; padding-left: 8px; }
+.select-options button.is-active { background: var(--soft); }
+.select-options p { padding: 14px; }
+.chart-toolbar { display: grid; grid-template-columns: auto auto minmax(0,1fr) auto; gap: 12px 16px; padding: 20px 24px; }
+.chart-toolbar > .spacer { display: none; }
+.chart-toolbar > .check-label { grid-column: 4; }
+.chart-toolbar > label:has(#agentFilter) { grid-row: 2; grid-column: 1 / 3; }
+.chart-toolbar > label:has(#modelFilter) { grid-row: 2; grid-column: 3 / -1; }
+.chart-toolbar > label:not(.check-label) { min-width: 0; padding: 0 0 0 12px; }
+.chart-toolbar .select-shell { flex: 1; }
+.chart-toolbar .select-trigger { min-width: 0; border-radius: 9px; font-size: 12px; }
+.heat-footer .select-trigger, .heat-card h3 .select-trigger { min-width: 74px; font-size: 12px; }
+.cost-value { display: inline-flex; align-items: baseline; max-width: 100%; position: relative; gap: 0; }
+.cost-extension { display: inline-flex; align-items: baseline; gap: .18em; max-width: 0; opacity: 0; overflow: hidden; transition: max-width 340ms var(--motion-ease), opacity 180ms var(--motion-ease); }
+.cost-extension .cost-upper { min-width: var(--upper-width); }
+.cost-expanded .cost-extension { max-width: 18ch; opacity: 1; }
+.cost-value:not(:has(.cost-extension)) .cost-plus { display: inline; }
+.cost-expanded .cost-plus { display: none; }
+.cost-separator { color: var(--muted); padding: 0 .1em; }
+.cost-value { font-variant-numeric: tabular-nums; }
+.cost-hero .cost-value { transition: color 160ms var(--motion-ease); }
+#totalCost { white-space: normal; letter-spacing: -2px; }
+#totalCost .cost-value { min-height: 90px; }
+#totalCost { font-size: clamp(40px,4.8vw,64px); letter-spacing: -1.5px; }
+#totalCost .cost-value { flex-wrap: wrap; }
+.cost-hero { min-height: 116px; }
+.cost-help { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.cost-help:empty { display: none; }
+.day-detail .day-content { padding: 24px; }
+.day-agent-list { display: grid; gap: 16px; margin-top: 14px; max-height: min(560px,70vh); overflow-y: auto; scrollbar-width: thin; padding: 1px 4px 1px 1px; overscroll-behavior: auto; }
+.day-content .client-row { padding: 22px 24px; margin: 0; border-radius: 14px; }
+.day-content .client-line { flex-wrap: wrap; gap: 10px; }
+.day-content .client-numbers { gap: 18px; padding-left: 10px; }
+.day-content .model-line { margin: 14px 0 0 30px; flex-wrap: wrap; gap: 10px 18px; line-height: 1.75; }
+.day-content .model-name { flex: 1; min-width: 100px; }
+.day-content .model-cost { margin-left: auto; }
+.day-content .day-subtitle { margin: 22px 0 12px; }
+.models .table-scroll { max-height: min(420px,65vh); overflow: auto; overscroll-behavior: auto; scrollbar-width: thin; }
+.models thead { position: sticky; top: 0; z-index: 1; background: var(--card); }
+.habit-date-list { max-height: 280px; overflow: auto; scrollbar-width: thin; padding: 2px; }
+#pricingPanel > .pricing-card { max-height: min(680px,75vh); overflow: auto; scrollbar-width: thin; overscroll-behavior: contain; }
+body[data-motion='reduced'] .select-panel, body[data-motion='off'] .select-panel { transform: none; }
+body[data-motion='reduced'] .select-panel { transition: opacity 80ms var(--motion-ease), display 80ms allow-discrete, overlay 80ms allow-discrete !important; }
+@media (max-width:900px) { .chart-toolbar { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }.chart-toolbar > .check-label { grid-column: 1 / -1; }.chart-toolbar > label:has(#agentFilter) { grid-row: 3; grid-column: 1; }.chart-toolbar > label:has(#modelFilter) { grid-row: 3; grid-column: 2; } }
+@media (max-width:600px) { .chart-toolbar { padding: 16px; gap: 12px; }.chart-toolbar > label:has(#agentFilter), .chart-toolbar > label:has(#modelFilter) { grid-column: 1 / -1; grid-row: auto; }.day-detail .day-content { padding: 18px; }.day-content .client-row { padding: 18px; }.day-content .client-numbers { margin-left: 30px; padding-left: 0; flex-wrap: wrap; }#totalCost { font-size: 48px; }#totalCost .cost-expanded { font-size: clamp(22px,5.5vw,32px); } }

@@ -1,0 +1,47 @@
+/* Desktop refinement: quiet controls, a legible estimate, useful chart hierarchy. */
+#totalCost { font-size:clamp(52px,6.2vw,82px); min-height:108px; align-items:center; }
+#totalCost .cost-value { transform-origin:left center; transform:scale(1); transition:transform 400ms cubic-bezier(.22,.7,.2,1),color 180ms; }
+#totalCost .cost-value.cost-expanded { transform:scale(.84); }
+.cost-hero { min-height:142px; }
+.cost-extension { align-items:center; }
+.cost-value { align-items:center; }
+.cost-separator { font-size:.24em; font-weight:450; padding:0 .65em; opacity:.65; align-self:center; line-height:1; letter-spacing:0; }
+.cost-value .cost-separator { min-width:0; }
+.cost-upper { letter-spacing:inherit; }
+.trend-explore { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:0 24px 20px; }
+.trend-explore .inline-field { width:auto; }
+.trend-range { display:flex; align-items:center; gap:8px; margin-left:auto; font-size:12px; color:var(--muted); }
+.trend-range input { min-width:0; width:130px; background:var(--soft); border:1px solid transparent; border-radius:9px; padding:9px 8px; font:inherit; color:var(--text); color-scheme:light; }
+body.dark .trend-range input { color-scheme:dark; }
+.trend-range button { padding:8px 12px; }
+.trend-insights { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; padding:2px 28px 26px; }
+.trend-insights > div { display:flex; flex-direction:column; gap:7px; }
+.trend-insights span { color:var(--muted); font-size:12px; }
+.trend-insights strong,.trend-insights button { font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.5px; }
+.trend-insights button { background:none; border:0; padding:0; text-align:left; align-self:flex-start; }
+.trend-insights button:hover { color:var(--blue); }
+#trend .plot { height:320px; padding:8px 24px; }
+#trend .chart-legend { max-height:none; padding-bottom:12px; }
+#chartLegend button { border-radius:20px; padding:6px 10px; border:1px solid var(--line); font-size:12px; }
+#chartLegend button[aria-pressed="false"] { opacity:.42; }
+#trendNote { font-size:11px; color:var(--muted); margin:0; padding:0 28px 24px; }
+.pricing-sync,.billing-section { padding:6px 0 24px; margin-bottom:20px; border-bottom:1px solid var(--line); }
+.pricing-section-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:18px; }
+.pricing-section-heading h3 { margin:0; font-size:16px; }
+.pricing-section-heading p { margin:6px 0 0; font-size:12px; color:var(--muted); }
+.pricing-sync-footer { display:flex; align-items:center; justify-content:space-between; gap:20px; font-size:12px; color:var(--muted); }
+.switch-label { display:flex; align-items:center; gap:8px; font-size:12px; white-space:nowrap; }
+.switch-label input { accent-color:var(--blue); width:16px; height:16px; }
+.billing-section td input { max-width:100%; min-width:0; width:230px; border:1px solid var(--line); border-radius:8px; padding:9px 10px; font:inherit; background:transparent; color:var(--text); }
+.billing-section td .billing-multiplier { width:74px; }
+.billing-section td select { max-width:160px; }
+.mapping-form { display:flex; flex-wrap:wrap; align-items:end; gap:12px; padding-top:16px; }
+.mapping-form .field { flex:1; min-width:200px; margin:0; }
+.mapping-form button { margin-bottom:2px; }
+#pricingPanel > .pricing-card { max-height:none; overflow:visible; }
+#mappingRows td { word-break:break-word; }
+.price-filters { align-items:end; }
+#priceMore { margin-bottom:20px; }
+body[data-motion="reduced"] #totalCost .cost-value,body[data-motion="off"] #totalCost .cost-value { transition:none; transform:none; }
+@media(max-width:1000px) { .trend-range { margin-left:0; flex-wrap:wrap; }.billing-section td input { width:170px; } }
+@media(max-width:850px) { #totalCost { font-size:64px; } #totalCost .cost-value.cost-expanded { transform:scale(.78); }.trend-insights { gap:14px; padding:0 20px 22px; }.trend-explore { padding:0 20px 18px; }.trend-insights strong,.trend-insights button {font-size:17px;} }

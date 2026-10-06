@@ -1,0 +1,21 @@
+/* Native Windows controls above a restrained, functional app-owned toolbar. */
+.integrated-titlebar { --appbar-height:44px; }
+.app-titlebar { position:fixed;inset:0 0 auto;height:44px;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);user-select:none;app-region:drag; }
+.app-titlebar-inner { margin-left:env(titlebar-area-x,0px);width:env(titlebar-area-width,calc(100% - 140px));max-width:calc(100% - 140px);height:44px;display:flex;align-items:center;gap:3px;padding:0 12px; }
+.app-titlebar button { app-region:no-drag;border:0;background:transparent;color:var(--muted);border-radius:6px;min-height:28px;padding:4px 9px;font-size:12px; }
+.app-titlebar button:hover:not(:disabled) { background:var(--soft); }
+.app-titlebar button:disabled { opacity:.28; }
+.app-titlebar button img { width:16px;height:16px; }
+.app-titlebar .window-icon { width:30px;padding:6px; }
+.app-titlebar .window-icon:first-child { margin-right:2px; }
+.window-divider { width:1px;height:16px;background:var(--line);margin:0 8px; }
+.window-title { margin-left:auto;margin-right:10px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.window-title b { color:var(--text);font-weight:500; }
+.window-inactive .window-title { opacity:.6; }
+.integrated-titlebar .topbar { top:44px;height:calc(100dvh - 44px); }
+.integrated-titlebar main { padding-top:80px; }
+.integrated-titlebar .topbar-inner { padding-top:22px; }
+.integrated-titlebar .skip:focus { top:48px; }
+.integrated-titlebar.sidebar-collapsed .topbar { visibility:hidden;pointer-events:none; }
+.integrated-titlebar.sidebar-collapsed main { margin-left:0; }
+@media(max-width:800px) { .integrated-titlebar .topbar { position:fixed;inset:44px 0 auto 0;width:100%;height:auto; }.integrated-titlebar main { padding-top:184px; }.integrated-titlebar.sidebar-collapsed main { padding-top:76px; }.window-title b,.window-title > span[aria-hidden] { display:none; }.window-divider { margin:0 3px; } }
