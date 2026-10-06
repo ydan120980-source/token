@@ -1,0 +1,53 @@
+topic: "Windows local agent statistics and Codex quota reassessment"
+date: "2026-10-03"
+timezone: "Asia/Shanghai"
+scope:
+  desktop: "Windows x64, existing Electron stack"
+  usage_sources: ["Codex", "Claude Code", "OpenCode", "WorkBuddy", "MiMo Code"]
+  quota_provider: "Codex only"
+  privacy: "offline usage collector; optional official CLI account entry; keyring required"
+  stage: "requirements and source research only; no implementation"
+  user_scope_confirmed: true
+  deferred: ["iPhone", "cloud", "E2EE production sync", "other account providers", "account switching", "proxy routing", "autostart", "publication"]
+items:
+  - name: "Javis603/token-monitor"
+    url: "https://github.com/Javis603/token-monitor"
+    role: "existing desktop baseline"
+    inspected_release: "v0.65.0"
+    baseline_commit: "db325fdf46ea7f7328feeb47a4f2005fe339909f"
+  - name: "junhoyeo/tokscale"
+    url: "https://github.com/junhoyeo/tokscale"
+    role: "fixed collection and reconciliation baseline"
+    inspected_release: "v4.17.0"
+  - name: "BLACKIELF/AgentHub-AiGoodBro"
+    url: "https://github.com/BLACKIELF/AgentHub-AiGoodBro"
+    role: "quota state, refresh and test reference"
+    inspected_commit: "d03430a81a4dca5b3967864d79064b2590165955"
+    branch: "codex/reset-messages-0926v1"
+  - name: "nesszer/Win-CodexBar"
+    url: "https://github.com/nesszer/Win-CodexBar"
+    role: "Windows quota and delivery reference"
+    inspected_release_page: "v0.60.3"
+  - name: "ccusage/ccusage"
+    url: "https://github.com/ccusage/ccusage"
+    role: "independent local accounting reference"
+    evidence: "current README; runtime version not selected"
+  - name: "xiufengsun/TokenTracker"
+    url: "https://github.com/xiufengsun/TokenTracker"
+    role: "alternative parser and dashboard reference"
+    evidence: "current README and privacy policy; no local execution"
+execution:
+  batch_size: 1
+  items_per_agent: 1
+  output_dir: "./results"
+  mode: "direct requirements and literature review in Markdown"
+  deep_batches_started: false
+  agents_started: false
+  note: "This records the completed bounded review; no separate deep batches, implementation or later stages are authorized."
+deliverables:
+  - "README.md"
+  - "requirements.md"
+  - "research.md"
+  - "sources.md"
+  - "outline.yaml"
+  - "fields.yaml"

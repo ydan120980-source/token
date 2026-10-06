@@ -1,0 +1,50 @@
+{
+  "verification": {
+    "lint": "passed",
+    "behaviorTests": {
+      "passed": 41,
+      "failed": 0
+    },
+    "nativeCollector": "passed; synthetic fixtures",
+    "originalWindowsUi": "passed at forced 100/150 scale",
+    "quotaWindowsUi": "passed; final executable and Chinese/space extraction at forced 100/150 scale",
+    "upstreamTests": {
+      "passed": 34,
+      "failed": 0
+    },
+    "syntheticCrypto": "passed",
+    "archive": {
+      "zipCrc": "passed",
+      "sourceMatchesCurrentWhitelist": true,
+      "sha256": "passed",
+      "chineseSpaceExtraction": "dist\\delivery-quota-stability-20261003\\中文 空格 解压验收"
+    },
+    "asarSource": {
+      "packagedSourceMatchesWorkspace": true,
+      "files": [
+        "src/quota/contract.js",
+        "src/quota/errors.js",
+        "src/quota/rpc.js",
+        "src/quota/service.js",
+        "src/quota/main.js",
+        "src/quota/preload.js",
+        "design/desktop-reference/quota-ui.js"
+      ]
+    }
+  },
+  "realAccountAcceptance": {
+    "officialLogin": "user completed in independent acceptance directory",
+    "quotaRead": "passed",
+    "officialPageComparison": "user confirmed matching",
+    "fullExitRestartCredentialRecovery": "passed through effective keyring enforcement",
+    "ownPlaintextAuthFiles": 0,
+    "manualRefresh": "passed",
+    "fiveMinuteAutomaticRefresh": "passed; 17:35:04 to 17:35:09 CST; success=1 failed=0 skipped=0",
+    "disabledAndRestartOff": "passed",
+    "selectedLogout": "deferred by user; connection preserved",
+    "otherClientLoginIsolation": "pending user check after selected logout",
+    "actualWindowsDpiDialogsTray": "user confirmed no obvious defects",
+    "physicalWindowsSleepWake": "not performed; fake-clock due wake and actual powerMonitor resume notification before due tested"
+  },
+  "multiAccountAcceptance": "synthetic only"
+}

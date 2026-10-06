@@ -1,0 +1,70 @@
+{
+  "kind": "Windows Codex quota test build",
+  "version": "0.1.0",
+  "cliDependency": "official installed codex.exe; tested 0.160.0; not bundled",
+  "source": {
+    "file": "AgentUsage-CodexQuota-source.zip",
+    "bytes": 2314831,
+    "sha256": "4840d4d33119919caba33de89a0a0d3f2113fd2c521cd3d2501c7c141e42292d",
+    "files": 176
+  },
+  "windows": {
+    "file": "AgentUsage-CodexQuota-Windows-x64.zip",
+    "bytes": 166510444,
+    "sha256": "c6c19a741fea9638c0f48e779790b2a190172162ee027ddbc1472e5464165e4f",
+    "files": 80
+  },
+  "realAccountAcceptance": {
+    "officialLogin": "user completed in independent acceptance directory",
+    "quotaRead": "passed",
+    "officialPageComparison": "user confirmed matching",
+    "fullExitRestartCredentialRecovery": "passed through effective keyring enforcement",
+    "ownPlaintextAuthFiles": 0,
+    "manualRefresh": "passed",
+    "fiveMinuteAutomaticRefresh": "passed; 17:35:04 to 17:35:09 CST; success=1 failed=0 skipped=0",
+    "disabledAndRestartOff": "passed",
+    "selectedLogout": "deferred by user; connection preserved",
+    "otherClientLoginIsolation": "pending user check after selected logout",
+    "actualWindowsDpiDialogsTray": "user confirmed no obvious defects",
+    "physicalWindowsSleepWake": "not performed; fake-clock due wake and actual powerMonitor resume notification before due tested"
+  },
+  "syntheticAcceptance": "verify, native collector, source/packaged UI at 100/150 scale, crypto, upstream tests",
+  "multiAccountAcceptance": "synthetic only",
+  "unsigned": true,
+  "scope": "Codex only; no cloud/iOS/reset consumption/account switching",
+  "verification": {
+    "lint": "passed",
+    "behaviorTests": {
+      "passed": 41,
+      "failed": 0
+    },
+    "nativeCollector": "passed; synthetic fixtures",
+    "originalWindowsUi": "passed at forced 100/150 scale",
+    "quotaWindowsUi": "passed; final executable and Chinese/space extraction at forced 100/150 scale",
+    "upstreamTests": {
+      "passed": 34,
+      "failed": 0
+    },
+    "syntheticCrypto": "passed",
+    "archive": {
+      "zipCrc": "passed",
+      "sourceMatchesCurrentWhitelist": true,
+      "sha256": "passed",
+      "chineseSpaceExtraction": "dist\\delivery-quota-stability-20261003\\中文 空格 解压验收"
+    },
+    "asarSource": {
+      "packagedSourceMatchesWorkspace": true,
+      "files": [
+        "src/quota/contract.js",
+        "src/quota/errors.js",
+        "src/quota/rpc.js",
+        "src/quota/service.js",
+        "src/quota/main.js",
+        "src/quota/preload.js",
+        "design/desktop-reference/quota-ui.js"
+      ]
+    }
+  },
+  "finalExecutable": "dist/quota-stability-20261003-final/win-unpacked/Agent Usage Quota.exe",
+  "evidencePrivacy": "Real quota observations, credentials, runtime data and logs excluded from source ZIP and delivery evidence."
+}
