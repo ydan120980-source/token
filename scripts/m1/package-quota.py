@@ -99,6 +99,7 @@ manifest = {"kind": "Unified Windows local usage and Codex quota build", "versio
             "syntheticAcceptance": "See " + acceptance.relative_to(root).as_posix() + " for this generation executed checks and workload limits; older reports describe historical builds.",
             "multiAccountAcceptance": "synthetic only",
             "unsigned": True, "scope": "Local offline usage within documented adapter contracts and Codex quota; no cloud/iOS/reset consumption/account switching"}
-(output / MANIFEST_NAME).write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
-(output / SUMS_NAME).write_text("".join(item["sha256"] + "  " + item["file"] + "\n" for item in [source, binary] if item), encoding="utf8")
+# LF records so standard `sha256sum -c` works on Windows checkouts too.
+(output / MANIFEST_NAME).write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf8", newline="\n")
+(output / SUMS_NAME).write_text("".join(item["sha256"] + "  " + item["file"] + "\n" for item in [source, binary] if item), encoding="utf8", newline="\n")
 print(json.dumps(manifest, ensure_ascii=False))
