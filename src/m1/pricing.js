@@ -38,7 +38,9 @@ function evaluate(record, overrides = {}, resolved = null) {
         else if (Number.isFinite(rate) && Number.isFinite(rates.inputUncached)) {
           bounded = true; continue;
         } else return { reason: 'usage-incomplete', lower: null, upper: null };
-      } else if (field === 'cacheWrite' && rates.cacheWrite === 0 && !isManual && record.provider === 'deepseek') { count = 0; }
+      // A write the billing vendor prices at exactly zero costs nothing whatever
+      // its unreported count, including routes such as workbuddy-xdpool -> deepseek.
+      } else if (field === 'cacheWrite' && rates.cacheWrite === 0 && !isManual) { count = 0; }
       else return { reason: 'usage-incomplete', lower: null, upper: null };
     }
     if (count > 0 && !Number.isFinite(rate)) return { reason: 'rate-missing', lower: null, upper: null };

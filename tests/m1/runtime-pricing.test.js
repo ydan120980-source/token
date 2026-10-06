@@ -52,3 +52,13 @@ test('calendar buckets retain null/known-zero, partial buckets, cumulative endpo
   assert.deepEqual(bucketSeries(days,[0,null,2,3,null,0,5],'week')[0],{label:'2026-09-28',start:days[0],end:days.at(-1),value:10,partial:true});
   assert.equal(bucketSeries(days,days.map(()=>null),'week')[0].value,null);assert.equal(bucketSeries(days,[0,1,2,3,4,5,null],'week','total')[0].value,null);assert.equal(bucketSeries(days,[0,1,2,3,4,5,6],'week','average')[0].value,3);assert.equal(bucketSeries(days,[0,1,2,3,4,5,6],'month').length,2);
 });
+test('an unreported cache write is exact only when the billing vendor prices writes at zero, including routed providers', () => {
+  const base = { agent:'deepseek', provider:'workbuddy-xdpool', model:'deepseek-v4.1-flash', quality:'measured', inputUncached:1000000, output:100000, cacheRead:1000000, cacheWrite:null, reasoning:null };
+  const rates = { inputUncached:3e-7, output:1.2e-6, cacheRead:6e-9, cacheWrite:0, provenance:'official-current-standard' };
+  const routed = evaluate(base, {}, { ...rates, billingProvider:'deepseek' });
+  assert.equal(routed.reason, 'exact'); assert(Math.abs(routed.lower - (0.3 + 0.12 + 0.006)) < 1e-12);
+  // A positive or unknown write rate still leaves the record unpriced.
+  assert.equal(evaluate(base, {}, { ...rates, cacheWrite:3.75e-7 }).reason, 'usage-incomplete');
+  assert.equal(evaluate(base, {}, { ...rates, cacheWrite:null }).reason, 'usage-incomplete');
+  assert.equal(evaluate({ ...base, cacheRead:null }, {}, rates).reason, 'usage-incomplete');
+});

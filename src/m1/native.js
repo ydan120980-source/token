@@ -4,6 +4,14 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 function binary() { return path.join(path.dirname(require.resolve('@tokscale/cli-win32-x64-msvc/package.json')), 'bin', 'tokscale.exe').replace(/app\.asar([/\\])/, 'app.asar.unpacked$1'); }
 async function verifyProjection(records, directory, onSpawn = () => {}) {
+  // tokscale keeps a per-path source-message cache that assumes append-only
+  // transcripts; a record leaving the rewritten projection stays cached and every
+  // later check mismatches. Each check therefore runs in its own fresh directory.
+  fs.mkdirSync(directory, { recursive: true });
+  const run = fs.mkdtempSync(path.join(directory, 'native-'));
+  try { return await verifyIn(records, run, onSpawn); } finally { fs.rmSync(run, { recursive: true, force: true }); }
+}
+async function verifyIn(records, directory, onSpawn) {
   const home = path.join(directory, 'projection');
   const project = path.join(home, '.claude', 'projects', 'statistics-only'); fs.mkdirSync(project, { recursive: true });
   const file = path.join(project, 'usage.jsonl');
