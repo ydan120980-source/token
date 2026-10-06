@@ -17,7 +17,7 @@ Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, 
 
 ## Commands
 
-- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`, 105 tests at r4)
+- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`, 108 tests)
 - Required checks: `npm run test:native`, `npm run test:ui`, `npm run test:quota:ui`, `npm run test:stress`, `npm run experiment:crypto`, `npm run audit:runtime`, plus Windows packaged/extracted UI smoke checks
 - Build: `npm run dist:win:dir`; source archive: `npm run package:source`; share runtime across generations: `npm run dist:share`
 - All maintenance UI tests must specify own usage/quota directories and a synthetic fixture home. Real-source verification follows privacy gates.
@@ -26,6 +26,8 @@ Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, 
 
 - Never fill unknown usage/price with zero and never disable conflict protection to make totals price; unknown stays null and displays as unknown/unpriced.
 - When replacing a selected usage snapshot, apply it completely: remove attributes absent from the new snapshot, keep first-owner identity and object references (R9, `src/m1/sources.js`).
+- Snapshot selection (`src/m1/usage-snapshot.js`) must stay order-independent: valid over invalid, then larger total (even if partial), then quality/known fields; `tests/m1/snapshot-order.test.js` checks every order against a reference rule.
+- Playwright `page.waitForFunction` resolves immediately for async predicates; poll bridge state with `until` from `scripts/m1/ui-settle.js`.
 - Source status `partial` describes the scan; whether a record is priced depends on that record's current quality.
 
 ## Git
