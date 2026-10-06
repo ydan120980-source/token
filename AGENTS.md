@@ -2,7 +2,7 @@
 
 Scope authority: the user's approved M1-WINDOWS-LOCAL plan plus the dated user authorizations in `docs/SCOPE-LEDGER.md` (newest first). Planning records mirror them and cannot authorize later stages. Record every new user authorization at the top of that ledger, not here.
 
-Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, OpenCode, WorkBuddy, MiMo Code, Gemini CLI, Cursor, ZCode, DeepSeek Harness) under `docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md`; account quota remains Codex only. Mainline branch `m2/agents-r4`; Claude Code is the main developer (2026-10-06). Latest candidate `dist/agents-20261006-r4`; results in `docs/m2/AGENT-INTEGRATION-RESULTS-R4-20261006.md`. Fourth independent review not yet dispatched.
+Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, OpenCode, WorkBuddy, MiMo Code, Gemini CLI, Cursor, ZCode, DeepSeek Harness) under `docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md`; account quota remains Codex only. Mainline branch `m2/agents-r4`; Claude Code is the main developer (2026-10-06). Latest candidate `dist/agents-20261006-r5`; results in `docs/m2/AGENT-INTEGRATION-RESULTS-R5-20261006.md`. The user replaced the fourth independent review with order-invariance tests.
 
 ## Boundaries
 
@@ -17,7 +17,7 @@ Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, 
 
 ## Commands
 
-- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`, 108 tests)
+- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`, 109 tests)
 - Required checks: `npm run test:native`, `npm run test:ui`, `npm run test:quota:ui`, `npm run test:stress`, `npm run experiment:crypto`, `npm run audit:runtime`, plus Windows packaged/extracted UI smoke checks
 - Build: `npm run dist:win:dir`; source archive: `npm run package:source`; share runtime across generations: `npm run dist:share`
 - All maintenance UI tests must specify own usage/quota directories and a synthetic fixture home. Real-source verification follows privacy gates.
@@ -27,6 +27,7 @@ Current increment (2026-10-05/06): nine-source local usage (Codex, Claude Code, 
 - Never fill unknown usage/price with zero and never disable conflict protection to make totals price; unknown stays null and displays as unknown/unpriced.
 - When replacing a selected usage snapshot, apply it completely: remove attributes absent from the new snapshot, keep first-owner identity and object references (R9, `src/m1/sources.js`).
 - Snapshot selection (`src/m1/usage-snapshot.js`) must stay order-independent: valid over invalid, then larger total (even if partial), then quality/known fields; `tests/m1/snapshot-order.test.js` checks every order against a reference rule.
+- Native verification must run in a fresh directory each time; tokscale's source-message cache assumes append-only files and a reused projection freezes every later collection.
 - Playwright `page.waitForFunction` resolves immediately for async predicates; poll bridge state with `until` from `scripts/m1/ui-settle.js`.
 - Source status `partial` describes the scan; whether a record is priced depends on that record's current quality.
 
