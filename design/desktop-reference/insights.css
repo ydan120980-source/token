@@ -87,3 +87,12 @@ body.dark .efficiency-list .delta.good { color: #7fcf9c; }
 #trend .agent-picker button { height: 32px; min-height: 32px; padding: 0 10px 0 8px; gap: 5px; font-size: 12.5px; }
 #trend .agent-picker button.is-empty:not([aria-pressed="true"]) { padding: 0 8px; }
 #trend .agent-picker button.is-empty:not([aria-pressed="true"]) .agent-chip-name { display: none; }
+
+/* Hero: one caption line ("API 等价估算 · scope"), a larger figure, quieter facts. */
+.overview-scope { gap: 5px; margin-bottom: 6px; }
+.overview-scope .hero-label { margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.overview-scope .hero-label::after { content: '·'; margin-left: 5px; }
+.usage-overview .cost-hero { min-height: 0; }
+#totalCost { font-size: clamp(68px, 8vw, 116px); height: 1.2em; min-height: 1.2em; line-height: 1.15; letter-spacing: -.035em; }
+.overview-facts { margin-top: 6px; gap: 10px 26px; }
+@media (max-width: 850px) { #totalCost { font-size: 72px; } }

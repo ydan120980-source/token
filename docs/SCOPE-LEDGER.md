@@ -2,6 +2,8 @@
 
 User authorizations moved verbatim from `AGENTS.md` on 2026-10-06 (newest first, as originally ordered). These entries remain scope authority; `AGENTS.md` points here. Append new authorizations at the top.
 
+User direction (2026-10-07, after `3859657`): make the "API 等价估算" hero figure larger and tidy its surrounding layout with fewer small captions; then build the r7 candidate and complete packaged and extracted acceptance.
+
 User refinement (2026-10-07, after `c141eaf`): "整体再调整一下排版" — adjust the overall layout of the desktop UI. Interpreted as layout only: balance and de-duplicate the usage page (composition/habits columns, repeated facts, wrapping controls); no data semantics, sources or controls removed (trend keeps Agent/source/model/refresh/range controls).
 
 User refinement (2026-10-07, after the write-path fix): (1) stop showing reported values as "未报告" — output whose reasoning split is unknown, and fields a source never records; (2) add a collapse control to the pricing used-model list; (3) tear down "Token 构成" and rebuild it as both a cost-destination view (cost share by token category, cache hit rate, estimated cache savings) and an Agent/model share view; (4) tear down "使用习惯" and rebuild it as both a weekday × hour activity heatmap (hourly rows may extend beyond seven days) and efficiency metrics. Includes the related misleading "部分来源读取失败" banner and refresh backoff caused by data-quality notices. Next-batch Agent integrations are not authorized by this entry; unknown stays unknown.
