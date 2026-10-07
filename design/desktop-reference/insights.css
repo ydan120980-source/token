@@ -1,7 +1,7 @@
 /* 2026-10-07 composition and habits views. Same restraint as polish.css: hairlines,
    one accent, numbers in tabular figures, colour only where it carries meaning. */
 .insights .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.insights > .insight-card + .insight-card { margin-top: 16px; }
+.insights .habits-grid { grid-template-columns: minmax(0, 2fr) minmax(250px, 1fr); }
 .insight-card { padding: 22px 24px 24px; min-width: 0; }
 .insight-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
 .insight-head h3 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.2px; }
@@ -20,10 +20,12 @@
 .cost-parts b, .share-list b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .cost-parts em, .share-list em { font-style: normal; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 
+.cost-savings { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--fill); font-size: 13px; color: var(--muted); }
+.cost-savings b { color: var(--text); font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .insight-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; margin-top: 18px; }
 .insight-facts > div { padding: 11px 14px; border-radius: 12px; background: var(--fill); }
-.insight-facts small, .efficiency-grid small { display: block; color: var(--muted); font-size: 12px; }
-.insight-facts b { display: block; margin-top: 3px; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.insight-facts small { display: block; color: var(--muted); font-size: 12px; }
+.insight-facts b { display: block; margin-top: 3px; font-size: 15px; white-space: nowrap; font-weight: 650; font-variant-numeric: tabular-nums; }
 
 .insight-toggle { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--fill); flex: none; }
 .insight-toggle button { border: 0; background: transparent; color: var(--muted); font-size: 12px; padding: 4px 11px; border-radius: 7px; min-height: 0; }
@@ -50,22 +52,38 @@
 .hour-grid span { color: var(--muted); font-size: 10px; line-height: 1; align-self: center; font-variant-numeric: tabular-nums; }
 .hour-grid .hour-day { font-size: 11px; }
 
-.efficiency-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.efficiency-grid > div { padding: 13px 15px; border-radius: 12px; background: var(--fill); }
-.efficiency-grid b { display: block; margin-top: 4px; font-size: 19px; font-weight: 650; letter-spacing: -.3px; font-variant-numeric: tabular-nums; }
-.efficiency-grid .delta { display: inline-block; margin-top: 4px; font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.efficiency-grid .delta.good { color: #2f8a57; }
-.efficiency-grid .delta.bad { color: var(--warn); }
-body.dark .efficiency-grid .delta.good { color: #7fcf9c; }
+.efficiency-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: baseline; padding: 13px 0; border-bottom: 1px solid var(--hairline); }
+.efficiency-list > div:first-child { padding-top: 2px; }
+.efficiency-list > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.efficiency-list span { grid-row: span 2; }
+.efficiency-list small { display: block; font-size: 13px; color: var(--text); }
+.efficiency-list span i { display: block; margin-top: 2px; font-style: normal; font-size: 11px; color: var(--muted); }
+.efficiency-list b { font-size: 18px; font-weight: 650; letter-spacing: -.3px; text-align: right; font-variant-numeric: tabular-nums; }
+.efficiency-list .delta { grid-column: 2; text-align: right; font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.efficiency-list .delta.good { color: #2f8a57; }
+.efficiency-list .delta.bad { color: var(--warn); }
+body.dark .efficiency-list .delta.good { color: #7fcf9c; }
 
 /* Category tiles: structural states (not recorded / contained in output) are facts, not gaps. */
 .is-structural b { color: var(--muted); font-weight: 500; }
 .model-metrics .is-structural b, .mix-legend .is-structural b { font-weight: 500; }
 
+@media (max-width: 1100px) {
+  .insights .habits-grid { grid-template-columns: 1fr; }
+  /* Full width: the efficiency list becomes columns instead of a long stretched list. */
+  .efficiency-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 28px; }
+  .efficiency-list > div, .efficiency-list > div:first-child, .efficiency-list > div:last-child { padding: 10px 0; border-bottom: 0; }
+}
+@media (max-width: 760px) { .efficiency-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 900px) {
-  .efficiency-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .insights .insight-grid { grid-template-columns: 1fr; }
   .share-list button { grid-template-columns: 18px minmax(70px, 1fr) 54px 38px 62px; }
   .share-track { display: none; }
 }
-@media (max-width: 620px) { .efficiency-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Trend Agent chips: one row at desktop widths. An Agent with no usage in range keeps
+   its icon and accessible name (aria-label/title) but drops the visible label. */
+#trend .agent-picker { gap: 4px; }
+#trend .agent-picker button { height: 32px; min-height: 32px; padding: 0 10px 0 8px; gap: 5px; font-size: 12.5px; }
+#trend .agent-picker button.is-empty:not([aria-pressed="true"]) { padding: 0 8px; }
+#trend .agent-picker button.is-empty:not([aria-pressed="true"]) .agent-chip-name { display: none; }

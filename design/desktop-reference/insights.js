@@ -22,7 +22,7 @@
       '<div class="cost-total"><strong>' + usd(result.total) + '</strong><span>' + (result.pricedShare !== null && result.pricedShare < 0.9995 ? '覆盖 ' + pct(result.pricedShare) + ' 的 token；其余未定价，不计入' : '全部 token 已定价') + '</span></div>' +
       '<div class="cost-bar" role="img" aria-label="' + visible.map(part => part.label + ' ' + pct(part.share)).join('，') + '">' + visible.map(part => '<span style="--w:' + (part.share * 100) + '%;--c:' + part.color + '"></span>').join('') + '</div>' +
       '<ul class="cost-parts">' + parts.map(part => '<li style="--c:' + part.color + '"><i></i><span>' + part.label + '</span><b>' + usd(part.value) + '</b><em>' + pct(part.share) + '</em></li>').join('') + '</ul>' +
-      '<div class="insight-facts"><div><small>缓存命中率</small><b>' + pct(result.hitRate) + '</b></div><div title="缓存读取若按未缓存输入单价计费需多付的金额"><small>缓存约省下</small><b>' + (result.savings === null ? '—' : usd(result.savings)) + '</b></div></div>';
+      '<p class="cost-savings" title="缓存读取若按未缓存输入单价计费需多付的金额"><span>缓存约省下</span><b>' + (result.savings === null ? '—' : usd(result.savings)) + '</b></p>';
   }
 
   function renderShare(ctx) {
@@ -56,18 +56,18 @@
   function renderEfficiency(ctx) {
     const now = math.efficiency(ctx.rows, ctx.recorded), before = ctx.previousRows ? math.efficiency(ctx.previousRows, ctx.recorded) : null, { short, usd } = ctx;
     // Direction is judged only where it is unambiguous: cheaper and more cache hits are better.
+    // Active days and daily tokens already appear in the activity and trend cards.
     const metrics = [
       ['日均费用', '按有用量的天数', now.costPerDay, before?.costPerDay, value => usd(value), 'lower'],
       ['每百万 token 成本', '已定价部分的综合单价', now.costPerMillion, before?.costPerMillion, value => usd(value), 'lower'],
       ['每条记录 token', '一条记录约为一次模型调用', now.tokensPerRecord, before?.tokensPerRecord, value => short(Math.round(value)), null],
-      ['缓存命中率', '缓存读取占输入侧 token', now.hitRate, before?.hitRate, value => pct(value), 'higher'],
-      ['活跃天数', '有用量的日期', now.activeDays, before?.activeDays, value => value + ' 天', null]
+      ['缓存命中率', '缓存读取占输入侧 token', now.hitRate, before?.hitRate, value => pct(value), 'higher']
     ];
     const compare = before ? ctx.compareText : ctx.compareMissing;
-    $('efficiencyCard').innerHTML = header('效率', compare) + '<div class="efficiency-grid">' + metrics.map(([label, hint, value, previous, format, better]) => {
+    $('efficiencyCard').innerHTML = header('效率', compare) + '<div class="efficiency-list">' + metrics.map(([label, hint, value, previous, format, better]) => {
       const delta = before ? math.change(value, previous) : null, sign = delta === null || Math.abs(delta) < 0.005 ? 0 : Math.sign(delta);
       const tone = !sign || !better ? '' : (sign < 0) === (better === 'lower') ? ' good' : ' bad';
-      return '<div title="' + hint + '"><small>' + label + '</small><b>' + (value === null || value === undefined ? '—' : format(value)) + '</b>' +
+      return '<div><span><small>' + label + '</small><i>' + hint + '</i></span><b>' + (value === null || value === undefined ? '—' : format(value)) + '</b>' +
         (delta === null ? '' : '<em class="delta' + tone + '">' + (sign > 0 ? '↑ ' : sign < 0 ? '↓ ' : '') + (sign ? pct(Math.abs(delta), 0) : '持平') + '</em>') + '</div>';
     }).join('') + '</div>';
   }
