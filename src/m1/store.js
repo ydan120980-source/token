@@ -36,7 +36,7 @@ class Store {
     this.validation = load(path.join(dir, 'validation.json'), {});
     this.overrides = load(path.join(dir, 'pricing.json'), {});
     this.billing = load(path.join(dir, 'billing.json'), { autoSync:true, defaults:{}, mappings:{} });
-    this.downloadedCatalog = false;
+    this.downloadedCatalog = false; this.persistedDigest = null;
     try { const saved = load(path.join(dir,'model-pricing.json'), null); this.remoteCatalog = runtimeCatalog.verify(saved || runtimeCatalog.embedded); this.downloadedCatalog = Boolean(saved); } catch { this.remoteCatalog = runtimeCatalog.verify(runtimeCatalog.embedded); }
     this.modelCatalog = runtimeCatalog.merged(this.remoteCatalog);
     this.modelCatalogHash = runtimeCatalog.hash(this.modelCatalog);
@@ -157,9 +157,22 @@ class Store {
       status.status = status.detected ? 'partial' : 'not-detected';
       status.lastSuccess = previousSuccess.get(agent) || null;
     }
-    this.state.sequence++; this.state.updatedAt = at;
-    atomic(path.join(this.dir, 'statistics.json'), this.state);
+    // A rescan that reproduces the stored ledger changes nothing durable: skip the
+    // full rewrite and keep the sequence so the snapshot is not rebuilt.
+    const digest = this.digest();
+    if (digest !== this.persistedDigest) {
+      this.state.sequence++; this.state.updatedAt = at;
+      atomic(path.join(this.dir, 'statistics.json'), this.state); this.persistedDigest = digest;
+    }
     return this.snapshot();
+  }
+  // Ledger content without per-attempt timing, which changes on every scan.
+  digest() {
+    const statuses = Object.fromEntries(Object.entries(this.state.statuses).map(([agent, status]) => {
+      const durable = { ...status }; delete durable.lastAttempt; delete durable.lastSuccess; delete durable.durationMs;
+      return [agent, durable];
+    }));
+    return crypto.createHash('sha256').update(JSON.stringify({ ...this.state, sequence: 0, updatedAt: null, statuses })).digest('hex');
   }
   snapshot() {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, today = day(Date.now(), timezone);
@@ -305,6 +318,6 @@ class Store {
     atomic(path.join(this.dir,'billing.json'),next); this.billing = next; this._snapshot = null;
     return this.pricing();
   }
-  clear() { this.state.records = {}; this.state.duplicateIds = {}; this.state.statuses = {}; this.state.sequence++; this.state.updatedAt = null; atomic(path.join(this.dir, 'statistics.json'), this.state); }
+  clear() { this.state.records = {}; this.state.duplicateIds = {}; this.state.statuses = {}; this.state.sequence++; this.state.updatedAt = null; atomic(path.join(this.dir, 'statistics.json'), this.state); this.persistedDigest = null; }
 }
 module.exports = { Store, atomic, price }; // load/day 仅为模块内部使用，不再导出

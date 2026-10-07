@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { SOURCES, filesUnder, readBytes } = require('./policy');
 const { readDatabase, query } = require('./sqlite-memory');
 const { normalize, number } = require('./normalize');
@@ -99,17 +100,76 @@ async function parseDatabase(agent, file, salt, audit) {
     return records;
   });
 }
-async function scanSources(selectedRoots, salt, audit) {
+// Every input a file's parse depends on: its bytes, plus committed WAL pages for
+// databases. Size and modification time stand in for those bytes.
+function fileStamp(file) {
+  const stat = fs.statSync(file); let stamp = stat.size + ':' + stat.mtimeMs;
+  if (file.endsWith('.db') || file.endsWith('.sqlite')) {
+    try { const wal = fs.statSync(file + '-wal'); stamp += '|wal:' + wal.size + ':' + wal.mtimeMs; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+  return stamp;
+}
+function listFiles(agent, selectedRoots, audit) {
+  let detected = false, files = []; const errors = [];
+  for (const root of selectedRoots[agent] || []) {
+    if (fs.existsSync(root)) detected = true;
+    try { files.push(...filesUnder(agent, root, audit)); } catch (error) { errors.push(error.message); }
+  }
+  return { detected, files: [...new Set(files)], errors };
+}
+// Changes whenever a scan could produce a different result.
+function sourceStamp(selectedRoots, salt, audit) {
+  const hash = crypto.createHash('sha256').update(salt);
+  for (const agent of SOURCES) {
+    const listed = listFiles(agent, selectedRoots, audit);
+    hash.update(JSON.stringify([agent, selectedRoots[agent] || [], listed.detected, listed.errors]));
+    for (const file of listed.files) { let stamp; try { stamp = fileStamp(file); } catch { stamp = 'unreadable'; } hash.update('\0' + file + '\0' + stamp); }
+  }
+  return hash.digest('hex');
+}
+async function parseFile(agent, file, salt, audit) {
+  const outcome = { records: null, partial: false, skipped: 0, errors: [], failure: null };
+  try {
+    let parsed;
+    if (file.endsWith('.db') || file.endsWith('.sqlite')) parsed = await parseDatabase(agent, file, salt, audit);
+    else if (/\.csv$/i.test(file)) parsed = extended.cursorCsv(readBytes(file, audit).toString('utf8'), salt);
+    else {
+      const bytes = readBytes(file, audit);
+      const text = agent === 'deepseek' ? extended.decodeDeepseek(bytes, file.endsWith('.zstd'), () => { outcome.partial = true; outcome.errors.push('DEEPSEEK_LOG_INCOMPLETE'); }) : bytes.toString('utf8');
+      const objects = [];
+      if (file.endsWith('.json')) objects.push(JSON.parse(text));
+      else for (const line of text.split('\n')) {
+        if (!line.trim()) continue;
+        try { objects.push(JSON.parse(line)); } catch { outcome.partial = true; outcome.skipped++; if (agent === 'deepseek') break; }
+      }
+      parsed = agent === 'deepseek' ? extended.deepseek(objects, salt, file) : parseObjects(agent, objects, salt, path.basename(file));
+    }
+    outcome.errors.push(...parsed.warnings || []);
+    outcome.records = [...parsed];
+  } catch (error) { outcome.failure = /^[A-Z_]+$/.test(error.message) ? error.message : 'SOURCE_PARSE_FAILED'; }
+  return outcome;
+}
+// The cache keeps each file's parse outcome by stamp; merging below mutates
+// records, so a cached outcome is cloned for every scan.
+async function parsedFile(agent, file, salt, audit, cache) {
+  if (!cache) return parseFile(agent, file, salt, audit);
+  const key = agent + '\0' + file; cache.seen.add(key);
+  let stamp = null; try { stamp = fileStamp(file); } catch {}
+  const hit = cache.files.get(key);
+  if (hit && stamp !== null && hit.stamp === stamp) return { ...hit.outcome, records: structuredClone(hit.outcome.records) };
+  const outcome = await parseFile(agent, file, salt, audit);
+  if (outcome.failure || stamp === null) cache.files.delete(key);
+  else { cache.files.set(key, { stamp, outcome }); return { ...outcome, records: structuredClone(outcome.records) }; }
+  return outcome;
+}
+async function scanSources(selectedRoots, salt, audit, { cache = null, report = null } = {}) {
+  if (cache) { if (cache.salt !== salt) { cache.files.clear(); cache.salt = salt; } cache.seen = new Set(); }
   const result = {}, physical = new Set(), shared = new Map();
   for (const agent of SOURCES) {
-    const records = new Map(), detailedSessions = new Set(); let detected = false, fileCount = 0, skipped = 0, partial = false; const errors = new Set();
+    const records = new Map(), detailedSessions = new Set(); let fileCount = 0, skipped = 0, partial = false;
     const started = Date.now();
-    let allFiles = [];
-    for (const root of selectedRoots[agent] || []) {
-      if (fs.existsSync(root)) detected = true;
-      try { allFiles.push(...filesUnder(agent, root, audit)); } catch (error) { errors.add(error.message); }
-    }
-    allFiles = [...new Set(allFiles)];
+    const listed = listFiles(agent, selectedRoots, audit), detected = listed.detected, errors = new Set(listed.errors);
+    let allFiles = listed.files;
     if (agent === 'deepseek') allFiles = extended.canonicalFiles(allFiles);
     // Export snapshots and SDK runs are alternate Cursor acquisition modes.
     // Their identifiers cannot prove cross-mode identity; refuse ambiguous sums.
@@ -125,25 +185,16 @@ async function scanSources(selectedRoots, salt, audit) {
       files.sort((a, b) => Number(a.endsWith('.db')) - Number(b.endsWith('.db')));
       for (const file of files) {
         if (encodingConflicts.has(path.dirname(file))) continue;
-        if (Date.now() - started > 55000) { errors.add('SOURCE_TIMEOUT'); break; }
+        if (Date.now() - started > 55000) { errors.add('SOURCE_TIMEOUT'); if (report) report.failures++; break; }
         if (physical.has(file)) continue;
         fileCount++;
         try {
-          let parsed;
-          if (file.endsWith('.db') || file.endsWith('.sqlite')) parsed = await parseDatabase(agent, file, salt, audit);
-          else if (/\.csv$/i.test(file)) parsed = extended.cursorCsv(readBytes(file, audit).toString('utf8'), salt);
-          else {
-            const bytes = readBytes(file, audit);
-            const text = agent === 'deepseek' ? extended.decodeDeepseek(bytes, file.endsWith('.zstd'), () => { partial = true; errors.add('DEEPSEEK_LOG_INCOMPLETE'); }) : bytes.toString('utf8');
-            const objects = [];
-            if (file.endsWith('.json')) objects.push(JSON.parse(text));
-            else for (const line of text.split('\n')) {
-              if (!line.trim()) continue;
-              try { objects.push(JSON.parse(line)); } catch { partial = true; skipped++; if (agent === 'deepseek') break; }
-            }
-            parsed = agent === 'deepseek' ? extended.deepseek(objects, salt, file) : parseObjects(agent, objects, salt, path.basename(file));
-          }
-          for (const warning of parsed.warnings || []) errors.add(warning);
+          const outcome = await parsedFile(agent, file, salt, audit, cache);
+          if (outcome.partial) partial = true;
+          skipped += outcome.skipped;
+          for (const code of outcome.errors) errors.add(code);
+          if (outcome.failure) throw new Error(outcome.failure);
+          const parsed = outcome.records;
           physical.add(file);
           for (const record of parsed) {
             if (record.sharedKey) {
@@ -175,12 +226,13 @@ async function scanSources(selectedRoots, salt, audit) {
             records.set(record.id,choice.record);
             if (record.sharedKey) shared.set(record.sharedKey,choice.record);
           }
-        } catch (error) { errors.add(/^[A-Z_]+$/.test(error.message) ? error.message : 'SOURCE_PARSE_FAILED'); }
+        } catch (error) { errors.add(/^[A-Z_]+$/.test(error.message) ? error.message : 'SOURCE_PARSE_FAILED'); if (report) report.failures++; }
       }
     }
     const retained = [...records.values()].filter(record => record.accountingKind !== 'session-aggregate' || !detailedSessions.has(record.sessionKey));
     result[agent] = { records: retained, detected, fileCount, skipped, partial: partial || errors.size > 0, errors: [...errors], durationMs: Date.now() - started };
   }
+  if (cache) for (const key of cache.files.keys()) if (!cache.seen.has(key)) cache.files.delete(key);
   return result;
 }
-module.exports = { parseObjects, parseDatabase, scanSources };
+module.exports = { parseObjects, parseDatabase, scanSources, sourceStamp };
