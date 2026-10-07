@@ -19,7 +19,7 @@ const categories = [
   ['reasoning', '推理', '#97a780']
 ];
 let period = 'all', metric = 'tokens', selectedDay = null, enabled = true, sequence = realData ? localSnapshot.sequence : 1;
-let trendChart, toastTimer, selectedWeekday = null, trendMode = 'flow', trendRange = null, trendBuckets = [], keyboardTrendIndex = 0;
+let trendChart, toastTimer, trendMode = 'flow', trendRange = null, trendBuckets = [], keyboardTrendIndex = 0;
 let trendPress = null, trendDragged = false;
 let usageStatus = { collecting: false, error: null };
 let usageRevision = null;
@@ -76,24 +76,26 @@ for (let offset = 0; !realData && !bootstrapFailed && offset < 181; offset++) {
     const cacheRead = totalTokens - inputUncached - output - cacheWrite;
     const reasoning = offset === 0 ? 3000 : Math.round(output * .23);
     const cost = agent === 'workbuddy' && offset % 5 === 0 ? null : offset === 0 ? .76 : totalTokens / 1e6 * [.24, .2, .13, .54, .09][index % 5];
+    // Synthetic unit rates only shape how the cost is split; the split always sums to it.
+    const weights = { inputUncached: inputUncached * 2, output: output * 8, cacheRead: cacheRead * .2, cacheWrite: cacheWrite * 2.5 }, weight = Object.values(weights).reduce((a, b) => a + b, 0);
+    const costParts = cost === null ? null : Object.fromEntries(Object.entries(weights).map(([key, value]) => [key, cost * value / weight]));
     templates.push({ date: day, agent, entry: 'unknown', provider: 'synthetic', model: '示例模型 · ' +
-      meta.name, totalTokens, inputUncached, output, cacheRead, cacheWrite, reasoning, records: offset === 0 ? 11 : Math.max(1, Math.round(totalTokens / 65000)), estimatedCostUsd: cost, pricedTokens: cost === null ? 0 : totalTokens,
+      meta.name, totalTokens, inputUncached, output, cacheRead, cacheWrite, reasoning, records: offset === 0 ? 11 : Math.max(1, Math.round(totalTokens / 65000)), estimatedCostUsd: cost, pricedTokens: cost === null ? 0 : totalTokens, costParts, cacheSavingsUsd: cost === null ? null : cost * cacheRead * 1.8 / weight,
       // Like real Codex logs, unreported cache writes leave a bounded estimate.
       estimatedCostUpperUsd: cost === null ? null : agent === 'codex' ? cost * 1.08 : cost, boundedTokens: cost !== null && agent === 'codex' ? totalTokens : 0 });
   }
 }
 if (realData) templates.push(...localSnapshot.daily);
-// Hourly rows exist for the last seven local days; a single-day trend plots them by hour.
+// Hourly rows cover the whole history; a single-day trend plots them by hour.
 const hourlyTemplates = [];
 function currentHour() { return Number(new Intl.DateTimeFormat('en-GB', { timeZone: realData ? localSnapshot.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date())); }
-function hourlyReady(date) { return date >= shift(today, -6) && date <= today && (!realData || Array.isArray(localSnapshot.hourly)); }
+function hourlyReady(date) { return date <= today && (!realData || Array.isArray(localSnapshot.hourly)); }
 function loadHourly() {
   hourlyTemplates.length = 0;
   if (realData) { hourlyTemplates.push(...(localSnapshot.hourly || [])); return; }
   // Synthetic demo: split each recent day across working hours, exact to the token.
   const fields = ['totalTokens', 'inputUncached', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'records', 'estimatedCostUsd', 'estimatedCostUpperUsd', 'pricedTokens', 'boundedTokens'];
   for (const row of templates) {
-    if (row.date < shift(today, -6)) continue;
     const last = row.date === today ? currentHour() : 23, hours = [9, 10, 11, 14, 15, 16, 17, 20, 21, 22].filter(hour => hour <= last);
     if (!hours.length) hours.push(last);
     const weights = hours.map((hour, i) => 1 + (hour * 7 + i * 3 + row.totalTokens) % 5), weight = weights.reduce((a, b) => a + b, 0);
@@ -124,6 +126,14 @@ function aggregate(rows) { const priced = rows.filter(r => r.estimatedCostUsd !=
 function mix(rows) {
   return window.usageMath.disjointMix(rows);
 }
+// Which fields each source ever records; refreshed with every render.
+let recorded = () => true;
+function tiles(rows) { return window.insightsMath.categoryView(rows, recorded); }
+function tileText(tile) { return { value: short(tile.value), partial: '≥ ' + short(tile.value), combined: '含在输出中', 'not-recorded': '来源不记录' }[tile.state] ?? '未报告'; }
+function tileTitle(tile) {
+  return ({ partial: '部分记录未报告' + tile.label + '，显示已报告部分的下限', combined: '来源只记录输出总量，推理已包含其中，无法拆分', 'not-recorded': '这些来源的日志没有单独记录' + tile.label + '，相应 token 已计入其他分类，不按零计算', unknown: '这些记录没有报告' + tile.label + '，不按零计算' }[tile.state] || '') + (tile.note ? '；' + tile.note : '');
+}
+function tileClass(tile) { return tile.state === 'unknown' ? 'is-unreported' : ['combined', 'not-recorded'].includes(tile.state) ? 'is-structural' : ''; }
 function mixHtml(rows) {
   if (!rows.length) return '<p class="empty-message">暂无可用统计，未观测到的值不显示为零。</p>';
   const m = mix(rows);
@@ -138,14 +148,7 @@ function mixHtml(rows) {
     short(m.values[i]) +
     '"></span>').join('') : '') +
     '</div><div class="mix-legend">' +
-    categories.map(([, label], i) => m.displayValues[i] === null ? '<span class="is-unreported" title="这些记录没有报告' + label + '"><i class="swatch"></i>' + label + '<b>未报告</b></span>' : '<span><i class="swatch" style="background:' +
-    categoryColor(i) +
-    '"></i>' +
-    label +
-    '<b>' +
-    (m.partialValues[i] ? '≥ ' : '') +
-    short(m.displayValues[i]) +
-    '</b></span>').join('') +
+    tiles(rows).map((tile, i) => '<span class="' + tileClass(tile) + '" title="' + tileTitle(tile) + '"><i class="swatch" style="background:' + categoryColor(i) + '"></i>' + tile.label + '<b>' + tileText(tile) + '</b></span>').join('') +
     '</div>';
 }
 function clientHtml(rows, detail = false) {
@@ -187,8 +190,7 @@ function clientHtml(rows, detail = false) {
 }
 // Same disjoint buckets as the category tiles above, so the two never disagree.
 function modelMetrics(group) {
-  const m = mix(group);
-  return '<p class="model-metrics">' + categories.map(([, label], i) => '<span' + (m.displayValues[i] === null ? ' class="is-unreported"' : '') + '>' + label.replace(/（.*）/, '') + (i === 1 ? '<em>不含推理</em>' : '') + ' <b>' + (m.displayValues[i] === null ? '未报告' : (m.partialValues[i] ? '≥ ' : '') + short(m.displayValues[i])) + '</b></span>').join('') + '</p>';
+  return '<p class="model-metrics">' + tiles(group).map(tile => '<span class="' + tileClass(tile) + '" title="' + tileTitle(tile) + '">' + tile.label.replace(/（.*）/, '') + (/（(.*)）/.test(tile.label) && tile.key !== 'inputUncached' ? '<em>' + tile.label.match(/（(.*)）/)[1] + '</em>' : '') + ' <b>' + tileText(tile) + '</b></span>').join('') + '</p>';
 }
 function filterRows(rows) { const agent = $('agentFilter').value, source = $('sourceFilter').value, model = $('modelFilter').value; return rows.filter(r => (agent === 'all' || r.agent === agent) && (source === 'all' || (r.provider || 'unknown') === source) && (model === 'all' || r.model === model)); }
 function rangeStart() { return window.usageMath.startFor(today, period, coverageStart); }
@@ -304,14 +306,9 @@ function renderDay(rows) {
   const entering = $('dayDetail').hidden || $('dayDetail').dataset.date !== selectedDay;
   $('dayDetail').hidden = !selectedDay; if (!selectedDay) return;
   $('dayDetail').dataset.date = selectedDay;
-  const subset = filterRows(rows).filter(r => r.date === selectedDay), a = aggregate(subset), observed = realData ? rows.some(r => r.date === selectedDay) : selectedDay >= coverageStart && rows.length > 0, m = mix(subset);
+  const subset = filterRows(rows).filter(r => r.date === selectedDay), a = aggregate(subset), observed = realData ? rows.some(r => r.date === selectedDay) : selectedDay >= coverageStart && rows.length > 0;
   const dayCategories = '<h4 class="day-subtitle">Token 分类</h4><div class="day-categories">' +
-    categories.map(([, label], i) => subset.length && m.displayValues[i] === null ? '<div class="is-unreported" title="这一天的记录没有报告' + label + '，不按零计算"><small>' + label + '</small><b>未报告</b></div>' : '<div><small>' +
-    label +
-    '</small><b>' +
-    (subset.length ? (m.partialValues[i] && m.displayValues[i] !== null ? '≥ ' : '') +
-    short(m.displayValues[i]) : '—') +
-    '</b></div>').join('') +
+    tiles(subset).map(tile => '<div class="' + tileClass(tile) + '" title="' + tileTitle(tile) + '"><small>' + tile.label + '</small><b>' + (subset.length ? tileText(tile) : '—') + '</b></div>').join('') +
     '</div><h4 class="day-subtitle">Agent 与模型</h4>';
   $('dayDetail').innerHTML = '<header><div><span class="eyebrow">当日明细</span><h3>' +
     selectedDay +
@@ -463,7 +460,7 @@ function renderTrend(rows) {
   $('trendActive').textContent=new Set((hourly?hourRows:subset).filter(r=>r.totalTokens>0).map(r=>hourly?r.hour:r.date)).size+(hourly?' 小时':' 天');
   $('trendFrom').value=start;$('trendTo').value=end;$('trendRangeReset').hidden=!trendRange;
   $('trendRangeLabel').textContent=trendRange?start===end?start.slice(5):start.slice(5)+' – '+end.slice(5):period==='all'?'累计':period==='today'?'今天':'最近 '+period+' 天';$('trendRangeButton').title=start===end?start:start+' 至 '+end;$('trendRangeButton').setAttribute('aria-label','趋势时间范围：'+$('trendRangeButton').title);
-  $('trendNote').hidden=false;$('trendNote').textContent=hourly?'按小时 · 本地时间'+($('display').value==='total'?' · 当日累计':'')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===today?' · 截至 '+pad(currentHour())+':00 时段':''):(grain==='week'?'按周':grain==='month'?'按月':'按日')+($('display').value==='average'?' · 30 日均值':$('display').value==='total'?' · 区间累计':' · 已记录用量')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===end?' · 7 天前的单日仅有日汇总':' · 淡线连接未记录日期');
+  $('trendNote').hidden=false;$('trendNote').textContent=hourly?'按小时 · 本地时间'+($('display').value==='total'?' · 当日累计':'')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===today?' · 截至 '+pad(currentHour())+':00 时段':''):(grain==='week'?'按周':grain==='month'?'按月':'按日')+($('display').value==='average'?' · 30 日均值':$('display').value==='total'?' · 区间累计':' · 已记录用量')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===end?' · 该日没有小时数据':' · 淡线连接未记录日期');
   $('chartLegend').innerHTML=selected.map(entry=>'<button data-trend-series="'+escapeHtml(entry.key)+'" aria-pressed="true"><i class="swatch" style="background:'+entry.color+'"></i>'+escapeHtml(entry.label)+'</button>').join('');
   window.uiMotion.indicators();
 }
@@ -481,68 +478,21 @@ $('trendCanvas').addEventListener('pointerup',event=>{trendPress=null;if(event.c
 $('trendCanvas').addEventListener('pointercancel',()=>{trendPress=null;trendDragged=true;});
 window.addEventListener('ui-motion-change',()=>{cancelAnimationFrame(revealFrame);if(trendChart){trendChart.$reveal=1;trendChart.stop();trendChart.options.animation=window.uiMotion.mode==='full'?{duration:650,easing:'easeOutQuart'}:false;trendChart.update('none');}});
 
-function renderMix(rows) {
-  const subset = rangeRows(rows), m = mix(subset);
-  $('mixBar').innerHTML = m.total ? categories.map(([, label], i) => '<span style="background:' + categoryColor(i) + ';width:' + m.values[i] / m.total * 100 + '%" title="' + label + ' ' + short(m.values[i]) + '"></span>').join('') : '';
-  $('mixList').innerHTML = categories.map(([, label], i) => { const unknown = subset.length && m.displayValues[i] === null;
-    return '<div class="mix-item' + (unknown ? ' is-unreported' : '') + '" style="--swatch:' + categoryColor(i) + '"><dt><i class="swatch"></i>' + label + '</dt><dd class="mix-value">' +
-      (!subset.length ? '—' : unknown ? '未报告' : (m.partialValues[i] ? '≥ ' : '') + short(m.displayValues[i])) + '</dd>' +
-      (m.total && !m.incomplete ? '<dd class="mix-share">' + (m.values[i] / m.total * 100).toFixed(1) + '%</dd>' : '') + '</div>'; }).join('');
-  $('mixIncomplete').textContent = m.incomplete ? '部分记录缺少分类字段：分布条只统计完整记录（占 ' + ((m.coverage ?? 0) * 100).toFixed(1) + '%），≥ 表示已报告部分的下限。' : subset.length ? '' : '暂无可用分类数据。';
+function previousWindow() {
+  if (period === 'all') return null;
+  const start = rangeStart(), length = Math.round((Date.parse(today) - Date.parse(start)) / 86400000) + 1, from = shift(start, -length), to = shift(start, -1);
+  return { from, to, complete: from >= coverageStart };
 }
-function renderHabits(rows) {
-  const subset = rangeRows(rows), weekdays = [0, 0, 0, 0, 0, 0, 0], daily = new Map(), names = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
-  for (const row of subset) { weekdays[(new Date(row.date + 'T12:00:00Z').getUTCDay() + 6) % 7] += row.totalTokens; daily.set(row.date, (daily.get(row.date) ?? 0) + row.totalTokens); }
-  const bestIndex = weekdays.indexOf(Math.max(...weekdays)), biggest = [...daily].sort((a, b) => b[1] - a[1])[0];
-  $('bestWeekday').textContent = subset.length ? names[bestIndex] : '—'; $('weekdayTotal').textContent = subset.length ? short(weekdays[bestIndex]) + ' token · 占区间 ' + (100 * weekdays[bestIndex] / sum(subset, 'totalTokens')).toFixed(0) + '%' : '暂无数据';
-  $('biggestDayTokens').textContent = biggest ? short(biggest[1]) : '—'; $('biggestDay').textContent = biggest ? biggest[0] : '暂无数据'; $('habitRange').textContent = rangeLabel();
-  $('bestWeekday').disabled = !subset.length; $('bestWeekday').dataset.weekday = String(bestIndex);
-  $('biggestDayTokens').disabled = !biggest; $('biggestDayTokens').dataset.habitDate = biggest ? biggest[0] : '';
-  const maximum = Math.max(1, ...weekdays);
-  $('weekdayBars').innerHTML = weekdays.map((value, i) => '<button data-weekday="' +
-    i +
-    '" aria-label="' +
-    names[i] +
-    '，' +
-    value.toLocaleString('zh-CN') +
-    ' token" aria-pressed="' +
-    (selectedWeekday === i) +
-    '" class="' +
-    (i === bestIndex ? 'best' : '') +
-    '"><b>' +
-    short(value) +
-    '</b><span class="weekday-column"><i style="height:' +
-    value / maximum * 100 +
-    '%"></i></span><span>' +
-    names[i] +
-    '</span></button>').join('');
-  $('habitDetail').hidden = selectedWeekday === null;
-  if (selectedWeekday !== null) {
-    const matching = subset.filter(r => (new Date(r.date + 'T12:00:00Z').getUTCDay() + 6) % 7 === selectedWeekday), a = aggregate(matching);
-    const days = [...new Set(matching.map(r => r.date))].sort().reverse();
-    $('habitDetail').innerHTML = '<div class="habit-detail-heading"><strong>' +
-      names[selectedWeekday] +
-      ' · ' +
-      short(a.total) +
-      ' token</strong><button data-close-habit aria-label="关闭星期明细">' +
-      icon('ui/x') +
-      '</button></div><p>' +
-      days.length +
-      ' 个有记录的日期 · ' +
-      a.records +
-      ' 条用量记录 · ' +
-      costHtml(a, '星期估算') +
-      '</p><div class="habit-date-list">' +
-      days.map(date => '<button data-habit-date="' +
-      date +
-      '"><span>' +
-      date +
-      '</span><b>' +
-      short(sum(matching.filter(r => r.date === date), 'totalTokens')) +
-      '</b></button>').join('') +
-      (days.length ? '' : '<p>当前范围没有该星期的用量记录。</p>') +
-      '</div>';
-  }
+function renderInsights(rows) {
+  const subset = rangeRows(rows), start = rangeStart(), previous = previousWindow();
+  const hourly = filterRows(hourlyData()).filter(r => r.date >= start && r.date <= today);
+  const previousRows = previous?.complete ? filterRows(rows).filter(r => r.date >= previous.from && r.date <= previous.to) : null;
+  window.usageInsights.render({
+    rows: subset, hourlyRows: hourly, previousRows, recorded, rangeText: rangeLabel(),
+    compareText: period === 'today' ? '较昨天' : '较前 ' + period + ' 天',
+    compareMissing: period === 'all' ? '累计范围，不做对比' : '上一周期早于记录开始，不做对比',
+    colorOf: categoryColor, agents, short, usd: window.displayValues.usd, icon, escapeHtml, displayModel
+  });
 }
 function renderModels(rows) {
   const subset = rangeRows(rows), grouped = new Map();
@@ -612,8 +562,7 @@ function updateCollection() { const interval=usageStatus.refreshIntervalMs??1500
  $('settingsPause').disabled = realData && !usageBridge; $('settingsPause').textContent = usageBridge ? enabled ? '暂停采集' : '恢复采集' : realData ? '只读快照' : enabled ? '暂停演示采集' : '恢复演示采集';
  // The pause control is a switch, so its state must be exposed with the label.
  $('settingsPause').setAttribute('role', 'switch'); $('settingsPause').setAttribute('aria-checked', String(Boolean(enabled))); }
-function render() { syncCalendar(); const rows = data(); window.usageCalendar = { today, min: coverageStart, recorded: new Set(filterRows(rows).map(r => r.date)) }; renderOverview(rows); renderHeat(rows); renderTrend(rows); renderMix(rows);
- renderHabits(rows); renderModels(rows); updateCollection(); window.uiSelect?.syncAll(); window.uiSegments?.syncAll(); window.uiMotion.indicators(); }
+function render() { syncCalendar(); const rows = data(); recorded = window.insightsMath.recordedFields(templates); window.usageCalendar = { today, min: coverageStart, recorded: new Set(filterRows(rows).map(r => r.date)) }; renderOverview(rows); renderHeat(rows); renderTrend(rows); renderInsights(rows); renderModels(rows); updateCollection(); window.uiSelect?.syncAll(); window.uiSegments?.syncAll(); window.uiMotion.indicators(); }
 function view(name) {
   if ($('main').dataset.currentView === name) return;
   // Save the actual presentation position before hiding a long page clamps scrollY.
@@ -698,15 +647,14 @@ function goToDay(date) { selectedDay = date; renderHeat(data()); window.uiDetail
 document.addEventListener('click', event => {
   const button = event.target.closest('button'); if (!button) return;
   if (button.dataset.view) view(button.dataset.view);
-  if (button.dataset.period && button.dataset.period !== period) { period = button.dataset.period; trendRange = null; selectedWeekday = null; for (const b of document.querySelectorAll('[data-period]')) b.setAttribute('aria-pressed', String(b === button)); render(true); }
+  if (button.dataset.period && button.dataset.period !== period) { period = button.dataset.period; trendRange = null; for (const b of document.querySelectorAll('[data-period]')) b.setAttribute('aria-pressed', String(b === button)); render(true); }
   if (button.dataset.metric) { metric = button.dataset.metric; for (const b of document.querySelectorAll('[data-metric]')) b.setAttribute('aria-pressed', String(b === button)); renderTrend(data()); window.uiMotion.indicators(); }
   if (button.dataset.date) { selectedDay = button.dataset.date; for (const cell of $('heatmap').querySelectorAll('button')) cell.setAttribute('aria-pressed', String(cell === button)); renderDay(data()); }
   if (button.hasAttribute('data-refresh-today')) void refreshUsage();
   if (button.dataset.model) { $('modelFilter').value = button.dataset.model; render(true); }
   if (button.hasAttribute('data-reset-model')) { $('modelFilter').value = 'all'; render(true); }
-  if (button.dataset.weekday !== undefined) { selectedWeekday = Number(button.dataset.weekday); renderHabits(data()); }
   if (button.dataset.habitDate) goToDay(button.dataset.habitDate);
-  if (button.hasAttribute('data-close-habit')) { selectedWeekday = null; renderHabits(data()); }
+  if (button.dataset.shareAgent) { $('agentFilter').value = button.dataset.shareAgent; $('agentFilter').dispatchEvent(new Event('change')); }
   if (button.dataset.avatar) { profileDraft.tone = button.dataset.avatar; profileDraft.photo = null; resetAvatarInput(); $('profileError').textContent = ''; showDraft(); }
   if (button.hasAttribute('data-export')) { $('exportResult').textContent = ''; $('jsonPreview').hidden = true; $('jsonPreview').open = false; $('exportDialog').showModal(); }
   if (button.dataset.sourceView) view('sources');

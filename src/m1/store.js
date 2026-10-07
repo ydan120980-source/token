@@ -19,7 +19,6 @@ function load(file, fallback) {
 const dayFormatters = new Map();
 const hourFormatters = new Map();
 function hourOf(time, timezone) { if (!hourFormatters.has(timezone)) hourFormatters.set(timezone, new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', hourCycle: 'h23' })); return Number(hourFormatters.get(timezone).format(new Date(time))); }
-function shiftDay(date, days) { const value = new Date(date + 'T12:00:00Z'); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10); }
 function day(time, timezone) { if (!dayFormatters.has(timezone)) dayFormatters.set(timezone, new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })); return dayFormatters.get(timezone).format(new Date(time)); }
 class Store {
   constructor(dir, defaults = roots()) {
@@ -177,12 +176,12 @@ class Store {
   snapshot() {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, today = day(Date.now(), timezone);
     if (this._snapshot?.sequence === this.state.sequence && this._snapshot.timezone === timezone && this._snapshot.today === today) return this._snapshot;
-    // Hourly rows cover the last seven local days, so a single-day view can plot by hour.
-    const groups = new Map(), hourGroups = new Map(), horizon = shiftDay(today, -6);
+    // Hourly rows cover the whole history: single-day trends and the weekday x hour view.
+    const groups = new Map(), hourGroups = new Map();
     const add = (map, key, base, record, estimate) => {
       let row = map.get(key);
       if (!row) {
-        row = { ...base, agent: record.agent, entry: record.entry, provider: record.provider, model: record.model, totalTokens: 0, inputUncached: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, records: 0, pricedRecords: 0, pricedTokens: 0, estimatedCostUsd: 0, estimatedCostUpperUsd: 0, boundedTokens: 0, pricingReasons: {}, knownUsage: {}, knownRecords: {}, partialRecords: 0 };
+        row = { ...base, agent: record.agent, entry: record.entry, provider: record.provider, model: record.model, totalTokens: 0, inputUncached: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, records: 0, pricedRecords: 0, pricedTokens: 0, estimatedCostUsd: 0, estimatedCostUpperUsd: 0, boundedTokens: 0, pricingReasons: {}, knownUsage: {}, knownRecords: {}, partialRecords: 0, costParts: { inputUncached: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, cacheSavingsUsd: 0 };
         map.set(key, row);
       }
       row.totalTokens += record.totalTokens; row.records++;
@@ -193,21 +192,33 @@ class Store {
         if (!record.usageConflict && Number.isFinite(count)) { row.knownUsage[field] = (row.knownUsage[field] || 0) + count; row.knownRecords[field] = (row.knownRecords[field] || 0) + 1; }
       }
       row.pricingReasons[estimate.reason] = (row.pricingReasons[estimate.reason] || 0) + 1;
-      if (estimate.lower !== null) { row.estimatedCostUsd += estimate.lower; row.estimatedCostUpperUsd += estimate.upper; row.pricedRecords++; row.pricedTokens += record.totalTokens; if (estimate.upper > estimate.lower) row.boundedTokens += record.totalTokens; }
+      if (estimate.lower !== null) {
+        row.estimatedCostUsd += estimate.lower; row.estimatedCostUpperUsd += estimate.upper; row.pricedRecords++; row.pricedTokens += record.totalTokens; if (estimate.upper > estimate.lower) row.boundedTokens += record.totalTokens;
+        for (const field of Object.keys(row.costParts)) row.costParts[field] += estimate.parts[field]; row.cacheSavingsUsd += estimate.savings;
+      }
     };
     for (const record of this.records()) {
       const date = day(record.timestamp, timezone);
       const resolved = this.resolvePrice(record);
       const estimate = resolved.rates ? evaluate(record, {}, {...resolved.rates,billingProvider:resolved.target?.split('/')[0] || record.provider}) : {reason:'model-unpriced',lower:null,upper:null};
       const multiplier = this.billing.defaults[record.agent]?.multiplier ?? 1;
-      if (estimate.lower !== null) { estimate.lower *= multiplier; estimate.upper *= multiplier; }
+      if (estimate.lower !== null) {
+        estimate.lower *= multiplier; estimate.upper *= multiplier;
+        // The lower estimate is allocated to token categories by count x unit rate,
+        // so the parts always sum to it; savings price cache reads at the uncached rate.
+        const rates = resolved.rates, rate = field => Number.isFinite(rates[field]) ? rates[field] : 0;
+        const weights = Object.fromEntries(['inputUncached', 'output', 'cacheRead', 'cacheWrite'].map(field => [field, (record[field] ?? 0) * rate(field)]));
+        const weight = Object.values(weights).reduce((sum, value) => sum + value, 0);
+        estimate.parts = Object.fromEntries(Object.entries(weights).map(([field, value]) => [field, weight > 0 ? estimate.lower * value / weight : 0]));
+        estimate.savings = (record.cacheRead ?? 0) * Math.max(0, rate('inputUncached') - rate('cacheRead')) * multiplier;
+      }
       const identity = [record.agent, record.entry, record.provider, record.model];
       add(groups, JSON.stringify([date, ...identity]), { date }, record, estimate);
-      if (date >= horizon && date <= today) { const hour = hourOf(record.timestamp, timezone); add(hourGroups, JSON.stringify([date, hour, ...identity]), { date, hour }, record, estimate); }
+      const hour = hourOf(record.timestamp, timezone); add(hourGroups, JSON.stringify([date, hour, ...identity]), { date, hour }, record, estimate);
     }
     const daily = [...groups.values()].sort((a, b) => a.date.localeCompare(b.date));
     const hourly = [...hourGroups.values()].sort((a, b) => a.date.localeCompare(b.date) || a.hour - b.hour);
-    for (const row of [...daily, ...hourly]) { if (!row.pricedRecords) { row.estimatedCostUsd = null; row.estimatedCostUpperUsd = null; } row.semantics = { inputUncached: 'excludes-cache', reasoning: 'subset-of-output', totalTokens: 'non-overlapping-source-total' }; }
+    for (const row of [...daily, ...hourly]) { if (!row.pricedRecords) { row.estimatedCostUsd = null; row.estimatedCostUpperUsd = null; row.costParts = null; row.cacheSavingsUsd = null; } row.semantics = { inputUncached: 'excludes-cache', reasoning: 'subset-of-output', totalTokens: 'non-overlapping-source-total' }; }
     return this._snapshot = {
       schemaVersion: 'UsageSnapshotV1', deviceId: this.state.deviceId, sequence: this.state.sequence,
       collectedAt: this.state.updatedAt || null, generatedAt: new Date().toISOString(), timezone, today,

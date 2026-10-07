@@ -65,10 +65,16 @@
   }
   $('newPrice').addEventListener('click', () => openEditor(null));
 
+  // The list opens on the heaviest models; a search always shows every match.
+  const COLLAPSED_ROWS = 8; let expanded = false;
+  $('priceExpand').addEventListener('click', () => { expanded = !expanded; render(); if (!expanded) $('priceModelsTitle').scrollIntoView({ block: 'nearest' }); });
   function render() {
     const query = $('priceSearch').value.trim().toLowerCase();
     const shown = query ? models.filter(item => (item.key + ' ' + item.agents.join(' ') + ' ' + pricing.origin(item.row).label).toLowerCase().includes(query)) : models;
-    $('priceRows').innerHTML = view.rowsHtml(shown, { empty: query ? '没有匹配的已用模型。' : '采集后显示已使用的模型。' }, pricing);
+    const folded = !query && shown.length > COLLAPSED_ROWS;
+    $('priceRows').innerHTML = view.rowsHtml(folded && !expanded ? shown.slice(0, COLLAPSED_ROWS) : shown, { empty: query ? '没有匹配的已用模型。' : '采集后显示已使用的模型。' }, pricing);
+    $('priceExpand').hidden = !folded; $('priceExpand').setAttribute('aria-expanded', String(expanded));
+    $('priceExpand').textContent = expanded ? '收起，只看前 ' + COLLAPSED_ROWS + ' 个' : '展开其余 ' + (shown.length - COLLAPSED_ROWS) + ' 个模型';
     $('priceModelCount').textContent = models.length ? (query ? shown.length + ' / ' : '') + models.length : '';
   }
   function renderSummary() {

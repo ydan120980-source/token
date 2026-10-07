@@ -1,0 +1,71 @@
+/* 2026-10-07 composition and habits views. Same restraint as polish.css: hairlines,
+   one accent, numbers in tabular figures, colour only where it carries meaning. */
+.insights .insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.insights > .insight-card + .insight-card { margin-top: 16px; }
+.insight-card { padding: 22px 24px 24px; min-width: 0; }
+.insight-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.insight-head h3 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.2px; }
+.insight-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.insight-empty { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+
+.cost-total { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; }
+.cost-total strong { font-size: 30px; font-weight: 680; letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
+.cost-total span { color: var(--muted); font-size: 12px; }
+.cost-bar { display: flex; gap: 2px; height: 10px; margin: 16px 0 14px; border-radius: 5px; overflow: hidden; background: var(--fill); }
+.cost-bar span { width: var(--w); min-width: 3px; background: var(--c); }
+.cost-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.cost-parts li { display: grid; grid-template-columns: 10px 1fr auto 52px; align-items: center; gap: 10px; padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--hairline); }
+.cost-parts li:last-child { border-bottom: 0; }
+.cost-parts i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.cost-parts b, .share-list b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.cost-parts em, .share-list em { font-style: normal; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+.insight-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; margin-top: 18px; }
+.insight-facts > div { padding: 11px 14px; border-radius: 12px; background: var(--fill); }
+.insight-facts small, .efficiency-grid small { display: block; color: var(--muted); font-size: 12px; }
+.insight-facts b { display: block; margin-top: 3px; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.insight-toggle { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--fill); flex: none; }
+.insight-toggle button { border: 0; background: transparent; color: var(--muted); font-size: 12px; padding: 4px 11px; border-radius: 7px; min-height: 0; }
+.insight-toggle button[aria-pressed='true'] { background: var(--raised); color: var(--text); box-shadow: var(--card-edge); }
+
+.share-list { list-style: none; margin: 0; padding: 0; }
+.share-list button { display: grid; grid-template-columns: 18px minmax(84px, 1.5fr) minmax(36px, 1fr) 52px 34px 60px; align-items: center; gap: 10px; padding: 8px 6px; margin: 0 -6px; width: calc(100% + 12px); border: 0; border-radius: 9px; background: transparent; color: var(--text); font-size: 13px; text-align: left; min-height: 0; }
+.share-list button:not(:disabled):hover { background: var(--fill); }
+.share-list button:disabled { opacity: 1; cursor: default; color: var(--muted); }
+.share-list img { width: 16px; height: 16px; }
+.share-dot { width: 8px; height: 8px; margin-left: 4px; border-radius: 50%; background: var(--fill-strong); }
+.share-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-track { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.share-track span { display: block; height: 100%; width: var(--w); border-radius: 3px; background: var(--accent); opacity: .75; }
+.share-list small { color: var(--muted); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.hour-scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+.hour-grid { display: grid; grid-template-columns: 30px repeat(24, minmax(12px, 1fr)); gap: 3px; min-width: 460px; }
+.hour-grid i { height: 20px; border-radius: 4px; background: var(--fill); }
+.hour-grid i.lv1 { background: color-mix(in srgb, var(--accent) 22%, var(--fill)); }
+.hour-grid i.lv2 { background: color-mix(in srgb, var(--accent) 45%, var(--fill)); }
+.hour-grid i.lv3 { background: color-mix(in srgb, var(--accent) 70%, var(--fill)); }
+.hour-grid i.lv4 { background: var(--accent); }
+.hour-grid span { color: var(--muted); font-size: 10px; line-height: 1; align-self: center; font-variant-numeric: tabular-nums; }
+.hour-grid .hour-day { font-size: 11px; }
+
+.efficiency-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.efficiency-grid > div { padding: 13px 15px; border-radius: 12px; background: var(--fill); }
+.efficiency-grid b { display: block; margin-top: 4px; font-size: 19px; font-weight: 650; letter-spacing: -.3px; font-variant-numeric: tabular-nums; }
+.efficiency-grid .delta { display: inline-block; margin-top: 4px; font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.efficiency-grid .delta.good { color: #2f8a57; }
+.efficiency-grid .delta.bad { color: var(--warn); }
+body.dark .efficiency-grid .delta.good { color: #7fcf9c; }
+
+/* Category tiles: structural states (not recorded / contained in output) are facts, not gaps. */
+.is-structural b { color: var(--muted); font-weight: 500; }
+.model-metrics .is-structural b, .mix-legend .is-structural b { font-weight: 500; }
+
+@media (max-width: 900px) {
+  .efficiency-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .insights .insight-grid { grid-template-columns: 1fr; }
+  .share-list button { grid-template-columns: 18px minmax(70px, 1fr) 54px 38px 62px; }
+  .share-track { display: none; }
+}
+@media (max-width: 620px) { .efficiency-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

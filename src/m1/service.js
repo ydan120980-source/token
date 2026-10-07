@@ -3,6 +3,9 @@ const path = require('node:path');
 const { Worker } = require('node:worker_threads');
 const crypto = require('node:crypto');
 const { Store, atomic } = require('./store');
+// Facts about the collected data, reproduced by every scan of the same files. They
+// are shown on the source cards; they are not read failures and must not back off.
+const DATA_NOTICES = new Set(['USAGE_UNREPORTED', 'SOURCE_USAGE_CONFLICT', 'SOURCE_USAGE_REGRESSION', 'SOURCE_ROW_INVALID', 'DEEPSEEK_FORMAT_UNSUPPORTED', 'DEEPSEEK_SEED_INVALID', 'DEEPSEEK_ENCODING_CONFLICT', 'DEEPSEEK_LOG_INCOMPLETE', 'CURSOR_SOURCE_MODE_CONFLICT', 'CURSOR_CSV_SCHEMA', 'CURSOR_CSV_INVALID', 'SOURCE_COMPRESSION_UNSUPPORTED']);
 class Service {
   constructor(dir, sourceRoots, update = () => {}) { this.store = new Store(dir, sourceRoots); this.update = update; this.timer = null; this.current = null; this.retry = 0; this.lastError = null; this.audit = null; this.closed = false; this.timeoutMs = 60000; this.collector = null; this.requests = 0; this.stamp = null; this.stampSequence = null; this.scanHadError = false; this.checkedAt = null; }
   async refresh(maintenance = false) {
@@ -45,7 +48,7 @@ class Service {
       // Unchanged sources reproduce the stored ledger; skip ingest, verification and writes.
       if (!result.unchanged && !this.closed) {
         this.store.ingest(result.scan, result.native);
-        this.scanHadError = Object.values(result.scan).some(s => s.errors.length);
+        this.scanHadError = Object.values(result.scan).some(s => s.errors.some(code => !DATA_NOTICES.has(code)));
         this.stamp = result.stamp; this.stampSequence = this.store.state.sequence;
       }
       this.checkedAt = new Date().toISOString();

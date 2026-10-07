@@ -15,6 +15,8 @@ function selectSnapshot(snapshot) {
     selected.estimatedCostUpperUsd = count(row.estimatedCostUpperUsd ?? row.estimatedCostUsd ?? null);
     selected.boundedTokens = count(row.boundedTokens ?? 0, false);
     selected.pricingReasons = Object.fromEntries(Object.entries(row.pricingReasons || {}).filter(([key, value]) => ['exact', 'long-context', 'cache-write-unreported', 'model-unpriced', 'price-unverified', 'usage-incomplete', 'rate-missing', 'context-unreported', 'reasoning-unreported', 'time-tariff-unreported'].includes(key) && Number.isSafeInteger(value) && value > 0));
+    selected.costParts = row.costParts ? Object.fromEntries(['inputUncached', 'output', 'cacheRead', 'cacheWrite'].map(key => [key, count(row.costParts[key] ?? 0, false)])) : null;
+    selected.cacheSavingsUsd = count(row.cacheSavingsUsd ?? null);
     for (const name of ['knownUsage', 'knownRecords']) selected[name] = Object.fromEntries(Object.entries(row[name] || {}).filter(([key, value]) => ['inputUncached', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'outputPlain'].includes(key) && Number.isFinite(value) && value >= 0));
     return selected;
   };

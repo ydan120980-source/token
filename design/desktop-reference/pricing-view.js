@@ -29,7 +29,7 @@
       '<section class="pc-attention" id="priceAttention" hidden aria-labelledby="priceAttentionTitle"><h3 id="priceAttentionTitle">需要处理</h3><div id="priceGaps"></div></section>' +
       '<section class="pc-models" aria-labelledby="priceModelsTitle"><div class="pc-section-head"><h3 id="priceModelsTitle">已用模型 <span id="priceModelCount" class="muted"></span></h3><input id="priceSearch" type="search" placeholder="筛选模型或服务商" aria-label="筛选已用模型"></div>' +
       '<div class="pc-table" role="table" aria-label="已用模型与计费依据"><div class="pc-row pc-head" role="row"><span role="columnheader">模型</span><span role="columnheader">计费依据</span><span role="columnheader" title="输入 · 输出 · 缓存读取 · 缓存写入">每百万 Token 价格</span><span role="columnheader">用量</span><span role="columnheader"><span class="sr-only">操作</span></span></div><div id="priceRows" role="rowgroup"></div></div>' +
-      '<div class="pc-foot"><button id="newPrice" class="text-button" type="button">为其他模型添加价格</button></div></section>' +
+      '<div class="pc-foot"><button id="priceExpand" class="text-button pc-expand" type="button" aria-controls="priceRows" aria-expanded="false" hidden></button><button id="newPrice" class="text-button" type="button">为其他模型添加价格</button></div></section>' +
       '<details class="pc-billing" id="billingSection"><summary><span><strong>Agent 计费规则</strong><small>倍率与默认计费模型，默认按日志中的实际模型、倍率 1</small></span><img src="assets/ui/chevron-down.svg" alt=""></summary><div id="billingRows" class="billing-list"></div><div class="pc-billing-actions"><button class="primary" id="saveBilling">保存规则</button></div></details>' +
       '<p id="priceResult" role="status"></p></div>' +
       '<p id="priceCatalogLine" class="pc-footnote"></p><datalist id="priceTargets"></datalist>' +
