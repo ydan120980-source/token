@@ -2,6 +2,8 @@
 
 User authorizations moved verbatim from `AGENTS.md` on 2026-10-06 (newest first, as originally ordered). These entries remain scope authority; `AGENTS.md` points here. Append new authorizations at the top.
 
+User refinement (2026-10-08, after `52d999f`): move the 全部时段 back chip up, keeping the lines below level.
+
 User refinement (2026-10-08, after `7b5f2f1`): the chosen-slot detail block (grey card under the hour facts) does not fit in style or position; rework it.
 
 User refinement (2026-10-08, after `8b6ea81`): build the first screen one-to-one like the proposed wireframe (no bar tracks, lighter figure weight, compact facts and header); in the daily calendar show unobserved days as ordinary blank squares again (no merged block); redesign the hourly view, which looks ugly; make every blank/unobserved placeholder colour lighter.

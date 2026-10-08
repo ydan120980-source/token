@@ -84,12 +84,13 @@
     for (const cell of $('hourCard').querySelectorAll('.hour-grid button')) cell.setAttribute('aria-pressed', String(Boolean(state.slot) && Number(cell.dataset.d) === state.slot.d && Number(cell.dataset.h) === state.slot.h));
     if (!panel) return;
     markCalendar();
-    const facts = $('hourCard').querySelector('.hour-facts');
+    const facts = $('hourCard').querySelector('.hour-facts'), back = $('hourCard').querySelector('.insight-tools [data-slot-close]');
+    if (back) back.hidden = !state.slot;
     if (!state.slot) { const closing = !panel.hidden; panel.hidden = true; panel.innerHTML = ''; if (facts) { facts.hidden = false; if (closing) reveal(facts); } return; }
     if (facts) facts.hidden = true;
     const { d, h } = state.slot, cell = grid.cells[d][h], rows = slotRows(d, h), items = math.shares(rows, 'agent', 4);
     const cost = rows.filter(row => row.estimatedCostUsd !== null && row.estimatedCostUsd !== undefined).reduce((sum, row) => sum + row.estimatedCostUsd, 0);
-    panel.innerHTML = '<div class="slot-head"><button class="insight-clear" data-slot-close aria-label="返回全部时段概览"><span aria-hidden="true">‹</span>全部时段</button><strong>' + slotName(d, h) + '</strong><span>' + (cell.tokens ? cell.days + ' 天有用量 · ' + ctx.short(cell.tokens) + ' token · ' + money(ctx.usd, cost) : '这个时段没有用量') + '</span></div>' +
+    panel.innerHTML = '<div class="slot-head"><strong>' + slotName(d, h) + '</strong><span>' + (cell.tokens ? cell.days + ' 天有用量 · ' + ctx.short(cell.tokens) + ' token · ' + money(ctx.usd, cost) : '这个时段没有用量') + '</span></div>' +
       (items.length ? '<ol class="slot-list">' + items.map(item => {
         const agent = item.key ? ctx.agents[item.key] : null;
         return '<li>' + (agent ? ctx.icon(agent.icon) : '<i class="share-dot"></i>') + '<span>' + ctx.escapeHtml(agent ? agent.name : '其他 ' + item.count + ' 个 Agent') + '</span><span class="share-track"><span style="--w:' + (item.tokenShare * 100) + '%"></span></span><b>' + ctx.short(item.tokens) + '</b><em>' + pct(item.tokenShare, 0) + '</em></li>';
@@ -154,8 +155,9 @@
   function renderActivity(ctx) {
     state.activity = ctx; state.grid = math.weekHour(ctx.hourlyRows); state.dayHours = null;
     const f = frame('hourCard', '每小时');
-    if (!f.tools.dataset.ready) { f.tools.innerHTML = '<button class="insight-clear" data-day-clear hidden><span aria-hidden="true">‹</span>回到星期 × 小时</button>'; f.tools.dataset.ready = 'true'; }
+    if (!f.tools.dataset.ready) { f.tools.innerHTML = '<button class="insight-clear" data-day-clear hidden><span aria-hidden="true">‹</span>回到星期 × 小时</button><button class="insight-clear" data-slot-close hidden aria-label="返回全部时段概览"><span aria-hidden="true">‹</span>全部时段</button>'; f.tools.dataset.ready = 'true'; }
     f.tools.querySelector('[data-day-clear]').hidden = !ctx.selectedDay;
+    f.tools.querySelector('[data-slot-close]').hidden = Boolean(ctx.selectedDay) || !state.slot;
     renderStats(ctx);
     if (ctx.selectedDay) renderDayHours(ctx, f); else renderWeek(ctx, f);
     markCalendar();
