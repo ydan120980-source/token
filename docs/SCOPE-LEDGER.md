@@ -2,6 +2,8 @@
 
 User authorizations moved verbatim from `AGENTS.md` on 2026-10-06 (newest first, as originally ordered). These entries remain scope authority; `AGENTS.md` points here. Append new authorizations at the top.
 
+User direction (2026-10-08, after `3962b84`): build the r9 candidate and complete packaged and extracted acceptance.
+
 User direction (2026-10-08, after `24ffc39`, via a design critique): the overall UI is fine; fill in the details yourself.
 
 User refinement (2026-10-08, after `52d999f`): move the 全部时段 back chip up, keeping the lines below level.
