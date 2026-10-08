@@ -2,6 +2,8 @@
 
 User authorizations moved verbatim from `AGENTS.md` on 2026-10-06 (newest first, as originally ordered). These entries remain scope authority; `AGENTS.md` points here. Append new authorizations at the top.
 
+User refinement (2026-10-08, after `8b6ea81`): build the first screen one-to-one like the proposed wireframe (no bar tracks, lighter figure weight, compact facts and header); in the daily calendar show unobserved days as ordinary blank squares again (no merged block); redesign the hourly view, which looks ugly; make every blank/unobserved placeholder colour lighter.
+
 User direction (2026-10-08, during the r8 fixes, via a design critique): the first screen with pushed-down content and blank space is too ugly; adopt the proposed cover instead: the hero number with its facts on one row, a full-width last-30-days bar strip replacing the seven-day bars (today highlighted, hover value, click opens the day), the today-vs-average delta beside the strip title, and only a light scale on the number while scrolling — no content is moved.
 
 User refinement (2026-10-08, on r8, via an accessibility review): the first screen does not match the proposed design (hero alone on the first screen, the rest arriving while scrolling); the expanded estimate range is clipped; switching 最近一年 / 2026 shows no change; the daily calendar is small and fills only half the card; trend series switch with inconsistent, abrupt transitions; the trend header repeats the page total (merge it); popovers stay open while the page scrolls; the back chips (全部 Agent, 回到星期 × 小时) do not match the overall style; round the day bar chart. "应该不止这些" — also fix further problems found, including accessibility.

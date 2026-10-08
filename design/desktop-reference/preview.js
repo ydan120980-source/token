@@ -259,23 +259,21 @@ function renderOverview(rows) {
     sequence : '演示已暂停 · 历史仍可查看';
 }
 function heatStart() { return $('heatRange').value === today.slice(0, 4) ? today.slice(0, 4) + '-01-01' : shift(today, -364); }
-// The calendar always spans a whole year (rolling or calendar) across the card. Weeks
-// before the first record collapse into one labelled block; days after today in the
-// calendar-year view are empty frames. Both keep unknown history out of the zero scale.
+// The calendar always spans a whole year (rolling or calendar) across the card. Days
+// without records are plain blank squares (unknown, not zero); days after today in the
+// calendar-year view are fainter non-interactive squares.
 function heatEnd() { return $('heatRange').value === '365' ? today : $('heatRange').value + '-12-31'; }
 function renderHeat(rows) {
   hideHeatTooltip();
   const focusedDate = $('heatmap').contains(document.activeElement) ? document.activeElement.dataset.date : null;
   const start = heatStart(), end = heatEnd(), daily = new Map();
   const monday = day => shift(day, -((new Date(day + 'T12:00:00Z').getUTCDay() + 6) % 7)), days = (from, to) => Math.round((Date.parse(to) - Date.parse(from)) / 86400000);
-  const origin = monday(start), gapWeeks = rows.length && monday(coverageStart) > origin ? days(origin, monday(coverageStart)) / 7 : 0, gap = gapWeeks >= 2;
-  const first = gap ? monday(coverageStart) : start, allDates = dates(first, today), columns = Math.ceil((days(origin, end) + 1) / 7);
+  const origin = monday(start), allDates = dates(start, today), columns = Math.ceil((days(origin, end) + 1) / 7);
   if (selectedDay && (selectedDay < start || selectedDay > today)) selectedDay = null;
   $('heatRange').disabled = false;
   for (const row of filterRows(rows)) daily.set(row.date, (daily.get(row.date) ?? 0) + row.totalTokens);
-  const max = Math.max(1, ...allDates.map(d => daily.get(d) || 0)), leading = gap ? 0 : days(origin, start);
-  const gapText = start + ' 至 ' + shift(first, -1) + ' 没有记录（可能早于来源保留的历史）';
-  let html = (gap ? '<span class="heat-gap' + (gapWeeks < 5 ? ' is-narrow' : '') + '" style="grid-column:1 / span ' + gapWeeks + '" title="' + gapText + '" aria-label="' + gapText + '"><span>' + (gapWeeks >= 10 ? '未观测 · ' + start.slice(0, 7) + ' 至 ' + shift(first, -1).slice(0, 7) : '未观测') + '</span></span>' : '') + '<span class="pad" aria-hidden="true"></span>'.repeat(leading);
+  const max = Math.max(1, ...allDates.map(d => daily.get(d) || 0)), leading = days(origin, start);
+  let html = '<span class="pad" aria-hidden="true"></span>'.repeat(leading);
   const observedDates = new Set(rows.map(row => row.date));
   for (const day of allDates) {
     const value = daily.get(day) ?? 0, observed = realData ? observedDates.has(day) : day >= coverageStart && rows.length > 0;
@@ -285,7 +283,7 @@ function renderHeat(rows) {
   }
   html += '<span class="future" aria-hidden="true"></span>'.repeat(Math.max(0, days(today, end)));
   $('heatmap').innerHTML = html;
-  $('heatmap').style.setProperty('--heat-columns', String(columns)); $('heatmap').toggleAttribute('data-gap', gap);
+  $('heatmap').style.setProperty('--heat-columns', String(columns));
   // One label per month at the column holding its first day; a label with less than two
   // columns of room is dropped rather than overlapping its neighbour.
   const labels = [];

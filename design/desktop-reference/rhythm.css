@@ -4,29 +4,43 @@
 /* Secondary text meets 4.5:1 on the page, cards and fills (was 4.08:1 on the page). */
 :root { --muted: #66676b; }
 
-/* First screen as a cover: the figure and its facts share a row, the last 30 days span
-   the width below. focus.js only scales the figure slightly at the top of the page; an
-   expanded estimate range always shows at its resting size. */
+/* First screen as a cover, matching the approved wireframe: a compact header, the figure
+   in a lighter weight with its facts on the same row, and the last 30 days as free-standing
+   rounded bars (no tracks). focus.js only scales the figure slightly at the top of the
+   page; an expanded estimate range always shows at its resting size. */
 #usage { overflow-x: clip; }
-#totalCost { transform-origin: 0 100%; }
+#usage > .profile { padding-bottom: 0; }
+#usage > .profile .profile-avatar { width: 34px; height: 34px; border-radius: 50%; }
+#usage > .profile .profile-avatar span { font-size: 13px; letter-spacing: 0; }
+#usage > .profile .profile-left { gap: 12px; align-items: center; }
+#usage > .profile .profile-title h1 { font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+#usage > .profile .range-tabs button { min-height: 30px; padding: 4px 14px; font-size: 12px; }
+#usage .usage-overview { margin-top: 34px; padding-bottom: 26px; }
+#usage .overview-scope { margin-bottom: 4px; }
+#totalCost { transform-origin: 0 100%; font-size: clamp(60px, 7vw, 96px); font-weight: 560; letter-spacing: -.03em; }
+#totalCost .cost-value, #totalCost .cost-lower, #totalCost .cost-upper { font-weight: inherit; }
 #totalCost:has(.cost-expanded) { scale: 1 !important; transition: scale 220ms var(--ease-out, ease-out); }
 .usage-overview .hero-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 4px 40px; }
 .usage-overview .hero-row .totals { flex: 1 1 auto; min-width: 0; margin: 0; }
-.usage-overview .overview-facts { flex: none; margin: 0 0 24px; padding-right: 0; }
-.usage-overview .recent-activity, .usage-overview:has(.cost-expanded) .recent-activity { position: static; width: auto; margin: 34px 0 0; opacity: 1; pointer-events: auto; color: inherit; }
-.recent-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 12px; color: var(--muted); font-size: 12px; }
+.usage-overview .overview-facts { flex: none; gap: 8px 24px; margin: 0 0 22px; padding-right: 0; font-size: 13px; }
+.usage-overview .overview-facts strong { font-size: 18px; font-weight: 560; }
+.usage-overview .recent-activity, .usage-overview:has(.cost-expanded) .recent-activity { position: static; width: auto; margin: 26px 0 0; opacity: 1; pointer-events: auto; color: inherit; }
+.recent-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 14px; color: var(--muted); font-size: 13px; }
 .recent-head b { color: var(--text); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
-#overviewWeek.overview-week { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 5px; align-items: end; height: 112px; }
-#overviewWeek .week-day { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 0; height: 100%; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--text) 2.5%, transparent); }
-#overviewWeek .week-day i { display: block; width: 100%; height: var(--h); border-radius: 999px; background: color-mix(in srgb, var(--text) 17%, transparent); transform-origin: 50% 100%; transition: background-color 160ms; }
-#overviewWeek .week-day.is-peak i { background: color-mix(in srgb, var(--text) 40%, transparent); }
-#overviewWeek .week-day:hover i, #overviewWeek .week-day:focus-visible i { background: color-mix(in srgb, var(--text) 55%, transparent); }
+#overviewWeek.overview-week { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: clamp(4px, .55vw, 8px); align-items: end; height: 128px; }
+#overviewWeek .week-day { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 0; height: 100%; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 999px; background: transparent; }
+#overviewWeek .week-day i { display: block; width: 100%; height: max(var(--h), 5px); border-radius: 999px; background: color-mix(in srgb, var(--text) 22%, transparent); transform-origin: 50% 100%; transition: background-color 160ms, filter 160ms; }
+#overviewWeek .week-day.is-peak i { background: color-mix(in srgb, var(--text) 58%, transparent); }
+#overviewWeek .week-day:hover i, #overviewWeek .week-day:focus-visible i { filter: brightness(.82); }
+body.dark #overviewWeek .week-day:hover i, body.dark #overviewWeek .week-day:focus-visible i { filter: brightness(1.3); }
 #overviewWeek .week-day.is-today i { background: var(--blue); }
-#overviewWeek .week-day.is-unrecorded { background: transparent; }
-#overviewWeek .week-day.is-unrecorded i { height: 6px; background: none; border: 1.5px dotted var(--line); }
+#overviewWeek .week-day.is-unrecorded i { height: 5px; background: color-mix(in srgb, var(--text) 7%, transparent); }
 #overviewWeek .week-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.recent-axis { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-@media (max-width: 760px) { #overviewWeek.overview-week { gap: 3px; height: 88px; } }
+.recent-axis { display: grid; grid-template-columns: 1fr auto 1fr; margin-top: 10px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.recent-axis span:nth-child(2) { text-align: center; }
+.recent-axis span:last-child { text-align: right; }
+#usage .card.today .inline-totals strong { font-size: 18px; }
+@media (max-width: 760px) { #overviewWeek.overview-week { height: 96px; } }
 
 /* Back chips share the segmented controls' quiet style: neutral fill, drawn chevron. */
 .insight-clear { gap: 7px; height: 28px; padding: 0 12px 0 11px; border-radius: 9px; background: var(--fill); color: var(--text); font-weight: 500; }
@@ -49,10 +63,10 @@
 #activityBlock .heat-grid-scroll .heat-scroll { width: auto; min-width: 620px; padding: 0; }
 #activityBlock .heatmap { width: 100%; min-width: 620px; flex: none; gap: 3px; grid-template-rows: repeat(7, auto); grid-template-columns: repeat(var(--heat-columns, 53), minmax(0, 1fr)); }
 #activityBlock .heatmap button, #activityBlock .heatmap .pad, #activityBlock .heatmap .future { width: 100%; height: auto; aspect-ratio: 1; border-radius: 4px; }
-#activityBlock .heatmap .future { border: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); background: transparent; }
+#activityBlock .heatmap button[data-level='0'] { background: color-mix(in srgb, var(--heat0) 70%, transparent); }
+#activityBlock .heatmap button[data-observed='false'] { border: 0; opacity: 1; background: color-mix(in srgb, var(--heat0) 42%, transparent); }
+#activityBlock .heatmap .future { border: 0; background: color-mix(in srgb, var(--heat0) 28%, transparent); }
 #activityBlock .heat-months { width: 100%; min-width: 620px; padding-left: 0 !important; gap: 3px; margin-top: 8px; }
-.heat-gap { grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 8px; background: color-mix(in srgb, var(--text) 2%, transparent); color: var(--muted); font-size: 12px; cursor: help; overflow: hidden; }
-.heat-gap.is-narrow span { writing-mode: vertical-rl; letter-spacing: 2px; font-size: 11px; }
 /* A chosen hour slot: days that used it stay lit, the rest step back. */
 #heatmap[data-slot] button:not(.is-match) { opacity: .2; }
 #heatmap[data-slot] button.is-match { box-shadow: 0 0 0 1.5px var(--card), 0 0 0 2.5px var(--text); }
@@ -62,12 +76,24 @@
 .rhythm-hours .insight-head { margin-bottom: 14px; }
 .rhythm-hours .insight-head h3 { font-size: 13px; font-weight: 600; }
 .hours-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px 36px; align-items: start; }
-.rhythm-hours .hour-grid { grid-template-columns: 22px repeat(24, minmax(10px, 1fr)); gap: 4px; min-width: 420px; }
-.rhythm-hours .hour-grid button { height: 26px; aspect-ratio: auto; max-height: none; border-radius: 6px; }
-.rhythm-hours .hour-grid button.lv1 { background: var(--heat1); }
-.rhythm-hours .hour-grid button.lv2 { background: var(--heat2); }
-.rhythm-hours .hour-grid button.lv3 { background: var(--heat3); }
-.rhythm-hours .hour-grid button.lv4 { background: var(--heat4); }
+/* Week × hour as a punch card: one dot per slot, its size and tone growing with use, on a
+   faint guide line per weekday. Quieter than squares, and distinct from the calendar. */
+.rhythm-hours .hour-grid { grid-template-columns: 26px repeat(24, minmax(14px, 1fr)); gap: 2px 0; min-width: 460px; }
+.rhythm-hours .hour-grid .hour-day { padding-right: 8px; text-align: right; }
+.rhythm-hours .hour-grid button { position: relative; display: grid; place-items: center; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 8px; background: transparent !important; box-shadow: none !important; transform: none !important; }
+.rhythm-hours .hour-grid button::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: color-mix(in srgb, var(--text) 5%, transparent); }
+.rhythm-hours .hour-grid button i { position: relative; width: var(--s); height: var(--s); border-radius: 50%; background: var(--heat3); transition: scale 180ms var(--ease-out, ease-out), box-shadow 160ms; }
+.rhythm-hours .hour-grid button.lv0 i { background: color-mix(in srgb, var(--text) 9%, transparent); }
+.rhythm-hours .hour-grid button.lv1 i { background: var(--heat1); }
+.rhythm-hours .hour-grid button.lv2 i { background: var(--heat2); }
+.rhythm-hours .hour-grid button.lv4 i { background: var(--heat4); }
+.rhythm-hours .hour-grid button:hover i { scale: 1.25; }
+.rhythm-hours .hour-grid button.lv0:hover i { scale: 1.5; }
+.rhythm-hours .hour-grid button[aria-pressed='true'] i { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--text); }
+.rhythm-hours .hour-grid button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rhythm-hours .hour-grid .hour-tick { padding-top: 6px; text-align: left; }
+body[data-motion='reduced'] .rhythm-hours .hour-grid button i, body[data-motion='off'] .rhythm-hours .hour-grid button i { transition: none; }
+body[data-motion='reduced'] .rhythm-hours .hour-grid button:hover i, body[data-motion='off'] .rhythm-hours .hour-grid button:hover i { scale: 1; }
 /* Facts read as a short list of labelled values beside the chart. */
 .hours-side .insight-facts { display: flex; flex-direction: column; gap: 0; margin: 0; }
 .hours-side .insight-facts > div, .hours-side .insight-facts > button { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; padding: 10px 0; border-radius: 0; border-bottom: 1px solid var(--hairline, var(--line)); background: none; }
@@ -82,7 +108,7 @@
 
 /* One day's 24 hours: rounded bars on rounded tracks. */
 .day-hours { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 5px; height: 156px; align-items: end; }
-.day-hours > button { position: relative; display: flex; align-items: flex-end; height: 100%; min-height: 0; padding: 0; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--text) 3%, transparent); cursor: default; }
+.day-hours > button { position: relative; display: flex; align-items: flex-end; height: 100%; min-height: 0; padding: 0; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--text) 1.6%, transparent); cursor: default; }
 .day-hours i { display: block; width: 100%; height: max(var(--h), 8px); border-radius: 999px; background: var(--heat3); transform-origin: 50% 100%; transition: filter 160ms, background-color 160ms; }
 .day-hours .is-empty i { height: 0; }
 .day-hours .is-peak i { background: var(--heat4); }

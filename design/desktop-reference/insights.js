@@ -120,7 +120,7 @@
     const level = tokens => tokens <= 0 ? 0 : Math.min(4, 1 + Math.floor(Math.sqrt(tokens / grid.max) * 4 - 1e-9));
     const peak = grid.peak;
     const cells = grid.cells.map((row, d) => '<span class="hour-day" data-day="' + d + '">' + WEEKDAYS[d].slice(1) + '</span>' + row.map((cell, h) =>
-      '<button class="lv' + level(cell.tokens) + '" data-d="' + d + '" data-h="' + h + '" tabindex="-1" aria-label="' + slotName(d, h) + '，' + (cell.tokens ? short(cell.tokens) + ' token，' + cell.days + ' 天' : '无用量') + '"></button>').join('')).join('');
+      '<button class="lv' + level(cell.tokens) + '" data-d="' + d + '" data-h="' + h + '" tabindex="-1" aria-label="' + slotName(d, h) + '，' + (cell.tokens ? short(cell.tokens) + ' token，' + cell.days + ' 天' : '无用量') + '"><i style="--s:' + (cell.tokens ? (6 + Math.sqrt(cell.tokens / grid.max) * 14).toFixed(1) : 4) + 'px"></i></button>').join('')).join('');
     const ticks = '<span></span>' + Array.from({ length: 24 }, (_, h) => '<span class="hour-tick" data-hour="' + h + '">' + (h % 6 ? '' : h) + '</span>').join('');
     f.body.innerHTML = '<div class="hours-layout"><div class="hours-main"><div class="hour-scroll"><div class="hour-grid" role="group" aria-label="按星期和小时的用量分布，方向键移动，回车查看明细">' + cells + ticks + '</div></div></div>' +
       '<aside class="hours-side"><div class="insight-facts hour-facts"><button data-slot="' + peak.weekday + ',' + peak.hour + '"><small>最集中的时段</small><b>' + slotName(peak.weekday, peak.hour) + '</b></button><div><small>最活跃的星期</small><b>' + WEEKDAYS[grid.peakWeekday] + '</b></div><div title="一周 168 个小时中有用量的个数"><small>有用量的时段</small><b>' + grid.active + ' / 168</b></div></div><div class="slot-detail" hidden></div></aside></div>';
@@ -128,7 +128,7 @@
     const tabbable = state.slot ? [state.slot.d, state.slot.h] : [peak.weekday, peak.hour];
     for (const cell of f.body.querySelectorAll('.hour-grid button')) cell.tabIndex = Number(cell.dataset.d) === tabbable[0] && Number(cell.dataset.h) === tabbable[1] ? 0 : -1;
     reveal(f.body);
-    if (full()) for (const cell of f.body.querySelectorAll('.hour-grid button:not(.lv0)')) cell.animate([{ opacity: 0, transform: 'scale(.55)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: Number(cell.dataset.h) * 14 + Number(cell.dataset.d) * 8, easing: EASE, fill: 'backwards' });
+    if (full()) for (const cell of f.body.querySelectorAll('.hour-grid button:not(.lv0)')) cell.firstElementChild.animate([{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: Number(cell.dataset.h) * 14 + Number(cell.dataset.d) * 8, easing: EASE, fill: 'backwards' });
     renderSlot();
   }
   // One chosen day: its 24 hours as bars. Hours after now on today are not yet known.
