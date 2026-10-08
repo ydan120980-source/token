@@ -25,7 +25,7 @@ const hiddenKey = 'agentusage.trendHidden.v1';
 let hiddenSeries = new Set(['cost']);
 try { const saved = JSON.parse(localStorage.getItem(hiddenKey)); if (Array.isArray(saved)) hiddenSeries = new Set(saved.filter(key => typeof key === 'string').slice(0, 64)); } catch { /* Default: cost overlay hidden. */ }
 let usageStatus = { collecting: false, error: null };
-let usageRevision = null;
+let usageRevision = null, lastStripKey = null;
 const templates = [];
 function shift(date, days) { const value = new Date(date + 'T12:00:00Z'); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10); }
 function dates(start, end) { const result = []; for (let day = start; day <= end; day = shift(day, 1)) result.push(day); return result; }
@@ -244,6 +244,9 @@ function renderOverview(rows) {
   $('overviewWeek').innerHTML = month.map(day => { const known = observed.has(day), value = dayTotals.get(day) || 0;
     return '<button data-habit-date="' + day + '" data-tip="' + (known ? value : '') + '" class="week-day' + (day === today ? ' is-today' : '') + (!known ? ' is-unrecorded' : '') + (known && value === maximum && value > 0 ? ' is-peak' : '') + '" aria-label="' + day + '：' + (known ? short(value) + ' Token' : '未记录') + '，查看明细"><i style="--h:' + (known ? Math.max(4, value / maximum * 100) : 0) + '%"></i></button>';
   }).join('');
+  const stripKey = period + '|' + $('agentFilter').value + '|' + $('sourceFilter').value + '|' + $('modelFilter').value;
+  if (stripKey !== lastStripKey && window.uiMotion.mode === 'full' && !document.hidden) $('overviewWeek').querySelectorAll('i').forEach((bar, i) => bar.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 560, delay: i * 14, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' }));
+  lastStripKey = stripKey;
   $('overviewAxis').innerHTML = '<span>' + month[0].slice(5) + '</span><span>' + month[14].slice(5) + '</span><span>今天</span>';
   $('scopeSummary').textContent = rangeLabel() + ' · ' + scoped.length + ' 条每日聚合 · ' + short(a.total) + ' token · ' + ($('agentFilter').value === 'all' ? '全部 agent' : agents[$('agentFilter').value].name) + ' / ' + ($('modelFilter').value === 'all' ? '全部模型' : displayModel($('modelFilter').value));
   $('totalMix').innerHTML = mixHtml(scoped); $('todayMix').innerHTML = mixHtml(daily);
@@ -253,7 +256,8 @@ function renderOverview(rows) {
   window.uiDetail.number(todayNumbers[1].querySelector('.cost-lower'), 'today-cost', t.cost, v => v === null ? '未定价' : window.displayValues.usd(v));
   window.uiDetail.number(todayNumbers[2], 'today-records', daily.length ? t.records : null, v => v === null ? '—' : String(Math.round(v)));
   $('todayClients').innerHTML = daily.length ? clientHtml(daily) : rows.some(r => r.date === today) ? '<p class="empty-message">今天在当前筛选下没有用量记录。</p>' : todayEmptyHtml();
-  $('clientChips').innerHTML = Object.entries(agents).map(([key, meta]) => '<button data-source-view="' + key + '">' + icon(meta.icon) + meta.name + '</button>').join('');
+  $('clientChips').innerHTML = Object.entries(agents).map(([key, meta]) => { const source = realData ? localSnapshot.sources?.find(item => item.agent === key) : null, idle = Boolean(source) && !(source.observedRecords > 0);
+    return '<button data-source-view="' + key + '"' + (idle ? ' class="is-idle"' : '') + ' title="' + meta.name + (source ? ' · ' + (idle ? '未检测到本机记录' : source.observedRecords.toLocaleString('zh-CN') + ' 条已读取记录') : '') + ' · 打开来源管理">' + icon(meta.icon) + meta.name + '</button>'; }).join('');
   $('updated').textContent = localSnapshot?.previewReadError ? '读取失败 · 保留最后有效快照' : $('demoState').value === 'error' ? '演示读取失败 · 历史保留' : realData ? '快照采集 ' +
     (localSnapshot.collectedAt ? new Date(localSnapshot.collectedAt).toLocaleString('zh-CN') : '时间未记录') : enabled ? '合成数据 · 演示快照 ' +
     sequence : '演示已暂停 · 历史仍可查看';
@@ -322,7 +326,7 @@ function showHeatTooltip(button) {
   document.querySelector('[aria-describedby="heatTooltip"]')?.removeAttribute('aria-describedby');
   button.setAttribute('aria-describedby', 'heatTooltip');
   const date = button.dataset.date ?? button.dataset.habitDate, tokens = button.dataset.tokens ?? button.dataset.tip;
-  tooltip.innerHTML = '<span>' + date + '</span><strong>' + (tokens === '' ? '未观测到记录' : Number(tokens).toLocaleString('zh-CN') + ' <small>Token</small>') + '</strong>';
+  tooltip.innerHTML = '<span>' + date + ' · ' + ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(date + 'T12:00:00Z').getUTCDay()] + '</span><strong>' + (tokens === '' ? '未观测到记录' : Number(tokens).toLocaleString('zh-CN') + ' <small>Token</small>') + '</strong>';
   const rect = button.getBoundingClientRect();
   tooltip.style.left = '0px'; tooltip.style.top = '0px';
   const width = tooltip.offsetWidth, height = tooltip.offsetHeight;
@@ -531,7 +535,7 @@ function renderInsights(rows) {
     rows: subset, previousRows, recorded, rangeText: rangeLabel(), selected, scopeSuffix: scopeSuffix(),
     shareRows: { agent: inRange(filterRows(rows, 'agent')), model: inRange(filterRows(rows, 'model')) },
     compareText: period === 'today' ? '较昨天' : '较前 ' + period + ' 天',
-    compareMissing: period === 'all' ? '累计范围，不做对比' : '上一周期早于记录开始，不做对比',
+    compareMissing: period === 'all' ? '累计范围 · 不做对比' : '上一周期早于记录开始 · 不做对比',
     colorOf: categoryColor, agents, short, usd: window.displayValues.usd, icon, escapeHtml, displayModel
   });
 }

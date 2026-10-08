@@ -151,3 +151,16 @@ body[data-motion='reduced'] .day-hours i, body[data-motion='off'] .day-hours i {
 @media (max-width: 900px) { .efficiency-card .efficiency-list { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 8px; } }
 @media (max-width: 800px) { .rhythm-card .card-heading, .rhythm-body { padding-left: 16px; padding-right: 16px; } }
 .hours-side .slot-list .share-track span { background: var(--heat3); opacity: 1; }
+
+/* Agent marks outside the share lists follow the same rule: Claude keeps its brand tint,
+   monochrome marks invert on dark surfaces. */
+:is(.client-line, .client-chips, .source-row) img[src$='claude.svg'] { filter: invert(54%) sepia(18%) saturate(1444%) hue-rotate(337deg) brightness(93%) contrast(86%); }
+body.dark :is(.client-line, .source-row) img:is([src$='codex.svg'], [src$='opencode.svg'], [src$='cursor.svg']) { filter: invert(.85); }
+body.dark :is(.client-line, .client-chips, .source-row) img[src$='mimo.svg'] { filter: brightness(0) invert(.85); }
+
+/* Source chips: an even grid instead of a ragged wrap; a source without local records keeps
+   readable text and only greys its mark. */
+#usage .client-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+#usage .client-chips button { justify-content: flex-start; min-height: 38px; padding: 6px 12px 6px 10px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#usage .client-chips button.is-idle { color: var(--muted); }
+#usage .client-chips button.is-idle img { filter: grayscale(1); opacity: .45; }

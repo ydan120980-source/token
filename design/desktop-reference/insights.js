@@ -110,10 +110,11 @@
     const host = $('rhythmStats'); if (!host) return;
     const active = [...ctx.dayTotals].filter(([day, value]) => day >= ctx.start && day <= ctx.today && value > 0).length;
     const runs = math.streaks(ctx.dayTotals, ctx.start, ctx.today), peak = math.peakWindow(state.grid.hours);
-    const stat = (label, value, title) => '<span class="rhythm-stat"' + (title ? ' title="' + title + '"' : '') + '><small>' + label + '</small><b>' + value + '</b></span>';
-    host.innerHTML = stat('活跃', active + ' 天') + stat('当前连续', runs.current + ' 天', runs.current ? '截至 ' + ctx.today + (ctx.dayTotals.get(ctx.today) > 0 ? '' : '（今天尚无用量，不打断连续）') : '') +
-      stat('最长连续', runs.longest.length + ' 天', runs.longest.length ? runs.longest.from + ' 至 ' + runs.longest.to : '') +
+    const stat = (label, value, title, count) => '<span class="rhythm-stat"' + (title ? ' title="' + title + '"' : '') + '><small>' + label + '</small><b' + (count === undefined ? '' : ' data-count="' + count + '"') + '>' + value + '</b></span>';
+    host.innerHTML = stat('活跃', active + ' 天', '', active) + stat('当前连续', runs.current + ' 天', runs.current ? '截至 ' + ctx.today + (ctx.dayTotals.get(ctx.today) > 0 ? '' : '（今天尚无用量，不打断连续）') : '', runs.current) +
+      stat('最长连续', runs.longest.length + ' 天', runs.longest.length ? runs.longest.from + ' 至 ' + runs.longest.to : '', runs.longest.length) +
       (peak ? stat('高峰三小时', pad(peak.start) + '–' + (peak.end ? pad(peak.end) : '24') + ' 点', '这三个小时占范围内 ' + pct(peak.share, 0) + ' 的 token') : '');
+    host.querySelectorAll('b[data-count]').forEach((element, i) => number(element, 'rhythm-stat-' + i, Number(element.dataset.count), value => Math.round(value) + ' 天'));
   }
   function renderWeek(ctx, f) {
     const grid = state.grid, { short } = ctx;
