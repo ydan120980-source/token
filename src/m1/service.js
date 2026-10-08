@@ -7,7 +7,7 @@ const { Store, atomic } = require('./store');
 // are shown on the source cards; they are not read failures and must not back off.
 const DATA_NOTICES = new Set(['USAGE_UNREPORTED', 'SOURCE_USAGE_CONFLICT', 'SOURCE_USAGE_REGRESSION', 'SOURCE_ROW_INVALID', 'DEEPSEEK_FORMAT_UNSUPPORTED', 'DEEPSEEK_SEED_INVALID', 'DEEPSEEK_ENCODING_CONFLICT', 'DEEPSEEK_LOG_INCOMPLETE', 'CURSOR_SOURCE_MODE_CONFLICT', 'CURSOR_CSV_SCHEMA', 'CURSOR_CSV_INVALID', 'SOURCE_COMPRESSION_UNSUPPORTED']);
 class Service {
-  constructor(dir, sourceRoots, update = () => {}) { this.store = new Store(dir, sourceRoots); this.update = update; this.timer = null; this.current = null; this.retry = 0; this.lastError = null; this.audit = null; this.closed = false; this.timeoutMs = 60000; this.collector = null; this.requests = 0; this.stamp = null; this.stampSequence = null; this.scanHadError = false; this.checkedAt = null; }
+  constructor(dir, sourceRoots, update = () => {}) { this.store = new Store(dir, sourceRoots); this.update = update; this.timer = null; this.current = null; this.retry = 0; this.lastError = null; this.audit = null; this.closed = false; this.timeoutMs = 60000; this.collector = null; this.requests = 0; this.stamp = null; this.stampSequence = null; this.scanHadError = false; this.checkedAt = null; this.lastCollection = null; }
   async refresh(maintenance = false) {
     if (this.closed) return this.get();
     if (this.current) { if (maintenance) throw new Error('MAINTENANCE_BUSY'); try { await this.current; } catch {} return this.get(); }
@@ -46,10 +46,11 @@ class Service {
         return summary;
       }
       // Unchanged sources reproduce the stored ledger; skip ingest, verification and writes.
-      if (!result.unchanged && !this.closed) {
+      if (result.unchanged) { this.stamp = result.stamp; this.lastCollection = 'unchanged:' + result.reason; }
+      else if (!this.closed) {
         this.store.ingest(result.scan, result.native);
         this.scanHadError = Object.values(result.scan).some(s => s.errors.some(code => !DATA_NOTICES.has(code)));
-        this.stamp = result.stamp; this.stampSequence = this.store.state.sequence;
+        this.stamp = result.stamp; this.stampSequence = this.store.state.sequence; this.lastCollection = 'ingested';
       }
       this.checkedAt = new Date().toISOString();
       const hasError = this.scanHadError;

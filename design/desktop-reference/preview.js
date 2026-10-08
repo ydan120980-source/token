@@ -151,10 +151,14 @@ function mixHtml(rows) {
     tiles(rows).map((tile, i) => '<span class="' + tileClass(tile) + '" title="' + tileTitle(tile) + '"><i class="swatch" style="background:' + categoryColor(i) + '"></i>' + tile.label + '<b>' + tileText(tile) + '</b></span>').join('') +
     '</div>';
 }
+// A row with no tokens and no known usage (an empty assistant turn) adds nothing to a list;
+// the ledger and record counts keep it.
+function used(row) { return row.totalTokens > 0 || ['inputUncached', 'output', 'cacheRead', 'cacheWrite', 'reasoning'].some(field => (row.knownUsage?.[field] ?? row[field]) > 0); }
 function clientHtml(rows, detail = false) {
   if (!rows.length) return '<p class="empty-message">此日暂无用量记录。</p>';
+  if (!rows.some(used)) return '<p class="empty-message">此日只有 0 token 的空记录。</p>';
   const totals = aggregate(rows);
-  return Object.entries(agents).filter(([key]) => rows.some(r => r.agent === key)).map(([key, meta]) => {
+  return Object.entries(agents).filter(([key]) => rows.some(r => r.agent === key && used(r))).map(([key, meta]) => {
     const subset = rows.filter(r => r.agent === key), a = aggregate(subset);
     return '<div class="client-row"><div class="client-line">' +
       icon(meta.icon) +
@@ -170,7 +174,7 @@ function clientHtml(rows, detail = false) {
       '</small><span>' +
       short(a.total) +
       '</span></div></div>' +
-      [...new Set(subset.map(r => r.model))].filter(model => model !== 'unknown' || subset.some(r => r.model === model && (r.totalTokens > 0 || ['inputUncached','output','cacheRead','cacheWrite','reasoning'].some(field => (r.knownUsage?.[field] ?? r[field]) > 0)))).map(model => {
+      [...new Set(subset.map(r => r.model))].filter(model => subset.some(r => r.model === model && used(r))).map(model => {
       const group = subset.filter(r => r.model === model), g = aggregate(group);
       return '<div class="model-line"><span class="model-name">' +
         escapeHtml(displayModel(model)) +
@@ -192,7 +196,8 @@ function clientHtml(rows, detail = false) {
 function modelMetrics(group) {
   return '<p class="model-metrics">' + tiles(group).map(tile => '<span class="' + tileClass(tile) + '" title="' + tileTitle(tile) + '">' + tile.label.replace(/（.*）/, '') + (/（(.*)）/.test(tile.label) && tile.key !== 'inputUncached' ? '<em>' + tile.label.match(/（(.*)）/)[1] + '</em>' : '') + ' <b>' + tileText(tile) + '</b></span>').join('') + '</p>';
 }
-function filterRows(rows) { const agent = $('agentFilter').value, source = $('sourceFilter').value, model = $('modelFilter').value; return rows.filter(r => (agent === 'all' || r.agent === agent) && (source === 'all' || (r.provider || 'unknown') === source) && (model === 'all' || r.model === model)); }
+// `skip` leaves one dimension unfiltered, for views that select within that dimension.
+function filterRows(rows, skip = null) { const agent = skip === 'agent' ? 'all' : $('agentFilter').value, source = $('sourceFilter').value, model = skip === 'model' ? 'all' : $('modelFilter').value; return rows.filter(r => (agent === 'all' || r.agent === agent) && (source === 'all' || (r.provider || 'unknown') === source) && (model === 'all' || r.model === model)); }
 function rangeStart() { return window.usageMath.startFor(today, period, coverageStart); }
 function rangeRows(rows) { return filterRows(rows).filter(r => r.date >= rangeStart() && r.date <= today); }
 function rangeLabel() { return period === 'all' ? '累计 · ' + coverageStart + ' 至 ' + today : period === 'today' ? '今天 · ' + today : '最近 ' + period + ' 天（含今天）'; }
@@ -487,8 +492,11 @@ function renderInsights(rows) {
   const subset = rangeRows(rows), start = rangeStart(), previous = previousWindow();
   const hourly = filterRows(hourlyData()).filter(r => r.date >= start && r.date <= today);
   const previousRows = previous?.complete ? filterRows(rows).filter(r => r.date >= previous.from && r.date <= previous.to) : null;
+  const inRange = list => list.filter(r => r.date >= start && r.date <= today), selected = { agent: $('agentFilter').value, model: $('modelFilter').value };
+  const scope = [selected.agent === 'all' ? null : agents[selected.agent]?.name, $('sourceFilter').value === 'all' ? null : $('sourceFilter').selectedOptions[0]?.textContent, selected.model === 'all' ? null : displayModel(selected.model)].filter(Boolean);
   window.usageInsights.render({
-    rows: subset, hourlyRows: hourly, previousRows, recorded, rangeText: rangeLabel(),
+    rows: subset, hourlyRows: hourly, previousRows, recorded, rangeText: rangeLabel(), selected, scopeSuffix: scope.length ? ' · ' + scope.join(' · ') : '',
+    shareRows: { agent: inRange(filterRows(rows, 'agent')), model: inRange(filterRows(rows, 'model')) },
     compareText: period === 'today' ? '较昨天' : '较前 ' + period + ' 天',
     compareMissing: period === 'all' ? '累计范围，不做对比' : '上一周期早于记录开始，不做对比',
     colorOf: categoryColor, agents, short, usd: window.displayValues.usd, icon, escapeHtml, displayModel
@@ -655,6 +663,8 @@ document.addEventListener('click', event => {
   if (button.hasAttribute('data-reset-model')) { $('modelFilter').value = 'all'; render(true); }
   if (button.dataset.habitDate) goToDay(button.dataset.habitDate);
   if (button.dataset.shareAgent) { $('agentFilter').value = button.dataset.shareAgent; $('agentFilter').dispatchEvent(new Event('change')); }
+  if (button.dataset.shareClear === 'agent') { $('agentFilter').value = 'all'; $('agentFilter').dispatchEvent(new Event('change')); }
+  if (button.dataset.shareClear === 'model') { $('modelFilter').value = 'all'; render(true); }
   if (button.dataset.avatar) { profileDraft.tone = button.dataset.avatar; profileDraft.photo = null; resetAvatarInput(); $('profileError').textContent = ''; showDraft(); }
   if (button.hasAttribute('data-export')) { $('exportResult').textContent = ''; $('jsonPreview').hidden = true; $('jsonPreview').open = false; $('exportDialog').showModal(); }
   if (button.dataset.sourceView) view('sources');
@@ -742,6 +752,8 @@ function publishAgentUsage() {
   window.dispatchEvent(new CustomEvent('agent-usage', { detail: totals })); window.dispatchEvent(new CustomEvent('usage-models', { detail: models }));
 }
 function applyUsageState(state) {
+  // The main process omits an unchanged snapshot body; keep the one we hold.
+  if (!state.snapshot) state = { ...state, snapshot: localSnapshot };
   const changed = sequence !== state.snapshot.sequence, previousDay = today;
   const snapshotChanged = !Number.isSafeInteger(state.snapshotRevision) || usageRevision !== state.snapshotRevision;
   usageRevision = state.snapshotRevision;
@@ -777,7 +789,7 @@ if (usageBridge) {
   $('sourceNotice').textContent = '只读取五类本地来源的用量字段。添加目录后暂停采集，确认后恢复。';
   $('sourceRows').addEventListener('click', async event => { const button = event.target.closest('[data-add-source]'); if (button) { try { applyUsageState(await usageBridge.chooseSource(button.dataset.addSource)); } catch { toast('该目录不可读取或与产品数据目录重叠。'); } } });
   let reading = false, again = false;
-  async function loadUsage() { if (reading) { again = true; return; } reading = true; try { do { again = false; applyUsageState(await usageBridge.get()); } while (again); } catch { toast('读取统计失败，历史数据已保留。'); } finally { reading = false; } }
+  async function loadUsage() { if (reading) { again = true; return; } reading = true; try { do { again = false; applyUsageState(await usageBridge.get(usageRevision)); } while (again); } catch { toast('读取统计失败，历史数据已保留。'); } finally { reading = false; } }
   const unsubscribe = usageBridge.onUpdate(loadUsage); window.addEventListener('unload', unsubscribe); void loadUsage();
 }
 })();

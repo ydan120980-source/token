@@ -30,7 +30,9 @@ test('worker timeout retains statistics and backoff follows 30/60/120 seconds', 
   t.after(async () => { await service.close(); fs.rmSync(dir, { recursive: true, force: true }); });
   await service.refresh(); const sequence = service.store.state.sequence;
   service.timeoutMs = 1;
-  for (const delay of [30000, 60000, 120000]) { await service.refresh(); assert.equal(service.lastError, 'COLLECTION_TIMEOUT'); assert.equal(service.timer._idleTimeout, delay); assert.equal(service.store.state.sequence, sequence); }
+  // Unchanged sources now answer within a millisecond; forget the ingested stamp so
+  // every attempt runs a full scan and actually reaches the timeout.
+  for (const delay of [30000, 60000, 120000]) { service.stampSequence = null; await service.refresh(); assert.equal(service.lastError, 'COLLECTION_TIMEOUT'); assert.equal(service.timer._idleTimeout, delay); assert.equal(service.store.state.sequence, sequence); }
 });
 test('exit during native aggregation reaps Tokscale child process', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-reap-')), f = fixtures(path.join(dir, 'home')), service = new Service(path.join(dir, 'app'), f.roots);

@@ -46,9 +46,11 @@ else {
     });
     // Process-local projection revision also changes on repricing/timezone edits,
     // which do not necessarily advance the collector's persisted sequence.
-    const usageState = () => { const state = usage.get(); return { ...state, snapshot: usageSnapshot(state.snapshot), snapshotRevision }; };
+    // A caller that already holds the current revision gets the status without the
+    // snapshot body, so periodic checks do not re-send hundreds of kilobytes.
+    const usageState = known => { const state = usage.get(), snapshot = usageSnapshot(state.snapshot); return { ...state, snapshot: Number.isSafeInteger(known) && known === snapshotRevision ? null : snapshot, snapshotRevision }; };
     const usageHandle = (channel, action) => ipcMain.handle(channel, async (event, ...args) => { if (!valid(event)) throw new Error('IPC_SENDER_REJECTED'); return action(...args); });
-    usageHandle('usage:get', usageState);
+    usageHandle('usage:get', known => usageState(known));
     usageHandle('usage:refresh', async () => { await usage.refresh(); return usageState(); });
     usageHandle('usage:enabled', async value => { await usage.setEnabled(value); return usageState(); });
     usageHandle('usage:interval', value => { usage.setRefreshInterval(value); return usageState(); });

@@ -162,6 +162,31 @@ async function parsedFile(agent, file, salt, audit, cache) {
   else { cache.files.set(key, { stamp, outcome }); return { ...outcome, records: structuredClone(outcome.records) }; }
   return outcome;
 }
+// Re-parses only files whose stamp changed and reports whether any parse outcome,
+// file or listing differs from what the cache held. Identical outcomes merge into an
+// identical scan, so an unchanged report lets the caller skip the merge entirely.
+async function refreshCache(selectedRoots, salt, audit, cache) {
+  if (cache.salt !== salt) { cache.files.clear(); cache.salt = salt; cache.listing = null; }
+  const report = { changed: false, failures: 0 }, seen = new Set(), listing = [];
+  for (const agent of SOURCES) {
+    const listed = listFiles(agent, selectedRoots, audit);
+    listing.push([agent, listed.detected, listed.errors]);
+    for (const file of agent === 'deepseek' ? extended.canonicalFiles(listed.files) : listed.files) {
+      const key = agent + '\0' + file; seen.add(key);
+      let stamp = null; try { stamp = fileStamp(file); } catch {}
+      const hit = cache.files.get(key);
+      if (hit && stamp !== null && hit.stamp === stamp) continue;
+      const outcome = await parseFile(agent, file, salt, audit);
+      if (outcome.failure || stamp === null) { cache.files.delete(key); report.failures++; report.changed = true; continue; }
+      if (!hit || JSON.stringify(hit.outcome) !== JSON.stringify(outcome)) report.changed = true;
+      cache.files.set(key, { stamp, outcome });
+    }
+  }
+  for (const key of cache.files.keys()) if (!seen.has(key)) { cache.files.delete(key); report.changed = true; }
+  const signature = JSON.stringify(listing);
+  if (cache.listing !== signature) { cache.listing = signature; report.changed = true; }
+  return report;
+}
 async function scanSources(selectedRoots, salt, audit, { cache = null, report = null } = {}) {
   if (cache) { if (cache.salt !== salt) { cache.files.clear(); cache.salt = salt; } cache.seen = new Set(); }
   const result = {}, physical = new Set(), shared = new Map();
@@ -235,4 +260,4 @@ async function scanSources(selectedRoots, salt, audit, { cache = null, report = 
   if (cache) for (const key of cache.files.keys()) if (!cache.seen.has(key)) cache.files.delete(key);
   return result;
 }
-module.exports = { parseObjects, parseDatabase, scanSources, sourceStamp };
+module.exports = { parseObjects, parseDatabase, scanSources, sourceStamp, refreshCache };

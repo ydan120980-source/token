@@ -66,11 +66,23 @@ test('service skips unchanged sources without reading them and still collects ch
   assert.equal(total(service.store),fixture.total); assert(service.audit.reads > 0);
   fs.utimesSync(file,new Date(0),new Date(0));
   const first = service.checkedAt; await new Promise(resolve => setTimeout(resolve,5));
+  // With NTFS last-access updates on, the first scan's own reads raise change events,
+  // so one stat-only check may follow before the tree counts as quiet.
+  await service.refresh();
+  assert.match(service.lastCollection,/^unchanged:(quiet|stamp)$/); assert.equal(service.audit.reads,0);
   const state = await service.refresh();
+  assert.equal(service.lastCollection,'unchanged:quiet','a quiet source tree is not even walked');
   assert.equal(service.audit.reads,0); assert.equal(service.store.state.sequence,sequence); assert.equal(fs.statSync(file).mtimeMs,0);
   assert(state.checkedAt > first); assert(service.collector,'the collector worker is reused');
-  fs.appendFileSync(path.join(fixture.roots.claude[0],'project','session.jsonl'),'\n' + claudeLine('later-call'));
-  await service.refresh();
+  // A transcript that grows by a line without usage is re-read but changes no outcome:
+  // no merge, verification, ingest or write. Change events arrive asynchronously.
+  const settleEvents = () => new Promise(resolve => setTimeout(resolve,300));
+  const session = path.join(fixture.roots.claude[0],'project','session.jsonl');
+  fs.appendFileSync(session,'\n' + JSON.stringify({type:'user',uuid:'u-1',sessionId:'cache-session',timestamp:time,message:{role:'user',content:'text'}}));
+  await settleEvents(); await service.refresh();
+  assert(service.audit.reads > 0); assert.equal(service.lastCollection,'unchanged:outcome'); assert.equal(service.store.state.sequence,sequence); assert.equal(fs.statSync(file).mtimeMs,0);
+  fs.appendFileSync(session,'\n' + claudeLine('later-call'));
+  await settleEvents(); await service.refresh(); assert.equal(service.lastCollection,'ingested');
   assert.equal(service.store.state.sequence,sequence + 1); assert.equal(total(service.store),fixture.total + 10);
   service.store.clear(); assert.equal(total(service.store),0);
   await service.refresh();

@@ -2,6 +2,8 @@
 
 User authorizations moved verbatim from `AGENTS.md` on 2026-10-06 (newest first, as originally ordered). These entries remain scope authority; `AGENTS.md` points here. Append new authorizations at the top.
 
+User refinement (2026-10-08, on r7): (1) the usage page feels cramped — give it room; (2) Agent filter chips show only logos, the selected one expands to show its name; (3) add motion, transitions and interaction to the composition and habits cards, including a way back after filtering to a single Agent or model from the share card, and fix the habits card blemishes; (4) also review front end and back end for problems. Measured on the running r7: about 0.8 CPU-s per 5 s refresh while an Agent transcript keeps growing; reducing that is in scope. Earlier boundaries remain (trend keeps its controls; unknown stays unknown).
+
 User direction (2026-10-07, after `3859657`): make the "API 等价估算" hero figure larger and tidy its surrounding layout with fewer small captions; then build the r7 candidate and complete packaged and extracted acceptance.
 
 User refinement (2026-10-07, after `c141eaf`): "整体再调整一下排版" — adjust the overall layout of the desktop UI. Interpreted as layout only: balance and de-duplicate the usage page (composition/habits columns, repeated facts, wrapping controls); no data semantics, sources or controls removed (trend keeps Agent/source/model/refresh/range controls).

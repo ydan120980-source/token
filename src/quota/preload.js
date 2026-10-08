@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('usageBridge', Object.freeze({
   pricing: () => ipcRenderer.invoke('usage:pricing'), savePrice: entry => ipcRenderer.invoke('usage:priceSave', entry), resetPrice: entry => ipcRenderer.invoke('usage:priceReset', entry),
   syncPrices: () => ipcRenderer.invoke('usage:priceSync'), autoPrices: enabled => ipcRenderer.invoke('usage:priceAuto', enabled), saveBilling: value => ipcRenderer.invoke('usage:billingSave', value),
   previewCodex: () => ipcRenderer.invoke('usage:codexPreview'), applyCodex: id => ipcRenderer.invoke('usage:codexApply', id),
-  get: () => ipcRenderer.invoke('usage:get'), refresh: () => ipcRenderer.invoke('usage:refresh'),
+  get: revision => ipcRenderer.invoke('usage:get', Number.isSafeInteger(revision) ? revision : null), refresh: () => ipcRenderer.invoke('usage:refresh'),
   setEnabled: value => ipcRenderer.invoke('usage:enabled', value), setRefreshInterval: value => ipcRenderer.invoke('usage:interval', value), chooseSource: agent => ipcRenderer.invoke('usage:chooseSource', agent),
   exportStatistics: snapshot => ipcRenderer.invoke('usage:export', snapshot), probePrice: entry => ipcRenderer.invoke('usage:priceProbe', entry),
   onUpdate: callback => { const listener = () => callback(); ipcRenderer.on('usage:update', listener); return () => ipcRenderer.removeListener('usage:update', listener); }
