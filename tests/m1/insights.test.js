@@ -82,3 +82,14 @@ test('snapshot cost parts allocate the multiplied estimate exactly and cache sav
   assert.equal(unpriced.costParts, null); assert.equal(unpriced.cacheSavingsUsd, null);
   close(snapshot.hourly.find(r => r.model === 'claude-test').costParts.output, 16);
 });
+
+test('streaks forgive a day in progress and find the longest run; the peak window wraps midnight', () => {
+  const totals = new Map([['2026-10-01', 5], ['2026-10-02', 5], ['2026-10-03', 5], ['2026-10-05', 1], ['2026-10-06', 0], ['2026-10-07', 2], ['2026-10-08', 3]]);
+  assert.deepEqual(math.streaks(totals, '2026-09-30', '2026-10-08'), { current: 2, longest: { length: 3, from: '2026-10-01', to: '2026-10-03' } });
+  assert.equal(math.streaks(totals, '2026-09-30', '2026-10-09').current, 2, 'an empty last day does not break the run');
+  assert.equal(math.streaks(totals, '2026-09-30', '2026-10-10').current, 0);
+  assert.equal(math.streaks(new Map(), '2026-10-01', '2026-10-08').longest.length, 0);
+  const hours = Array(24).fill(0); hours[23] = 6; hours[0] = 3; hours[1] = 1; hours[12] = 5;
+  assert.deepEqual(math.peakWindow(hours), { start: 23, end: 2, tokens: 10, share: 10 / 15 });
+  assert.equal(math.peakWindow(Array(24).fill(0)), null);
+});

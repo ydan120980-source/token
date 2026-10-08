@@ -12,7 +12,7 @@
   const pct = (value, digits = 1) => value === null || value === undefined ? '—' : (value * 100).toFixed(digits) + '%';
   const pad = hour => String(hour).padStart(2, '0');
   const slotName = (d, h) => WEEKDAYS[d] + ' ' + pad(h) + ':00–' + pad(h + 1) + ':00';
-  const state = { shareBy: 'agent', slot: null, ctx: null, grid: null };
+  const state = { shareBy: 'agent', slot: null, ctx: null, activity: null, grid: null, dayHours: null };
   const full = () => (root.uiMotion?.mode ?? 'full') === 'full' && !document.hidden;
 
   // Amounts below a cent and cheap unit rates keep their magnitude instead of "$0.00".
@@ -77,11 +77,12 @@
     root.uiMotion?.select(f.tools.querySelector('.insight-toggle'));
   }
 
-  function slotRows(d, h) { return state.ctx.hourlyRows.filter(row => row.hour === h && (new Date(row.date + 'T12:00:00Z').getUTCDay() + 6) % 7 === d); }
+  function slotRows(d, h) { return state.activity.hourlyRows.filter(row => row.hour === h && (new Date(row.date + 'T12:00:00Z').getUTCDay() + 6) % 7 === d); }
   function renderSlot() {
-    const panel = $('hourCard').querySelector('.slot-detail'), grid = state.grid, ctx = state.ctx;
+    const panel = $('hourCard').querySelector('.slot-detail'), grid = state.grid, ctx = state.activity;
     for (const cell of $('hourCard').querySelectorAll('.hour-grid button')) cell.setAttribute('aria-pressed', String(Boolean(state.slot) && Number(cell.dataset.d) === state.slot.d && Number(cell.dataset.h) === state.slot.h));
     if (!panel) return;
+    markCalendar();
     if (!state.slot) { panel.hidden = true; panel.innerHTML = ''; return; }
     const { d, h } = state.slot, cell = grid.cells[d][h], rows = slotRows(d, h), items = math.shares(rows, 'agent', 4);
     const cost = rows.filter(row => row.estimatedCostUsd !== null && row.estimatedCostUsd !== undefined).reduce((sum, row) => sum + row.estimatedCostUsd, 0);
@@ -94,25 +95,68 @@
     if (opening) root.uiMotion?.enter(panel, 'detail'); else reveal(panel);
     grow([...panel.querySelectorAll('.share-track span')]);
   }
-  function renderHours(ctx) {
-    const f = frame('hourCard', '活跃时段'), grid = state.grid = math.weekHour(ctx.hourlyRows), { short } = ctx;
-    f.sub.textContent = ctx.rangeText + ctx.scopeSuffix + ' · 本地时间';
+  // A chosen slot lights up, in the calendar beside it, the days that used it.
+  function markCalendar() {
+    const heatmap = $('heatmap'); if (!heatmap) return;
+    const dates = state.slot && !state.activity.selectedDay ? new Set(slotRows(state.slot.d, state.slot.h).filter(row => row.totalTokens > 0).map(row => row.date)) : null;
+    heatmap.toggleAttribute('data-slot', Boolean(dates));
+    for (const cell of heatmap.querySelectorAll('button[data-date]')) cell.classList.toggle('is-match', Boolean(dates?.has(cell.dataset.date)));
+  }
+  function renderStats(ctx) {
+    const host = $('rhythmStats'); if (!host) return;
+    const active = [...ctx.dayTotals].filter(([day, value]) => day >= ctx.start && day <= ctx.today && value > 0).length;
+    const runs = math.streaks(ctx.dayTotals, ctx.start, ctx.today), peak = math.peakWindow(state.grid.hours);
+    const stat = (label, value, title) => '<span class="rhythm-stat"' + (title ? ' title="' + title + '"' : '') + '><small>' + label + '</small><b>' + value + '</b></span>';
+    host.innerHTML = stat('活跃', active + ' 天') + stat('当前连续', runs.current + ' 天', runs.current ? '截至 ' + ctx.today + (ctx.dayTotals.get(ctx.today) > 0 ? '' : '（今天尚无用量，不打断连续）') : '') +
+      stat('最长连续', runs.longest.length + ' 天', runs.longest.length ? runs.longest.from + ' 至 ' + runs.longest.to : '') +
+      (peak ? stat('高峰三小时', pad(peak.start) + '–' + (peak.end ? pad(peak.end) : '24') + ' 点', '这三个小时占范围内 ' + pct(peak.share, 0) + ' 的 token') : '');
+  }
+  function renderWeek(ctx, f) {
+    const grid = state.grid, { short } = ctx;
+    f.sub.textContent = '星期 × 小时 · ' + ctx.rangeText + ctx.scopeSuffix;
     if (!grid.max) { state.slot = null; f.body.innerHTML = empty('当前范围暂无按小时的用量。'); reveal(f.body); return; }
     if (state.slot && !grid.cells[state.slot.d][state.slot.h].tokens) state.slot = null;
     const level = tokens => tokens <= 0 ? 0 : Math.min(4, 1 + Math.floor(Math.sqrt(tokens / grid.max) * 4 - 1e-9));
     const peak = grid.peak;
-    const cells = grid.cells.map((row, d) => '<span class="hour-day" data-day="' + d + '">' + WEEKDAYS[d] + '</span>' + row.map((cell, h) =>
+    const cells = grid.cells.map((row, d) => '<span class="hour-day" data-day="' + d + '">' + WEEKDAYS[d].slice(1) + '</span>' + row.map((cell, h) =>
       '<button class="lv' + level(cell.tokens) + '" data-d="' + d + '" data-h="' + h + '" tabindex="-1" aria-label="' + slotName(d, h) + '，' + (cell.tokens ? short(cell.tokens) + ' token，' + cell.days + ' 天' : '无用量') + '"></button>').join('')).join('');
-    const ticks = '<span></span>' + Array.from({ length: 24 }, (_, h) => '<span class="hour-tick" data-hour="' + h + '">' + (h % 3 ? '' : h) + '</span>').join('');
+    const ticks = '<span></span>' + Array.from({ length: 24 }, (_, h) => '<span class="hour-tick" data-hour="' + h + '">' + (h % 6 ? '' : h) + '</span>').join('');
     f.body.innerHTML = '<div class="hour-scroll"><div class="hour-grid" role="group" aria-label="按星期和小时的用量分布，方向键移动，回车查看明细">' + cells + ticks + '</div></div>' +
       '<div class="slot-detail" hidden></div>' +
-      '<div class="insight-facts hour-facts"><button data-slot="' + peak.weekday + ',' + peak.hour + '"><small>最集中的时段</small><b>' + slotName(peak.weekday, peak.hour) + '</b></button><div><small>最常用的钟点</small><b>' + pad(grid.peakHour) + ':00–' + pad(grid.peakHour + 1) + ':00</b></div><div><small>最活跃的星期</small><b>' + WEEKDAYS[grid.peakWeekday] + '</b></div><div><small>有用量的时段</small><b>' + grid.active + ' / 168</b></div></div>';
+      '<div class="insight-facts hour-facts"><button data-slot="' + peak.weekday + ',' + peak.hour + '"><small>最集中的时段</small><b>' + slotName(peak.weekday, peak.hour) + '</b></button><div><small>最活跃的星期</small><b>' + WEEKDAYS[grid.peakWeekday] + '</b></div><div title="一周 168 个小时中有用量的个数"><small>有用量的时段</small><b>' + grid.active + ' / 168</b></div>' + '</div>';
     // One roving tab stop: the selected slot, otherwise the peak.
     const tabbable = state.slot ? [state.slot.d, state.slot.h] : [peak.weekday, peak.hour];
     for (const cell of f.body.querySelectorAll('.hour-grid button')) cell.tabIndex = Number(cell.dataset.d) === tabbable[0] && Number(cell.dataset.h) === tabbable[1] ? 0 : -1;
     reveal(f.body);
     if (full()) for (const cell of f.body.querySelectorAll('.hour-grid button:not(.lv0)')) cell.animate([{ opacity: 0, transform: 'scale(.55)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: Number(cell.dataset.h) * 14 + Number(cell.dataset.d) * 8, easing: EASE, fill: 'backwards' });
     renderSlot();
+  }
+  // One chosen day: its 24 hours as bars. Hours after now on today are not yet known.
+  function renderDayHours(ctx, f) {
+    const day = ctx.selectedDay, { short } = ctx, weekday = WEEKDAYS[(new Date(day + 'T12:00:00Z').getUTCDay() + 6) % 7];
+    f.sub.textContent = day + ' ' + weekday + ctx.scopeSuffix + ' · 本地时间';
+    if (!ctx.hoursReady(day)) { f.body.innerHTML = empty('这一天没有按小时的记录。'); reveal(f.body); return; }
+    const rows = ctx.dayHourRows(day), last = day === ctx.today ? ctx.currentHour() : 23;
+    const hours = Array.from({ length: 24 }, (_, h) => { const items = rows.filter(row => row.hour === h); return { h, tokens: items.reduce((sum, row) => sum + row.totalTokens, 0), items, future: h > last }; });
+    const max = Math.max(...hours.map(hour => hour.tokens)), used = hours.filter(hour => hour.tokens > 0);
+    if (!max) { f.body.innerHTML = empty(rows.length ? '这一天只有 0 token 的空记录。' : '这一天没有用量记录。'); reveal(f.body); return; }
+    const busiest = used.reduce((a, b) => b.tokens > a.tokens ? b : a);
+    f.body.innerHTML = '<div class="day-hours" role="list" aria-label="' + day + ' 每小时用量">' + hours.map(hour =>
+      '<span role="listitem" data-hour="' + hour.h + '" class="' + (hour.future ? 'is-future' : hour.tokens ? '' : 'is-empty') + (hour === busiest ? ' is-peak' : '') + '" aria-label="' + pad(hour.h) + ':00，' + (hour.future ? '尚未到达' : short(hour.tokens) + ' token') + '"><i style="--h:' + (hour.tokens / max * 100) + '%"></i></span>').join('') + '</div>' +
+      '<div class="day-hour-ticks" aria-hidden="true">' + [0, 6, 12, 18, 23].map(h => '<span style="--at:' + h + '">' + pad(h) + '</span>').join('') + '</div>' +
+      '<div class="insight-facts hour-facts"><div><small>最忙的小时</small><b>' + pad(busiest.h) + ':00 · ' + short(busiest.tokens) + '</b></div><div><small>有用量的小时</small><b>' + used.length + ' / ' + (last + 1) + '</b></div><div><small>时间跨度</small><b>' + pad(used[0].h) + ':00–' + pad(used.at(-1).h + 1) + ':00</b></div></div>';
+    state.dayHours = hours;
+    reveal(f.body);
+    if (full()) f.body.querySelectorAll('.day-hours i').forEach((bar, i) => bar.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 520, delay: i * 16, easing: EASE, fill: 'backwards' }));
+  }
+  function renderActivity(ctx) {
+    state.activity = ctx; state.grid = math.weekHour(ctx.hourlyRows); state.dayHours = null;
+    const f = frame('hourCard', '每小时');
+    if (!f.tools.dataset.ready) { f.tools.innerHTML = '<button class="insight-clear" data-day-clear hidden><span aria-hidden="true">‹</span>回到星期 × 小时</button>'; f.tools.dataset.ready = 'true'; }
+    f.tools.querySelector('[data-day-clear]').hidden = !ctx.selectedDay;
+    renderStats(ctx);
+    if (ctx.selectedDay) renderDayHours(ctx, f); else renderWeek(ctx, f);
+    markCalendar();
   }
 
   function renderEfficiency(ctx) {
@@ -138,14 +182,14 @@
 
   function render(ctx) {
     state.ctx = ctx;
-    renderCost(ctx); renderShare(ctx); renderHours(ctx); renderEfficiency(ctx);
+    renderCost(ctx); renderShare(ctx); renderEfficiency(ctx);
   }
 
   // Hover and focus explain a slot; click or Enter pins its breakdown below the grid.
   function tooltip(cell) {
     const tip = $('heatTooltip'), grid = state.grid; if (!tip || !grid) return;
     const d = Number(cell.dataset.d), h = Number(cell.dataset.h), data = grid.cells[d][h];
-    tip.innerHTML = '<span>' + slotName(d, h) + '</span><strong>' + (data.tokens ? state.ctx.short(data.tokens) + ' <small>Token</small>' : '无用量') + '</strong>' + (data.tokens ? '<span>' + data.days + ' 天有用量</span>' : '');
+    tip.innerHTML = '<span>' + slotName(d, h) + '</span><strong>' + (data.tokens ? state.activity.short(data.tokens) + ' <small>Token</small>' : '无用量') + '</strong>' + (data.tokens ? '<span>' + data.days + ' 天有用量</span>' : '');
     const rect = cell.getBoundingClientRect(); tip.style.left = '0px'; tip.style.top = '0px';
     const width = tip.offsetWidth, height = tip.offsetHeight, above = rect.top - height - 10;
     tip.style.left = Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2)) + 'px';
@@ -153,6 +197,16 @@
     tip.classList.add('visible'); tip.setAttribute('aria-hidden', 'false');
     const card = $('hourCard');
     for (const label of card.querySelectorAll('.hour-day, .hour-tick')) label.classList.toggle('is-active', label.dataset.day === String(d) || label.dataset.hour === String(h));
+  }
+  function dayTip(bar) {
+    const tip = $('heatTooltip'), hour = state.dayHours?.[Number(bar.dataset.hour)], ctx = state.activity; if (!tip || !hour) return;
+    const lead = hour.tokens ? math.shares(hour.items, 'agent', 1)[0] : null, agent = lead?.key ? ctx.agents[lead.key] : null;
+    tip.innerHTML = '<span>' + pad(hour.h) + ':00–' + pad(hour.h + 1) + ':00</span><strong>' + (hour.future ? '尚未到达' : hour.tokens ? ctx.short(hour.tokens) + ' <small>Token</small>' : '无用量') + '</strong>' + (agent ? '<span>' + ctx.escapeHtml(agent.name) + ' ' + pct(lead.tokenShare, 0) + '</span>' : '');
+    const rect = bar.getBoundingClientRect(); tip.style.left = '0px'; tip.style.top = '0px';
+    const width = tip.offsetWidth, height = tip.offsetHeight, above = rect.top - height - 10;
+    tip.style.left = Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2)) + 'px';
+    tip.style.top = (above >= 8 ? above : rect.bottom + 10) + 'px';
+    tip.classList.add('visible'); tip.setAttribute('aria-hidden', 'false');
   }
   function untip() {
     const tip = $('heatTooltip'); tip?.classList.remove('visible'); tip?.setAttribute('aria-hidden', 'true');
@@ -170,9 +224,11 @@
     if (cell) { choose(Number(cell.dataset.d), Number(cell.dataset.h)); return; }
     const fact = event.target.closest('#hourCard [data-slot]');
     if (fact) { const [d, h] = fact.dataset.slot.split(',').map(Number); if (!state.slot || state.slot.d !== d || state.slot.h !== h) choose(d, h); return; }
-    if (event.target.closest('[data-slot-close]')) { state.slot = null; renderSlot(); }
+    if (event.target.closest('[data-slot-close]')) { state.slot = null; renderSlot(); return; }
+    if (event.target.closest('[data-day-clear]')) state.activity?.clearDay();
   });
-  document.addEventListener('mouseover', event => { const cell = event.target.closest('#hourCard .hour-grid button'); if (cell) tooltip(cell); });
+  document.addEventListener('mouseover', event => { const cell = event.target.closest('#hourCard .hour-grid button'); if (cell) tooltip(cell); const bar = event.target.closest('#hourCard .day-hours [data-hour]'); if (bar) dayTip(bar); });
+  document.addEventListener('mouseout', event => { if (event.target.closest('#hourCard .day-hours [data-hour]') && !event.relatedTarget?.closest?.('#hourCard .day-hours [data-hour]')) untip(); });
   document.addEventListener('mouseout', event => { if (event.target.closest('#hourCard .hour-grid button') && !event.relatedTarget?.closest?.('#hourCard .hour-grid button')) untip(); });
   document.addEventListener('focusin', event => { const cell = event.target.closest('#hourCard .hour-grid button'); if (cell && cell.matches(':focus-visible')) tooltip(cell); });
   document.addEventListener('focusout', event => { if (event.target.closest('#hourCard .hour-grid button')) untip(); });
@@ -185,5 +241,5 @@
     const d = (Number(cell.dataset.d) + move[0] + 7) % 7, h = (Number(cell.dataset.h) + move[1] + 24) % 24, next = $('hourCard').querySelector('.hour-grid button[data-d="' + d + '"][data-h="' + h + '"]');
     cell.tabIndex = -1; next.tabIndex = 0; next.focus();
   });
-  root.usageInsights = { render };
+  root.usageInsights = { render, renderActivity };
 })(window);

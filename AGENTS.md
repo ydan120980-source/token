@@ -17,7 +17,7 @@ Current increment (2026-10-05 to 10-07): nine-source local usage (Codex, Claude 
 
 ## Commands
 
-- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`, 116 tests)
+- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`, 117 tests)
 - Required checks: `npm run test:native`, `npm run test:ui`, `npm run test:quota:ui`, `npm run test:stress`, `npm run experiment:crypto`, `npm run audit:runtime`, plus Windows packaged/extracted UI smoke checks
 - Build: `npm run dist:win:dir`; source archive: `npm run package:source`; share runtime across generations: `npm run dist:share`
 - All maintenance UI tests must specify own usage/quota directories and a synthetic fixture home. Real-source verification follows privacy gates.

@@ -101,6 +101,31 @@
     return { cells, max, peak, active, peakHour: best(hours), peakWeekday: best(days), hours, days };
   }
 
+  const nextDay = (day, by) => { const value = new Date(day + 'T12:00:00Z'); value.setUTCDate(value.getUTCDate() + by); return value.toISOString().slice(0, 10); };
+  // Runs of consecutive days with usage between start and end (inclusive). The current
+  // run counts back from end, or from the day before while end has nothing yet: a day
+  // still in progress does not break a streak.
+  function streaks(totals, start, end) {
+    let longest = { length: 0, from: null, to: null }, run = 0, from = null;
+    for (let day = start; day <= end; day = nextDay(day, 1)) {
+      if ((totals.get(day) || 0) > 0) { if (!run) from = day; run++; if (run > longest.length) longest = { length: run, from, to: day }; } else run = 0;
+    }
+    let current = 0, day = (totals.get(end) || 0) > 0 ? end : nextDay(end, -1);
+    while (day >= start && (totals.get(day) || 0) > 0) { current++; day = nextDay(day, -1); }
+    return { current, longest };
+  }
+
+  // The width-hour window (wrapping past midnight) that holds the most tokens.
+  function peakWindow(hours, width = 3) {
+    const total = hours.reduce((a, b) => a + b, 0); if (!total) return null;
+    let best = null;
+    for (let start = 0; start < 24; start++) {
+      let tokens = 0; for (let i = 0; i < width; i++) tokens += hours[(start + i) % 24];
+      if (!best || tokens > best.tokens) best = { start, end: (start + width) % 24, tokens };
+    }
+    return { ...best, share: best.tokens / total };
+  }
+
   function efficiency(rows, recorded) {
     const tokens = sum(rows, row => row.totalTokens), records = sum(rows, row => row.records || 0);
     const priced = rows.filter(row => known(row.estimatedCostUsd)), cost = sum(priced, row => row.estimatedCostUsd), pricedTokens = sum(rows, row => row.pricedTokens || 0);
@@ -117,6 +142,6 @@
   // Relative change against a comparable earlier window; null when not comparable.
   function change(current, previous) { return known(current) && known(previous) && previous > 0 ? (current - previous) / previous : null; }
 
-  const api = { recordedFields, categoryView, cacheHitRate, costDestination, shares, weekHour, efficiency, change };
+  const api = { recordedFields, categoryView, cacheHitRate, costDestination, shares, weekHour, streaks, peakWindow, efficiency, change };
   if (typeof module === 'object') module.exports = api; else root.insightsMath = api;
 })(typeof window === 'object' ? window : null);

@@ -21,6 +21,9 @@ const categories = [
 let period = 'all', metric = 'tokens', selectedDay = null, enabled = true, sequence = realData ? localSnapshot.sequence : 1;
 let trendChart, toastTimer, trendMode = 'flow', trendRange = null, trendBuckets = [], keyboardTrendIndex = 0;
 let trendPress = null, trendDragged = false;
+const hiddenKey = 'agentusage.trendHidden.v1';
+let hiddenSeries = new Set(['cost']);
+try { const saved = JSON.parse(localStorage.getItem(hiddenKey)); if (Array.isArray(saved)) hiddenSeries = new Set(saved.filter(key => typeof key === 'string').slice(0, 64)); } catch { /* Default: cost overlay hidden. */ }
 let usageStatus = { collecting: false, error: null };
 let usageRevision = null;
 const templates = [];
@@ -48,6 +51,8 @@ function costHtml(a, label = 'API 等价估算') {
     (a.coverage ?? '') +
     '" data-cost-label="' +
     escapeHtml(label) +
+    '" title="' +
+    escapeHtml(note) +
     '" aria-label="' +
     escapeHtml(note) +
     '"><span class="cost-scale"><span class="cost-lower">' +
@@ -228,7 +233,7 @@ function renderOverview(rows) {
   if (period !== 'today' && recordedDays > 1 && average > 0) {
     const change = daily.length ? t.total / average - 1 : null, percent = change === null ? '' : (change >= 0 ? '+' : '−') + Math.abs(change * 100).toFixed(0) + '%';
     const note = '区间日均 ' + short(Math.round(average)) + ' Token（按 ' + recordedDays + ' 个有记录日计算）' + (change === null ? '；今日暂无记录' : '；今日至今 ' + short(t.total) + '，较日均 ' + percent);
-    comparison.innerHTML = '日均 <strong>' + short(Math.round(average)) + '</strong>' + (change === null ? '' : '<span class="fact-delta" data-direction="' + (change >= 0 ? 'up' : 'down') + '">今日 ' + percent + '</span>');
+    comparison.innerHTML = '日均 <strong>' + short(Math.round(average)) + '</strong>' + (change === null ? '' : '<span class="fact-delta" data-direction="' + (change >= 0 ? 'up' : 'down') + '">今日较日均 ' + percent + '</span>');
     comparison.title = note; comparison.setAttribute('aria-label', note); comparison.hidden = false;
   } else { comparison.textContent = ''; comparison.removeAttribute('title'); comparison.removeAttribute('aria-label'); comparison.hidden = true; }
   const week = dates(shift(today,-6),today), observed = new Set(rows.map(r => r.date)), dayTotals = new Map();
@@ -254,12 +259,14 @@ function heatStart() { return $('heatRange').value === today.slice(0, 4) ? today
 function renderHeat(rows) {
   hideHeatTooltip();
   const focusedDate = $('heatmap').contains(document.activeElement) ? document.activeElement.dataset.date : null;
-  const start = heatStart(), allDates = dates(start, today), daily = new Map();
+  const start = heatStart(), daily = new Map();
+  const monday = day => shift(day, -((new Date(day + 'T12:00:00Z').getUTCDay() + 6) % 7)), first = rows.length && monday(coverageStart) > start ? monday(coverageStart) : start, gap = first > start, allDates = dates(first, today);
   if (selectedDay && (selectedDay < start || selectedDay > today)) selectedDay = null;
   $('heatRange').disabled = false;
   for (const row of filterRows(rows)) daily.set(row.date, (daily.get(row.date) ?? 0) + row.totalTokens);
-  const max = Math.max(1, ...allDates.map(d => daily.get(d) || 0)), leading = (new Date(start + 'T12:00:00Z').getUTCDay() + 6) % 7;
-  let html = '<span class="pad" aria-hidden="true"></span>'.repeat(leading);
+  const max = Math.max(1, ...allDates.map(d => daily.get(d) || 0)), leading = (new Date(first + 'T12:00:00Z').getUTCDay() + 6) % 7;
+  const gapText = start + ' 至 ' + shift(first, -1) + ' 没有任何记录（可能早于来源保留的历史）';
+  let html = (gap ? '<span class="heat-gap" title="' + gapText + '" aria-label="' + gapText + '"><span>未观测</span></span>' : '') + '<span class="pad" aria-hidden="true"></span>'.repeat(leading);
   const observedDates = new Set(rows.map(row => row.date));
   for (const day of allDates) {
     const value = daily.get(day) ?? 0, observed = realData ? observedDates.has(day) : day >= coverageStart && rows.length > 0;
@@ -268,11 +275,11 @@ function renderHeat(rows) {
     html += '<button data-date="' + day + '" data-tokens="' + (observed ? value : '') + '" data-level="' + level + '" data-observed="' + observed + '" aria-label="' + title + '" aria-pressed="' + (selectedDay === day) + '">' + '</button>';
   }
   $('heatmap').innerHTML = html;
-  const firstMonth = new Date(start.slice(0, 7) + '-01T12:00:00Z'), lastMonth = new Date(today.slice(0, 7) + '-01T12:00:00Z');
+  const firstMonth = new Date(first.slice(0, 7) + '-01T12:00:00Z'), lastMonth = new Date(today.slice(0, 7) + '-01T12:00:00Z');
   const monthCount = (lastMonth.getUTCFullYear() - firstMonth.getUTCFullYear()) * 12 + lastMonth.getUTCMonth() - firstMonth.getUTCMonth() + 1;
   const months = []; for (let i = 0; i < monthCount; i++) { const date = new Date(firstMonth); date.setUTCMonth(date.getUTCMonth() + i); months.push((date.getUTCMonth() + 1) + '月'); }
   const columns = Math.ceil((allDates.length + leading) / 7);
-  $('heatmap').style.setProperty('--heat-columns', String(columns));
+  $('heatmap').style.setProperty('--heat-columns', String(columns)); $('heatmap').toggleAttribute('data-gap', gap);
   // Each label spans to the next month's column. A partial first month too
   // narrow for its label is dropped; a partial current month borrows one column.
   const labels = [];
@@ -282,12 +289,25 @@ function renderHeat(rows) {
   if (labels.length > 1 && labels[0].span < 2) labels.shift();
   const last = labels.at(-1);
   if (last && last.span < 2 && labels.length > 1) { last.column = Math.max(1, columns - 1); last.span = columns + 1 - last.column; const previous = labels.at(-2); previous.span = last.column - previous.column; if (previous.span < 2) labels.splice(-2, 1); }
-  $('heatMonths').innerHTML = labels.map(label => '<span style="grid-column:' + label.column + ' / span ' + Math.max(1, label.span) + '">' + label.text + '</span>').join('');
-  $('heatMonths').style.gridTemplateColumns = 'repeat(' + columns + ',minmax(10px,16px))';
+  $('heatMonths').innerHTML = labels.map(label => '<span style="grid-column:' + (label.column + gap) + ' / span ' + Math.max(1, label.span) + '">' + label.text + '</span>').join('');
+  $('heatMonths').style.gridTemplateColumns = (gap ? 'var(--heat-gap-width) ' : '') + 'repeat(' + columns + ',var(--heat-cell))';
   $('heatMonths').hidden = false;
-  $('heatActive').textContent = [...daily].filter(([d, value]) => d >= start && d <= today && value > 0).length + ' 个活跃日';
-  $('heatDates').textContent = start + ' — ' + today; renderDay(rows);
+  renderDay(rows); renderActivity(rows);
   if (focusedDate) $('heatmap').querySelector('[data-date="' + focusedDate + '"]')?.focus({ preventScroll: true });
+}
+function scopeSuffix() {
+  const scope = [$('agentFilter').value === 'all' ? null : agents[$('agentFilter').value]?.name, $('sourceFilter').value === 'all' ? null : $('sourceFilter').selectedOptions[0]?.textContent, $('modelFilter').value === 'all' ? null : displayModel($('modelFilter').value)].filter(Boolean);
+  return scope.length ? ' · ' + scope.join(' · ') : '';
+}
+function renderActivity(rows) {
+  const start = heatStart(), dayTotals = new Map(), hours = filterRows(hourlyData());
+  for (const row of filterRows(rows)) if (row.date >= start && row.date <= today) dayTotals.set(row.date, (dayTotals.get(row.date) || 0) + row.totalTokens);
+  window.usageInsights.renderActivity({
+    hourlyRows: hours.filter(r => r.date >= start && r.date <= today), dayTotals, start, today, selectedDay, scopeSuffix: scopeSuffix(),
+    rangeText: $('heatRange').value === '365' ? '最近一年' : $('heatRange').value + ' 年',
+    hoursReady: hourlyReady, dayHourRows: day => hours.filter(r => r.date === day), currentHour,
+    clearDay: () => { selectedDay = null; renderHeat(data()); }, agents, short, usd: window.displayValues.usd, icon, escapeHtml
+  });
 }
 function hideHeatTooltip() {
   const tooltip = $('heatTooltip');
@@ -423,7 +443,7 @@ function renderTrend(rows) {
     const fields=[['inputUncached','输入','#5998e0'],['output','输出（含推理）','#63ad95'],['cacheRead','缓存读取','#9575df'],['cacheWrite','缓存写入','#d9ab59']];
     selected=fields.map(([field,label,color])=>({key:field,label,color,unit:'tokens',values:hourly?perHour(r=>r[field]):window.usageMath.seriesByModel(($('display').value==='total'?subset:grouped).map(r=>({...r,model:field,estimatedCostUsd:r[field]??null})),[field],chronological,$('display').value,'cost',coverageStart,realData?new Set(rows.map(r=>r.date)):null).get(field)}));
     const costs=hourly?perHour(r=>r.estimatedCostUsd):window.usageMath.seriesByModel(($('display').value==='total'?subset:grouped).map(r=>({...r,model:'cost'})),['cost'],chronological,$('display').value,'cost',coverageStart,realData?new Set(rows.map(r=>r.date)):null).get('cost');
-    selected.push({key:'cost',label:'估算费用',color:'#dd7b84',unit:'cost',values:costs});
+    selected.push({key:'cost',label:'估算费用（右轴）',color:'#dd7b84',unit:'cost',values:costs});
   }
   if (trendMode==='models' && byModel.length>5) selected.push({key:'other',label:'其他 '+(byModel.length-5)+' 个模型',values:hourly?perHour(pick,r=>!byModel.slice(0,5).includes(r.model)):add(byModel.slice(5).map(m=>series.get(m))),color:'#a3abb8'});
   const bucket = hourly ? values => hours.map((hour,i)=>({label:pad(hour)+':00',start,end,hour,value:values[i],partial:false})) : values => window.chartUi.bucketSeries(chronological,values,grain,$('display').value);
@@ -433,12 +453,12 @@ function renderTrend(rows) {
   const observedDates=new Set(rows.map(row=>row.date));
   const datasets = selected.map(entry=>{const buckets=bucket(entry.values);if($('newest').checked)buckets.reverse();const values=buckets.map(b=>b.value),blocked=hourly?values.reduce((list,v)=>(list.push(list.at(-1)+Number(!Number.isFinite(v))),list),[0]):window.chartUi.gapPlan(buckets,values,observedDates,coverageStart,$('display').value);
     const kind=context=>window.chartUi.segmentKind(context.p0DataIndex,context.p1DataIndex,blocked,values);
-    const secondary=metric==='tokens'&&entry.unit==='cost';return {label:entry.label,usageMetric:entry.unit||metric,yAxisID:secondary?'yCost':'y',data:values,usageBuckets:buckets,borderColor:entry.color,borderDash:secondary?[5,5]:[],backgroundColor:context=>{const area=context.chart.chartArea;if(!area)return entry.color+'20';const fill=context.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);fill.addColorStop(0,entry.color+(trendMode==='total'?'40':'24'));fill.addColorStop(1,entry.color+'00');return fill;},borderWidth:secondary?2:2.4,fill:secondary?false:'origin',pointRadius:dayList.length===1?4:0,pointHoverRadius:5,pointHoverBorderWidth:2,pointHoverBackgroundColor:entry.color,cubicInterpolationMode:'monotone',tension:.35,spanGaps:true,segment:{borderColor:context=>kind(context)==='unknown'?'transparent':kind(context)==='bridge'?entry.color+'66':entry.color,borderDash:context=>kind(context)==='bridge'?[2,4]:secondary?[5,5]:[],backgroundColor:context=>kind(context)==='recorded'?undefined:'transparent'}};});
+    const secondary=metric==='tokens'&&entry.unit==='cost';return {hidden:hiddenSeries.has(entry.key),label:entry.label,usageMetric:entry.unit||metric,yAxisID:secondary?'yCost':'y',data:values,usageBuckets:buckets,borderColor:entry.color,borderDash:secondary?[5,5]:[],backgroundColor:context=>{const area=context.chart.chartArea;if(!area)return entry.color+'20';const fill=context.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);fill.addColorStop(0,entry.color+(trendMode==='total'?'40':'24'));fill.addColorStop(1,entry.color+'00');return fill;},borderWidth:secondary?2:2.4,fill:secondary?false:'origin',pointRadius:dayList.length===1?4:0,pointHoverRadius:5,pointHoverBorderWidth:2,pointHoverBackgroundColor:entry.color,cubicInterpolationMode:'monotone',tension:.35,spanGaps:true,segment:{borderColor:context=>kind(context)==='unknown'?'transparent':kind(context)==='bridge'?entry.color+'66':entry.color,borderDash:context=>kind(context)==='bridge'?[2,4]:secondary?[5,5]:[],backgroundColor:context=>kind(context)==='recorded'?undefined:'transparent'}};});
   trendTooltip.hidden=true;if(trendChart)trendChart.$hoverIndex=null;
   const crosshair={id:'usageCrosshair',afterDraw(chart){const active=chart.tooltip?.getActiveElements();if(chart.$hoverIndex==null&&!active?.length)return;const x=chart.$hoverIndex!=null?chart.scales.x.getPixelForValue(chart.$hoverIndex):active[0].element.x,{ctx,chartArea:area}=chart;ctx.save();ctx.strokeStyle=theme.text+'66';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x,area.top);ctx.lineTo(x,area.bottom);ctx.stroke();ctx.restore();}};
   const gapHover={id:'gapHover',afterEvent(chart,args){const event=args.event,a=chart.chartArea;if(event.type==='mouseout'){chart.$hoverIndex=null;return;}if(event.type!=='mousemove'||event.x<a.left||event.x>a.right||event.y<a.top||event.y>a.bottom)return;const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(chart.scales.x.getValueForPixel(event.x))));chart.$hoverIndex=index;const active=chart.data.datasets.flatMap((d,i)=>chart.isDatasetVisible(i)&&Number.isFinite(d.data[index])?[{datasetIndex:i,index}]:[]);chart.setActiveElements(active);chart.tooltip.setActiveElements(active,{x:event.x,y:event.y});args.changed=true;renderTrendTooltip({chart,tooltip:{opacity:1,caretX:event.x,caretY:event.y,dataPoints:[{dataIndex:index}]}});}};
   const animation=window.uiMotion.mode==='full'?{duration:650,easing:'easeOutQuart'}:false;
-  const config={type:'line',data:{labels:dayList,datasets},plugins:[crosshair,curveReveal,gapHover],options:{animation,responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},onClick:(event)=>{if(trendDragged)return;const area=trendChart.chartArea;if(event.x>=area.left&&event.x<=area.right&&event.y>=area.top&&event.y<=area.bottom){const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(trendChart.scales.x.getValueForPixel(event.x)))),b=trendBuckets[index];if(grain==='day'||hourly)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}}},plugins:{legend:{display:false},tooltip:{enabled:false,external:renderTrendTooltip}},scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8,color:theme.text,font:{size:12},callback:(_v,i)=>hourly?dayList[i]:dayList[i]?.slice(5)}},y:{beginAtZero:true,grid:{color:theme.grid+'90',lineWidth:1},border:{display:false},ticks:{maxTicksLimit:5,color:theme.text,font:{size:12},callback:v=>metric==='cost'?'$'+v:short(v)}},yCost:{display:metric==='tokens'&&trendMode==='flow',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},border:{display:false},ticks:{maxTicksLimit:5,color:'#c8757e',font:{size:12},callback:v=>'$'+v}}}}};
+  const config={type:'line',data:{labels:dayList,datasets},plugins:[crosshair,curveReveal,gapHover],options:{animation,responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},onClick:(event)=>{if(trendDragged)return;const area=trendChart.chartArea;if(event.x>=area.left&&event.x<=area.right&&event.y>=area.top&&event.y<=area.bottom){const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(trendChart.scales.x.getValueForPixel(event.x)))),b=trendBuckets[index];if(grain==='day'||hourly)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}}},plugins:{legend:{display:false},tooltip:{enabled:false,external:renderTrendTooltip}},scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8,color:theme.text,font:{size:12},callback:(_v,i)=>hourly?dayList[i]:dayList[i]?.slice(5)}},y:{beginAtZero:true,grid:{color:theme.grid+'90',lineWidth:1},border:{display:false},ticks:{maxTicksLimit:5,color:theme.text,font:{size:12},callback:v=>metric==='cost'?'$'+v:short(v)}},yCost:{display:metric==='tokens'&&trendMode==='flow'&&!hiddenSeries.has('cost'),position:'right',beginAtZero:true,grid:{drawOnChartArea:false},border:{display:false},ticks:{maxTicksLimit:5,color:'#c8757e',font:{size:12},callback:v=>'$'+v}}}}};
   for(let i=0;i<datasets.length;i++) datasets[i].usageKey=selected[i].key;
   if(trendChart){
     // Keep both the chart and matching datasets: Chart.js retains presented
@@ -448,7 +468,7 @@ function renderTrend(rows) {
     const previous=new Map(trendChart.data.datasets.map(d=>[d.usageKey,d]));
     config.data.datasets=datasets.map(next=>previous.has(next.usageKey)?Object.assign(previous.get(next.usageKey),next):next);
     trendChart.setActiveElements([]);trendChart.tooltip.setActiveElements([],{x:0,y:0});
-    trendChart.data=config.data;trendChart.options=config.options;trendChart.config.plugins[0]=crosshair;trendChart.update(window.uiMotion.mode==='full'?undefined:'none');
+    trendChart.data=config.data;trendChart.options=config.options;config.data.datasets.forEach((dataset,i)=>trendChart.setDatasetVisibility(i,!hiddenSeries.has(dataset.usageKey)));trendChart.config.plugins[0]=crosshair;trendChart.update(window.uiMotion.mode==='full'?undefined:'none');
   }else trendChart=new Chart($('trendCanvas'),config);
   $('chartEmpty').hidden=subset.length>0 && datasets.some(d=>d.data.some(Number.isFinite));
   $('trendTotalLabel').textContent=metric==='cost'?'区间已定价估算':'区间 token 总量';
@@ -458,15 +478,25 @@ function renderTrend(rows) {
   // Facts follow the plotted unit: recorded days, or active hours of one day.
   const unitTotals=new Map();for(const row of hourly?hourRows:subset){const v=pick(row);if(Number.isFinite(v)){const key=hourly?row.hour:row.date;unitTotals.set(key,(unitTotals.get(key)||0)+v);}}
   const peak=[...unitTotals].sort((a,b)=>b[1]-a[1])[0],format=v=>metric==='cost'?window.displayValues.usd(v):short(Math.round(v));
-  const [averageLabel,peakLabel,activeLabel]=document.querySelectorAll('.trend-insights span');
-  averageLabel.textContent=hourly?'活跃小时均值':'已记录日均';peakLabel.textContent=hourly?'峰值时段':'峰值日';activeLabel.textContent=hourly?'活跃小时':'活跃天数';
-  $('trendAverage').textContent=unitTotals.size?format([...unitTotals.values()].reduce((s,v)=>s+v,0)/unitTotals.size):'—';
+  // Footer facts the rest of the page does not show: change against the window just
+  // before (same length, and only when it is fully covered), the peak, and the lead model.
+  const [changeLabel,peakLabel]=document.querySelectorAll('.trend-insights span');peakLabel.textContent=hourly?'峰值时段':'峰值日';
+  const span=Math.round((Date.parse(end)-Date.parse(start))/86400000)+1,whole=!trendRange&&period==='all';
+  const recent=hourly?null:whole?{from:shift(today,-29),to:today}:{from:start,to:end},before=hourly?null:{from:shift(recent.from,-(whole?30:span)),to:shift(recent.from,-1)};
+  const valueOf=list=>{const values=list.map(pick).filter(Number.isFinite);return values.length?values.reduce((sum,v)=>sum+v,0):null;};
+  let now,then,changeNote;
+  if(hourly){const last=start===today?currentHour():23,within=r=>r.hour<=last;now=valueOf(hourRows.filter(within));then=hourlyReady(shift(start,-1))?valueOf(filterRows(hourlyData()).filter(r=>r.date===shift(start,-1)&&within(r))):null;changeLabel.textContent=start===today?'较昨天同时段':'较前一天';changeNote=start===today?'今天 00:00 至 '+pad(last+1)+':00 对比昨天同一时段':'';}
+  else{const within=(r,w)=>r.date>=w.from&&r.date<=w.to;now=valueOf(grouped.filter(r=>within(r,recent)));then=before.from>=coverageStart?valueOf(grouped.filter(r=>within(r,before))):null;changeLabel.textContent=whole?'近 30 天较前 30 天':'较上一区间';changeNote=recent.from+' 至 '+recent.to+' 对比 '+before.from+' 至 '+before.to;if(before.from<coverageStart)changeNote='上一区间早于记录开始，不做对比';}
+  const delta=window.insightsMath.change(now,then);
+  $('trendChange').textContent=delta===null?'—':(delta>=0?'+':'−')+Math.abs(delta*100).toFixed(0)+'%';$('trendChange').dataset.direction=delta===null?'':delta>=0?'up':'down';$('trendChange').title=changeNote;
+  const leads=new Map();for(const row of hourly?hourRows:subset){const v=pick(row);if(Number.isFinite(v))leads.set(row.model,(leads.get(row.model)||0)+v);}
+  const lead=[...leads].sort((x,y)=>y[1]-x[1])[0],leadTotal=[...leads.values()].reduce((sum,v)=>sum+v,0);
+  $('trendLead').textContent=lead&&lead[1]>0?displayModel(lead[0])+' · '+(lead[1]/leadTotal*100).toFixed(0)+'%':'—';$('trendLead').title=lead?displayModel(lead[0]):'';
   $('trendPeak').textContent=peak?format(peak[1])+' · '+(hourly?pad(peak[0])+':00':peak[0].slice(5)):'—';$('trendPeak').disabled=!peak;$('trendPeak').dataset.habitDate=peak?hourly?start:peak[0]:'';
-  $('trendActive').textContent=new Set((hourly?hourRows:subset).filter(r=>r.totalTokens>0).map(r=>hourly?r.hour:r.date)).size+(hourly?' 小时':' 天');
-  $('trendFrom').value=start;$('trendTo').value=end;$('trendRangeReset').hidden=!trendRange;
+  $('trendFrom').value=start;$('trendTo').value=end;$('trendRangeReset').hidden=!trendRange;$('trendRangeFollow').hidden=!trendRange;
   $('trendRangeLabel').textContent=trendRange?start===end?start.slice(5):start.slice(5)+' – '+end.slice(5):period==='all'?'累计':period==='today'?'今天':'最近 '+period+' 天';$('trendRangeButton').title=start===end?start:start+' 至 '+end;$('trendRangeButton').setAttribute('aria-label','趋势时间范围：'+$('trendRangeButton').title);
   $('trendNote').hidden=false;$('trendNote').textContent=hourly?'按小时 · 本地时间'+($('display').value==='total'?' · 当日累计':'')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===today?' · 截至 '+pad(currentHour())+':00 时段':''):(grain==='week'?'按周':grain==='month'?'按月':'按日')+($('display').value==='average'?' · 30 日均值':$('display').value==='total'?' · 区间累计':' · 已记录用量')+(metric==='cost'?' · 定价覆盖 '+((a.coverage??0)*100).toFixed(1)+'%':'')+(start===end?' · 该日没有小时数据':' · 淡线连接未记录日期');
-  $('chartLegend').innerHTML=selected.map(entry=>'<button data-trend-series="'+escapeHtml(entry.key)+'" aria-pressed="true"><i class="swatch" style="background:'+entry.color+'"></i>'+escapeHtml(entry.label)+'</button>').join('');
+  $('chartLegend').innerHTML=selected.map(entry=>'<button data-trend-series="'+escapeHtml(entry.key)+'" aria-pressed="'+!hiddenSeries.has(entry.key)+'" title="'+(hiddenSeries.has(entry.key)?'显示':'隐藏')+'这一项"><i class="swatch" style="background:'+entry.color+'"></i>'+escapeHtml(entry.label)+'</button>').join('');
   window.uiMotion.indicators();
 }
 $('trendModes').addEventListener('click',event=>{const b=event.target.closest('[data-trend-mode]');if(!b||trendMode===b.dataset.trendMode)return;trendMode=b.dataset.trendMode;for(const el of $('trendModes').children){if(!el.dataset.trendMode)continue;el.classList.toggle('active',el===b);el.setAttribute('aria-pressed',String(el===b));}renderTrend(data());});
@@ -474,8 +504,9 @@ $('trendGrain').addEventListener('change',()=>renderTrend(data()));
 $('trendRangeForm').addEventListener('submit',event=>{event.preventDefault();const start=$('trendFrom').value,end=$('trendTo').value;if(!start||!end||start>end||!datesLimited(start,end)){window.uiRangeCalendar?.warn(!start||!end?'请选择日期':start>end?'结束日期不能早于开始日期':'最多查看 10 年');return;}trendRange={start,end};$('trendRangePopover').hidePopover();renderTrend(data());});
 function datesLimited(start,end){return (Date.parse(end)-Date.parse(start))/86400000<=3660;}
 $('trendRangeReset').addEventListener('click',()=>{trendRange=null;$('trendRangePopover').hidePopover();renderTrend(data());});
-$('trendRangePopover').addEventListener('click',event=>{const button=event.target.closest('[data-trend-preset]');if(!button)return;trendRange=null;period=button.dataset.trendPreset;for(const b of document.querySelectorAll('[data-period]'))b.setAttribute('aria-pressed',String(b.dataset.period===period));$('trendRangePopover').hidePopover();render();});
-$('chartLegend').addEventListener('click',event=>{const b=event.target.closest('[data-trend-series]');if(!b)return;const buttons=[...$('chartLegend').querySelectorAll('[data-trend-series]')],index=buttons.indexOf(b),visible=!trendChart.isDatasetVisible(index);trendChart.setDatasetVisibility(index,visible);b.setAttribute('aria-pressed',String(visible));trendChart.update(window.uiMotion.mode==='full'?undefined:'none');});
+$('trendRangePopover').addEventListener('click',event=>{const button=event.target.closest('[data-trend-preset]');if(!button)return;const preset=button.dataset.trendPreset;trendRange=preset==='page'?null:{start:preset==='today'?today:shift(today,1-Number(preset)),end:today};$('trendRangePopover').hidePopover();renderTrend(data());});
+$('trendRangeFollow').addEventListener('click',()=>{trendRange=null;renderTrend(data());$('trendRangeButton').focus();});
+$('chartLegend').addEventListener('click',event=>{const b=event.target.closest('[data-trend-series]');if(!b)return;const key=b.dataset.trendSeries;if(hiddenSeries.has(key))hiddenSeries.delete(key);else hiddenSeries.add(key);try{localStorage.setItem(hiddenKey,JSON.stringify([...hiddenSeries]));}catch{/* Not remembered. */}renderTrend(data());$('chartLegend').querySelector('[data-trend-series="'+CSS.escape(key)+'"]')?.focus();});
 $('trendCanvas').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Enter','Escape'].includes(event.key)||!trendBuckets.length)return;event.preventDefault();if(event.key==='Escape'){trendChart.tooltip.setActiveElements([],{x:0,y:0});trendTooltip.hidden=true;trendChart.$hoverIndex=null;trendChart.draw();return;}if(event.key==='Enter'){const b=trendBuckets[keyboardTrendIndex];if(b.start===b.end)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}return;}keyboardTrendIndex=Math.max(0,Math.min(trendBuckets.length-1,keyboardTrendIndex+(event.key==='ArrowRight'?1:-1)));const element=trendChart.getDatasetMeta(0).data[keyboardTrendIndex];if(element){trendChart.$hoverIndex=keyboardTrendIndex;trendChart.tooltip.setActiveElements([{datasetIndex:0,index:keyboardTrendIndex}],{x:element.x,y:element.y});if(element.skip)renderTrendTooltip({chart:trendChart,tooltip:{opacity:1,caretX:element.x,caretY:trendChart.chartArea.top+40,dataPoints:[{dataIndex:keyboardTrendIndex}]}});trendChart.draw();}});
 $('trendCanvas').addEventListener('pointerdown',event=>{if(event.button!==0)return;trendPress={x:event.clientX,y:event.clientY};trendDragged=false;event.currentTarget.setPointerCapture(event.pointerId);});
 $('trendCanvas').addEventListener('pointermove',event=>{if(trendPress&&Math.hypot(event.clientX-trendPress.x,event.clientY-trendPress.y)>6)trendDragged=true;});
@@ -490,12 +521,10 @@ function previousWindow() {
 }
 function renderInsights(rows) {
   const subset = rangeRows(rows), start = rangeStart(), previous = previousWindow();
-  const hourly = filterRows(hourlyData()).filter(r => r.date >= start && r.date <= today);
   const previousRows = previous?.complete ? filterRows(rows).filter(r => r.date >= previous.from && r.date <= previous.to) : null;
   const inRange = list => list.filter(r => r.date >= start && r.date <= today), selected = { agent: $('agentFilter').value, model: $('modelFilter').value };
-  const scope = [selected.agent === 'all' ? null : agents[selected.agent]?.name, $('sourceFilter').value === 'all' ? null : $('sourceFilter').selectedOptions[0]?.textContent, selected.model === 'all' ? null : displayModel(selected.model)].filter(Boolean);
-  window.usageInsights.render({
-    rows: subset, hourlyRows: hourly, previousRows, recorded, rangeText: rangeLabel(), selected, scopeSuffix: scope.length ? ' · ' + scope.join(' · ') : '',
+    window.usageInsights.render({
+    rows: subset, previousRows, recorded, rangeText: rangeLabel(), selected, scopeSuffix: scopeSuffix(),
     shareRows: { agent: inRange(filterRows(rows, 'agent')), model: inRange(filterRows(rows, 'model')) },
     compareText: period === 'today' ? '较昨天' : '较前 ' + period + ' 天',
     compareMissing: period === 'all' ? '累计范围，不做对比' : '上一周期早于记录开始，不做对比',
@@ -657,7 +686,7 @@ document.addEventListener('click', event => {
   if (button.dataset.view) view(button.dataset.view);
   if (button.dataset.period && button.dataset.period !== period) { period = button.dataset.period; trendRange = null; for (const b of document.querySelectorAll('[data-period]')) b.setAttribute('aria-pressed', String(b === button)); render(true); }
   if (button.dataset.metric) { metric = button.dataset.metric; for (const b of document.querySelectorAll('[data-metric]')) b.setAttribute('aria-pressed', String(b === button)); renderTrend(data()); window.uiMotion.indicators(); }
-  if (button.dataset.date) { selectedDay = button.dataset.date; for (const cell of $('heatmap').querySelectorAll('button')) cell.setAttribute('aria-pressed', String(cell === button)); renderDay(data()); }
+  if (button.dataset.date) { selectedDay = button.dataset.date; for (const cell of $('heatmap').querySelectorAll('button')) cell.setAttribute('aria-pressed', String(cell === button)); renderDay(data()); renderActivity(data()); }
   if (button.hasAttribute('data-refresh-today')) void refreshUsage();
   if (button.dataset.model) { $('modelFilter').value = button.dataset.model; render(true); }
   if (button.hasAttribute('data-reset-model')) { $('modelFilter').value = 'all'; render(true); }
@@ -764,7 +793,7 @@ function applyUsageState(state) {
   $('dataBadge').textContent = state.error || (state.collecting ? '正在读取本地统计…' : '本机离线统计 · 已更新');
   $('dataBadge').hidden = !state.error;
   $('dataBadge').setAttribute('role', 'status');
-  $('refresh').disabled = state.collecting; window.uiMotion.busy($('refresh'), state.collecting); window.uiMotion.busy($('sourceRefresh'), state.collecting); const refreshLabel = state.collecting ? '正在采集…' : '刷新统计'; $('refresh').innerHTML = icon('ui/refresh') + '<span class="sr-only">' + refreshLabel + '</span>'; $('refresh').title = refreshLabel; $('refresh').setAttribute('aria-label', refreshLabel);
+  $('refresh').disabled = state.collecting; window.uiMotion.busy($('refresh'), state.collecting); window.uiMotion.busy($('sourceRefresh'), state.collecting); const refreshLabel = state.collecting ? '正在采集…' : '刷新统计', every = state.refreshIntervalMs ?? 15000; $('refresh').innerHTML = icon('ui/refresh') + '<span class="sr-only">' + refreshLabel + '</span>'; $('refresh').title = refreshLabel + (state.collecting ? '' : every ? ' · 每 ' + (every >= 60000 ? every / 60000 + ' 分钟' : every / 1000 + ' 秒') + '自动刷新（设置中修改）' : ' · 自动刷新已关闭'); $('refresh').setAttribute('aria-label', refreshLabel);
   if ($('main').dataset.currentView === 'usage') {
     if (snapshotChanged || previousDay !== today) render(changed);
     else if ($('todayClients').querySelector('.today-empty')) $('todayClients').innerHTML = todayEmptyHtml();
