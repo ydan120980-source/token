@@ -52,9 +52,9 @@
       <div id="scopeSummary" hidden class="scope-summary" role="status" aria-live="polite"></div>
       <div class="overview-card usage-overview" data-motion-surface="statistics">
         <div class="overview-scope"><h2 class="hero-label">API 等价估算</h2><span id="scopeContext" role="status" aria-live="polite"></span><button id="resetUsageScope" class="text-button" hidden>查看全部</button></div>
-        <section class="totals" aria-label="当前筛选用量概览"><article class="cost-hero"><strong id="totalCost"></strong><p id="priceCoverage" hidden></p></article></section>
-        <div class="overview-facts"><span><span id="totalLabel">Token</span> <strong id="totalTokens"></strong></span><span>用量记录 <strong id="recordCount"></strong></span><span id="dailyComparison"></span></div>
-        <div class="recent-activity"><span>近 7 天</span><div id="overviewWeek" class="overview-week" role="group" aria-label="近七天用量，选择日期查看明细"></div></div>
+        <div class="hero-row"><section class="totals" aria-label="当前筛选用量概览"><article class="cost-hero"><strong id="totalCost"></strong><p id="priceCoverage" hidden></p></article></section>
+        <div class="overview-facts"><span><span id="totalLabel">Token</span> <strong id="totalTokens"></strong></span><span>用量记录 <strong id="recordCount"></strong></span><span id="dailyComparison"></span></div></div>
+        <div class="recent-activity"><div class="recent-head"><span>近 30 天 · 每天的 token</span><span id="todaySummary" role="status"></span></div><div id="overviewWeek" class="overview-week" role="group" aria-label="近 30 天用量，选择日期查看明细"></div><div id="overviewAxis" class="recent-axis" aria-hidden="true"></div></div>
         <div id="totalMix" class="mix-inline" hidden></div>
       </div>
       <section class="card today" aria-label="今日用量"><div class="card-heading"><h2>今天 <span id="todayDate" class="date"></span></h2><div id="todayTotals" class="inline-totals"></div></div><div id="todayMix" class="mix-inline"></div><div id="todayClients"></div></section>

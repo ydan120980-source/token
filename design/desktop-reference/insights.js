@@ -9,7 +9,8 @@
   const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   const COST_LABELS = { inputUncached: '输入', output: '输出', cacheRead: '缓存读取', cacheWrite: '缓存写入' };
   const EASE = 'cubic-bezier(.22, 1, .36, 1)';
-  const pct = (value, digits = 1) => value === null || value === undefined ? '—' : (value * 100).toFixed(digits) + '%';
+  // A non-zero share that would round to zero reads as below the last digit, not 0%.
+  const pct = (value, digits = 1) => value === null || value === undefined ? '—' : value > 0 && value * 100 < .5 / 10 ** digits ? '<' + (1 / 10 ** digits) + '%' : (value * 100).toFixed(digits) + '%';
   const pad = hour => String(hour).padStart(2, '0');
   const slotName = (d, h) => WEEKDAYS[d] + ' ' + pad(h) + ':00–' + pad(h + 1) + ':00';
   const state = { shareBy: 'agent', slot: null, ctx: null, activity: null, grid: null, dayHours: null };
@@ -121,9 +122,8 @@
     const cells = grid.cells.map((row, d) => '<span class="hour-day" data-day="' + d + '">' + WEEKDAYS[d].slice(1) + '</span>' + row.map((cell, h) =>
       '<button class="lv' + level(cell.tokens) + '" data-d="' + d + '" data-h="' + h + '" tabindex="-1" aria-label="' + slotName(d, h) + '，' + (cell.tokens ? short(cell.tokens) + ' token，' + cell.days + ' 天' : '无用量') + '"></button>').join('')).join('');
     const ticks = '<span></span>' + Array.from({ length: 24 }, (_, h) => '<span class="hour-tick" data-hour="' + h + '">' + (h % 6 ? '' : h) + '</span>').join('');
-    f.body.innerHTML = '<div class="hour-scroll"><div class="hour-grid" role="group" aria-label="按星期和小时的用量分布，方向键移动，回车查看明细">' + cells + ticks + '</div></div>' +
-      '<div class="slot-detail" hidden></div>' +
-      '<div class="insight-facts hour-facts"><button data-slot="' + peak.weekday + ',' + peak.hour + '"><small>最集中的时段</small><b>' + slotName(peak.weekday, peak.hour) + '</b></button><div><small>最活跃的星期</small><b>' + WEEKDAYS[grid.peakWeekday] + '</b></div><div title="一周 168 个小时中有用量的个数"><small>有用量的时段</small><b>' + grid.active + ' / 168</b></div>' + '</div>';
+    f.body.innerHTML = '<div class="hours-layout"><div class="hours-main"><div class="hour-scroll"><div class="hour-grid" role="group" aria-label="按星期和小时的用量分布，方向键移动，回车查看明细">' + cells + ticks + '</div></div></div>' +
+      '<aside class="hours-side"><div class="insight-facts hour-facts"><button data-slot="' + peak.weekday + ',' + peak.hour + '"><small>最集中的时段</small><b>' + slotName(peak.weekday, peak.hour) + '</b></button><div><small>最活跃的星期</small><b>' + WEEKDAYS[grid.peakWeekday] + '</b></div><div title="一周 168 个小时中有用量的个数"><small>有用量的时段</small><b>' + grid.active + ' / 168</b></div></div><div class="slot-detail" hidden></div></aside></div>';
     // One roving tab stop: the selected slot, otherwise the peak.
     const tabbable = state.slot ? [state.slot.d, state.slot.h] : [peak.weekday, peak.hour];
     for (const cell of f.body.querySelectorAll('.hour-grid button')) cell.tabIndex = Number(cell.dataset.d) === tabbable[0] && Number(cell.dataset.h) === tabbable[1] ? 0 : -1;
@@ -141,10 +141,10 @@
     const max = Math.max(...hours.map(hour => hour.tokens)), used = hours.filter(hour => hour.tokens > 0);
     if (!max) { f.body.innerHTML = empty(rows.length ? '这一天只有 0 token 的空记录。' : '这一天没有用量记录。'); reveal(f.body); return; }
     const busiest = used.reduce((a, b) => b.tokens > a.tokens ? b : a);
-    f.body.innerHTML = '<div class="day-hours" role="list" aria-label="' + day + ' 每小时用量">' + hours.map(hour =>
-      '<span role="listitem" data-hour="' + hour.h + '" class="' + (hour.future ? 'is-future' : hour.tokens ? '' : 'is-empty') + (hour === busiest ? ' is-peak' : '') + '" aria-label="' + pad(hour.h) + ':00，' + (hour.future ? '尚未到达' : short(hour.tokens) + ' token') + '"><i style="--h:' + (hour.tokens / max * 100) + '%"></i></span>').join('') + '</div>' +
+    f.body.innerHTML = '<div class="hours-layout"><div class="hours-main"><div class="day-hours" role="group" aria-label="' + day + ' 每小时用量，左右方向键逐小时查看">' + hours.map(hour =>
+      '<button type="button" tabindex="' + (hour === busiest ? 0 : -1) + '" data-hour="' + hour.h + '" class="' + (hour.future ? 'is-future' : hour.tokens ? '' : 'is-empty') + (hour === busiest ? ' is-peak' : '') + '" aria-label="' + pad(hour.h) + ':00–' + pad(hour.h + 1) + ':00，' + (hour.future ? '尚未到达' : hour.tokens ? short(hour.tokens) + ' token' : '无用量') + '"><i style="--h:' + (hour.tokens / max * 100) + '%"></i></button>').join('') + '</div>' +
       '<div class="day-hour-ticks" aria-hidden="true">' + [0, 6, 12, 18, 23].map(h => '<span style="--at:' + h + '">' + pad(h) + '</span>').join('') + '</div>' +
-      '<div class="insight-facts hour-facts"><div><small>最忙的小时</small><b>' + pad(busiest.h) + ':00 · ' + short(busiest.tokens) + '</b></div><div><small>有用量的小时</small><b>' + used.length + ' / ' + (last + 1) + '</b></div><div><small>时间跨度</small><b>' + pad(used[0].h) + ':00–' + pad(used.at(-1).h + 1) + ':00</b></div></div>';
+      '</div><aside class="hours-side"><div class="insight-facts hour-facts"><div><small>最忙的小时</small><b>' + pad(busiest.h) + ':00 · ' + short(busiest.tokens) + '</b></div><div><small>有用量的小时</small><b>' + used.length + ' / ' + (last + 1) + '</b></div><div><small>时间跨度</small><b>' + pad(used[0].h) + ':00–' + pad(used.at(-1).h + 1) + ':00</b></div></div></aside></div>';
     state.dayHours = hours;
     reveal(f.body);
     if (full()) f.body.querySelectorAll('.day-hours i').forEach((bar, i) => bar.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 520, delay: i * 16, easing: EASE, fill: 'backwards' }));
@@ -228,12 +228,20 @@
     if (event.target.closest('[data-day-clear]')) state.activity?.clearDay();
   });
   document.addEventListener('mouseover', event => { const cell = event.target.closest('#hourCard .hour-grid button'); if (cell) tooltip(cell); const bar = event.target.closest('#hourCard .day-hours [data-hour]'); if (bar) dayTip(bar); });
+  document.addEventListener('focusin', event => { const bar = event.target.closest?.('#hourCard .day-hours [data-hour]'); if (bar && bar.matches(':focus-visible')) dayTip(bar); });
+  document.addEventListener('focusout', event => { if (event.target.closest?.('#hourCard .day-hours [data-hour]')) untip(); });
   document.addEventListener('mouseout', event => { if (event.target.closest('#hourCard .day-hours [data-hour]') && !event.relatedTarget?.closest?.('#hourCard .day-hours [data-hour]')) untip(); });
   document.addEventListener('mouseout', event => { if (event.target.closest('#hourCard .hour-grid button') && !event.relatedTarget?.closest?.('#hourCard .hour-grid button')) untip(); });
   document.addEventListener('focusin', event => { const cell = event.target.closest('#hourCard .hour-grid button'); if (cell && cell.matches(':focus-visible')) tooltip(cell); });
   document.addEventListener('focusout', event => { if (event.target.closest('#hourCard .hour-grid button')) untip(); });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && state.slot && $('hourCard').contains(document.activeElement)) { state.slot = null; renderSlot(); return; }
+    const bar = event.target.closest('#hourCard .day-hours [data-hour]');
+    if (bar && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      const bars = [...bar.parentElement.children], index = bars.indexOf(bar), next = bars[event.key === 'Home' ? 0 : event.key === 'End' ? bars.length - 1 : Math.max(0, Math.min(bars.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1)))];
+      bar.tabIndex = -1; next.tabIndex = 0; next.focus(); return;
+    }
     const cell = event.target.closest('#hourCard .hour-grid button'); if (!cell) return;
     const moves = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }, move = moves[event.key];
     if (!move) return;

@@ -1,67 +1,95 @@
 /* 2026-10-08 Token 活动 (calendar + hours in one card), first-screen focus and trend
    card touches. Loaded last; scoped to the elements it owns. */
 
-/* First-screen focus (focus.js sets --focus from 0 at the top to 1 at rest). */
-#totalCost[data-focus] { scale: calc(1 + .1 * (1 - var(--focus))); transform-origin: 0 100%; }
-.recent-activity[data-focus] { scale: calc(1 + .24 * (1 - var(--focus))); transform-origin: 100% 100%; }
-.profile[data-focus] { opacity: calc(.42 + .58 * var(--focus)); }
-.card.today[data-focus] { opacity: calc(.32 + .68 * var(--focus)); translate: 0 calc(44px * (1 - var(--focus))); }
+/* Secondary text meets 4.5:1 on the page, cards and fills (was 4.08:1 on the page). */
+:root { --muted: #66676b; }
 
-/* The enlarged hero must not widen the page. */
+/* First screen as a cover: the figure and its facts share a row, the last 30 days span
+   the width below. focus.js only scales the figure slightly at the top of the page; an
+   expanded estimate range always shows at its resting size. */
 #usage { overflow-x: clip; }
+#totalCost { transform-origin: 0 100%; }
+#totalCost:has(.cost-expanded) { scale: 1 !important; transition: scale 220ms var(--ease-out, ease-out); }
+.usage-overview .hero-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 4px 40px; }
+.usage-overview .hero-row .totals { flex: 1 1 auto; min-width: 0; margin: 0; }
+.usage-overview .overview-facts { flex: none; margin: 0 0 24px; padding-right: 0; }
+.usage-overview .recent-activity, .usage-overview:has(.cost-expanded) .recent-activity { position: static; width: auto; margin: 34px 0 0; opacity: 1; pointer-events: auto; color: inherit; }
+.recent-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 12px; color: var(--muted); font-size: 12px; }
+.recent-head b { color: var(--text); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#overviewWeek.overview-week { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 5px; align-items: end; height: 112px; }
+#overviewWeek .week-day { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 0; height: 100%; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--text) 2.5%, transparent); }
+#overviewWeek .week-day i { display: block; width: 100%; height: var(--h); border-radius: 999px; background: color-mix(in srgb, var(--text) 17%, transparent); transform-origin: 50% 100%; transition: background-color 160ms; }
+#overviewWeek .week-day.is-peak i { background: color-mix(in srgb, var(--text) 40%, transparent); }
+#overviewWeek .week-day:hover i, #overviewWeek .week-day:focus-visible i { background: color-mix(in srgb, var(--text) 55%, transparent); }
+#overviewWeek .week-day.is-today i { background: var(--blue); }
+#overviewWeek .week-day.is-unrecorded { background: transparent; }
+#overviewWeek .week-day.is-unrecorded i { height: 6px; background: none; border: 1.5px dotted var(--line); }
+#overviewWeek .week-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.recent-axis { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { #overviewWeek.overview-week { gap: 3px; height: 88px; } }
 
-/* Token 活动: one card, days on the left, hours on the right (wrapping below when the
-   calendar spans a full year or the window is narrow). */
-#activityBlock { --heat-cell: 14px; --heat-gap-width: 24px; }
+/* Back chips share the segmented controls' quiet style: neutral fill, drawn chevron. */
+.insight-clear { gap: 7px; height: 28px; padding: 0 12px 0 11px; border-radius: 9px; background: var(--fill); color: var(--text); font-weight: 500; }
+.insight-clear:hover { background: var(--fill-strong); }
+.insight-clear > span[aria-hidden] { display: none; }
+.insight-clear::before { content: ''; width: 6px; height: 6px; border-left: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; rotate: 45deg; margin-left: 2px; }
+.insight-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Token 活动: the calendar spans the card; hours sit below it. */
 .rhythm-card .card-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; padding: 22px 28px 4px; }
 .rhythm-stats { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .rhythm-stat { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
 .rhythm-stat small { color: var(--muted); font-size: 12px; }
 .rhythm-stat b { font-size: 15px; font-weight: 650; letter-spacing: -.2px; }
-.rhythm-body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 28px 44px; padding: 18px 28px 26px; }
-.rhythm-days { flex: none; min-width: 0; max-width: 100%; }
+.rhythm-body { padding: 18px 28px 28px; }
 .rhythm-caption { margin: 0 0 12px; font-size: 13px; font-weight: 600; }
 .rhythm-caption span { color: var(--muted); font-weight: 400; font-size: 12px; }
 .rhythm-card .heat-body { padding: 0; }
-#activityBlock .heat-grid-scroll { width: max-content; max-width: calc(100% + 8px); margin: 0 -4px; padding: 4px; }
-#activityBlock .heat-grid-scroll .heat-scroll { width: max-content; padding: 0; }
-#activityBlock .heat-grid-scroll .heat-scroll, #activityBlock .heat-grid-scroll .heat-months { min-width: 0; }
-#activityBlock .heatmap { min-width: 0; width: max-content; flex: none; gap: 3px; grid-template-rows: repeat(7, var(--heat-cell)); grid-template-columns: repeat(var(--heat-columns, 53), var(--heat-cell)); }
-#activityBlock .heatmap[data-gap] { grid-template-columns: var(--heat-gap-width) repeat(var(--heat-columns, 53), var(--heat-cell)); }
-#activityBlock .heatmap button, #activityBlock .heatmap .pad { width: var(--heat-cell); height: var(--heat-cell); aspect-ratio: auto; border-radius: 3px; }
-#activityBlock .heat-months { width: max-content; padding-left: 0 !important; gap: 3px; margin-top: 8px; }
-.heat-gap { grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 4px; color: var(--muted); font-size: 10px; cursor: help; }
-.heat-gap span { writing-mode: vertical-rl; letter-spacing: 2px; }
+#activityBlock .heat-grid-scroll { width: auto; max-width: none; margin: 0 -4px; padding: 4px; overflow-x: auto; overflow-y: hidden; }
+#activityBlock .heat-grid-scroll .heat-scroll { width: auto; min-width: 620px; padding: 0; }
+#activityBlock .heatmap { width: 100%; min-width: 620px; flex: none; gap: 3px; grid-template-rows: repeat(7, auto); grid-template-columns: repeat(var(--heat-columns, 53), minmax(0, 1fr)); }
+#activityBlock .heatmap button, #activityBlock .heatmap .pad, #activityBlock .heatmap .future { width: 100%; height: auto; aspect-ratio: 1; border-radius: 4px; }
+#activityBlock .heatmap .future { border: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); background: transparent; }
+#activityBlock .heat-months { width: 100%; min-width: 620px; padding-left: 0 !important; gap: 3px; margin-top: 8px; }
+.heat-gap { grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 8px; background: color-mix(in srgb, var(--text) 2%, transparent); color: var(--muted); font-size: 12px; cursor: help; overflow: hidden; }
+.heat-gap.is-narrow span { writing-mode: vertical-rl; letter-spacing: 2px; font-size: 11px; }
 /* A chosen hour slot: days that used it stay lit, the rest step back. */
 #heatmap[data-slot] button:not(.is-match) { opacity: .2; }
 #heatmap[data-slot] button.is-match { box-shadow: 0 0 0 1.5px var(--card), 0 0 0 2.5px var(--text); }
 .rhythm-card .heat-footer { margin-top: 14px; gap: 14px; }
 
-.rhythm-hours { flex: 1 1 420px; min-width: 0; }
-.rhythm-hours .insight-head { margin-bottom: 12px; }
+.rhythm-hours { margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--hairline, var(--line)); }
+.rhythm-hours .insight-head { margin-bottom: 14px; }
 .rhythm-hours .insight-head h3 { font-size: 13px; font-weight: 600; }
-.rhythm-hours .hour-grid { grid-template-columns: 22px repeat(24, minmax(10px, 1fr)); gap: 3px; min-width: 380px; }
-.rhythm-hours .hour-grid button { height: auto; aspect-ratio: 1; max-height: 22px; border-radius: 3px; }
+.hours-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px 36px; align-items: start; }
+.rhythm-hours .hour-grid { grid-template-columns: 22px repeat(24, minmax(10px, 1fr)); gap: 4px; min-width: 420px; }
+.rhythm-hours .hour-grid button { height: 26px; aspect-ratio: auto; max-height: none; border-radius: 6px; }
 .rhythm-hours .hour-grid button.lv1 { background: var(--heat1); }
 .rhythm-hours .hour-grid button.lv2 { background: var(--heat2); }
 .rhythm-hours .hour-grid button.lv3 { background: var(--heat3); }
 .rhythm-hours .hour-grid button.lv4 { background: var(--heat4); }
-/* Hour facts read as one line of labelled values, not tiles. */
-.rhythm-hours .insight-facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 14px; }
-.rhythm-hours .insight-facts > div, .rhythm-hours .insight-facts > button { display: flex; align-items: baseline; gap: 6px; width: auto; padding: 0; background: none; border-radius: 0; }
-.rhythm-hours .insight-facts > button { border-bottom: 1px dashed var(--line); padding-bottom: 1px; }
-.rhythm-hours .insight-facts > button:hover { background: none; border-bottom-color: var(--text); }
-.rhythm-hours .insight-facts b { margin: 0; font-size: 13px; }
+/* Facts read as a short list of labelled values beside the chart. */
+.hours-side .insight-facts { display: flex; flex-direction: column; gap: 0; margin: 0; }
+.hours-side .insight-facts > div, .hours-side .insight-facts > button { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; padding: 10px 0; border-radius: 0; border-bottom: 1px solid var(--hairline, var(--line)); background: none; }
+.hours-side .insight-facts > :last-child { border-bottom: 0; }
+.hours-side .insight-facts > button { border: 0; border-bottom: 1px solid var(--hairline, var(--line)); box-shadow: none; min-height: 0; height: auto; padding-left: 8px; padding-right: 8px; margin: 0 -8px; width: calc(100% + 16px); border-radius: 0; }
+.hours-side .insight-facts > button:hover { background: var(--fill); }
+.hours-side .insight-facts small { flex: none; }
+.hours-side .insight-facts b { margin: 0; font-size: 13px; text-align: right; }
+.hours-side .slot-detail { margin-top: 14px; }
+.hours-side .slot-list li { grid-template-columns: 18px minmax(60px, 1fr) 52px 34px; }
+.hours-side .slot-list .share-track { display: none; }
 
-/* One day's 24 hours. */
-.day-hours { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; height: 132px; align-items: end; }
-.day-hours > span { position: relative; display: flex; align-items: flex-end; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--text) 2.5%, transparent); cursor: default; }
-.day-hours i { display: block; width: 100%; height: var(--h); min-height: 3px; border-radius: 3px; background: var(--heat3); transform-origin: 50% 100%; transition: filter 140ms; }
-.day-hours .is-empty i { min-height: 0; height: 0; }
+/* One day's 24 hours: rounded bars on rounded tracks. */
+.day-hours { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 5px; height: 156px; align-items: end; }
+.day-hours > button { position: relative; display: flex; align-items: flex-end; height: 100%; min-height: 0; padding: 0; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--text) 3%, transparent); cursor: default; }
+.day-hours i { display: block; width: 100%; height: max(var(--h), 8px); border-radius: 999px; background: var(--heat3); transform-origin: 50% 100%; transition: filter 160ms, background-color 160ms; }
+.day-hours .is-empty i { height: 0; }
 .day-hours .is-peak i { background: var(--heat4); }
-.day-hours .is-future { background: transparent; outline: 1px dashed var(--line); outline-offset: -1px; }
-.day-hours > span:hover i { filter: brightness(1.12); }
-.day-hour-ticks { position: relative; height: 16px; margin-top: 6px; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.day-hours .is-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 80%, transparent); }
+.day-hours > button:hover i, .day-hours > button:focus-visible i { filter: brightness(1.1) saturate(1.1); }
+.day-hours > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.day-hour-ticks { position: relative; height: 16px; margin-top: 8px; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .day-hour-ticks span { position: absolute; left: calc((var(--at) + .5) * 100% / 24); translate: -50% 0; }
 
 /* Efficiency is a strip under cost and share. */
@@ -72,11 +100,21 @@
 .efficiency-card .efficiency-list b { order: -1; font-size: 24px; text-align: left; }
 .efficiency-card .efficiency-list .delta { text-align: left; }
 
-/* Trend: the chart's own range is marked as such; footer change is neutral (more use is not bad). */
+/* Trend: one quiet header line (scope and range total) instead of a second hero. */
+#trend .trend-header { padding: 22px 28px 14px; align-items: center; }
+#trend .trend-header > div:first-child { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+#trend .trend-eyebrow { flex: none; margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+#trend #trendTotal { font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+#trend #trendTotal .cost-value { font: inherit; color: inherit; }
+#trend #trendTotalLabel { font-size: 12px; }
 #trendRangeFollow { height: 30px; align-self: center; }
 #trendLead { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#chartLegend button[aria-pressed='false'] { opacity: .45; }
+/* A hidden series reads as off without dropping below text contrast: struck through, hollow swatch. */
+#chartLegend button { transition: color 200ms; }
+#chartLegend button[aria-pressed='false'] { opacity: 1; color: var(--muted); text-decoration: line-through; }
+#chartLegend button[aria-pressed='false'] .swatch { background: transparent !important; box-shadow: inset 0 0 0 1.5px currentColor; }
 
 body[data-motion='reduced'] .day-hours i, body[data-motion='off'] .day-hours i { transition: none; }
+@media (max-width: 960px) { .hours-layout { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .efficiency-card .efficiency-list { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 8px; } }
-@media (max-width: 800px) { .rhythm-card .card-heading, .rhythm-body { padding-left: 16px; padding-right: 16px; } .rhythm-hours { flex-basis: 100%; } }
+@media (max-width: 800px) { .rhythm-card .card-heading, .rhythm-body { padding-left: 16px; padding-right: 16px; } }

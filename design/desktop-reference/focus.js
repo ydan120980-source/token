@@ -1,34 +1,38 @@
 'use strict';
-// First-screen focus. At the top of the usage page the API-equivalent hero and its
-// seven-day bars are emphasised while the profile row and the today card recede;
-// scrolling eases everything into the regular layout, which is the resting state.
-// Only scale, translate and opacity change, so layout never moves. Reduced or off
-// motion, other pages and hidden documents always get the resting state.
+// First-screen emphasis and scroll intent.
+//
+// At the top of the usage page the API-equivalent figure sits slightly larger and eases
+// to its resting size over the first part of a scroll. Only that figure scales; nothing
+// moves, so positions never shift under the pointer, keyboard focus or scrollIntoView.
+// Reduced or off motion, other pages and an expanded estimate range use the resting size.
+//
+// uiFocus.userScrolling() tells whether the current scroll follows the user's wheel,
+// touch, scroll keys or a scrollbar drag (rather than code), so floating panels can close
+// on a user scroll without closing on a programmatic one.
 (() => {
-  const targets = [['#totalCost', 'hero'], ['#usage .recent-activity', 'week'], ['#usage > .profile', 'profile'], ['#usage > .card.today', 'today']];
-  let frame = 0, last = null;
+  let frame = 0, intentAt = -Infinity, pointerDown = false;
+  const intent = () => { intentAt = performance.now(); };
+  const scrollKeys = new Set(['PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End', ' ']);
+  for (const name of ['wheel', 'touchstart', 'touchmove']) addEventListener(name, intent, { passive: true, capture: true });
+  addEventListener('keydown', event => { if (scrollKeys.has(event.key) && !event.target.closest?.('input, textarea, select, [role="listbox"], [role="group"]')) intent(); }, { capture: true });
+  // Only a press on the page itself (its scrollbar) starts a drag-scroll; clicks on controls do not.
+  addEventListener('pointerdown', event => { if (event.target === document.documentElement) { pointerDown = true; intent(); } }, { capture: true });
+  addEventListener('pointerup', () => { if (pointerDown) intent(); pointerDown = false; }, { capture: true });
+  const userScrolling = () => pointerDown || performance.now() - intentAt < 900;
+
   function apply() {
     frame = 0;
-    const page = document.getElementById('usage');
+    const page = document.getElementById('usage'), cost = document.getElementById('totalCost'); if (!cost) return;
     const active = page && !page.hidden && !document.hidden && window.uiMotion?.mode === 'full';
-    // Fully regular after about a third of the window height.
-    const progress = active ? Math.min(1, Math.max(0, scrollY / Math.max(200, innerHeight * .34))) : 1;
-    const value = Math.round(progress * 1000) / 1000;
-    if (value === last) return;
-    last = value;
-    for (const [selector, part] of targets) {
-      const element = document.querySelector(selector); if (!element) continue;
-      if (value >= 1) { element.removeAttribute('data-focus'); element.style.removeProperty('--focus'); continue; }
-      element.setAttribute('data-focus', part); element.style.setProperty('--focus', String(value));
-    }
+    const rest = active ? 1 - Math.min(1, Math.max(0, scrollY / Math.min(320, innerHeight * .35))) : 0;
+    const ease = rest * rest * (3 - 2 * rest);
+    if (ease > .001) cost.style.scale = String(1 + .06 * ease); else cost.style.removeProperty('scale');
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(apply); };
-  const reset = () => { last = null; schedule(); };
   addEventListener('scroll', schedule, { passive: true });
   addEventListener('resize', schedule);
-  for (const name of ['ui-motion-change', 'ui-view-change']) addEventListener(name, reset);
-  document.addEventListener('visibilitychange', reset);
-  // Elements re-rendered by the page keep their attributes; a full re-check is cheap.
-  addEventListener('load', reset);
-  reset();
+  for (const name of ['ui-motion-change', 'ui-view-change']) addEventListener(name, schedule);
+  document.addEventListener('visibilitychange', schedule);
+  window.uiFocus = Object.freeze({ userScrolling });
+  schedule();
 })();

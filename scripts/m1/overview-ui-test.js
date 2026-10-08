@@ -30,7 +30,7 @@ const {settle}=require('./ui-settle');
    assert.match(await page.locator('#scopeContext').textContent(),/Codex · 累计/);assert.notEqual(await page.locator('#totalTokens').textContent(),before);
    assert.equal(await page.locator('#todayClients .client-name').count(),1);assert.match(await page.locator('#todayClients .client-name').textContent(),/Codex/);
    assert.equal(await page.locator('#activeDays,#availableSources').count(),0);assert.equal(await page.locator('#recordCount').isVisible(),true);
-   assert.equal(await page.locator('#overviewWeek button').count(),7);assert(await page.locator('#overviewWeek .is-unrecorded').count()>0);
+   assert.equal(await page.locator('#overviewWeek button').count(),30);assert(await page.locator('#overviewWeek .is-unrecorded').count()>0);
    await page.locator('#resetUsageScope').click();await settle(page);assert.equal(await page.locator('#totalTokens').textContent(),before);assert.equal(await page.locator('#todayClients .client-name').count(),2);
    await page.mouse.move(5,80);await page.screenshot({path:path.join(output,'overview-light-'+scale+'.png')});
    const date=await page.locator('#overviewWeek .is-today').getAttribute('data-habit-date');

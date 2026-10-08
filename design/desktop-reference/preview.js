@@ -51,8 +51,6 @@ function costHtml(a, label = 'API 等价估算') {
     (a.coverage ?? '') +
     '" data-cost-label="' +
     escapeHtml(label) +
-    '" title="' +
-    escapeHtml(note) +
     '" aria-label="' +
     escapeHtml(note) +
     '"><span class="cost-scale"><span class="cost-lower">' +
@@ -190,7 +188,7 @@ function clientHtml(rows, detail = false) {
         '</span></div>' + modelMetrics(group) : '<div class="share-line"><span style="width:' +
         (totals.total ? g.total / totals.total * 100 : 0) +
         '%"></span></div><span class="share">' +
-        (totals.total ? g.total / totals.total * 100 : 0).toFixed(0) +
+        (totals.total && g.total > 0 && g.total / totals.total < .005 ? '<1' : (totals.total ? g.total / totals.total * 100 : 0).toFixed(0)) +
         '%</span><span class="model-tokens">' +
         short(g.total) +
         '</span></div>');
@@ -229,19 +227,24 @@ function renderOverview(rows) {
   $('resetUsageScope').hidden = ['agentFilter','sourceFilter','modelFilter'].every(id => $(id).value === 'all');
   const recordedDays = new Set(scoped.map(r => r.date)).size, average = recordedDays ? a.total / recordedDays : 0;
   // Average over recorded days only; today is still in progress, so the delta is "so far".
-  const comparison = $('dailyComparison');
+  const comparison = $('dailyComparison'), summary = $('todaySummary');
+  const change = period !== 'today' && recordedDays > 1 && average > 0 && daily.length ? t.total / average - 1 : null, percent = change === null ? '' : (change >= 0 ? '+' : '−') + Math.abs(change * 100).toFixed(0) + '%';
   if (period !== 'today' && recordedDays > 1 && average > 0) {
-    const change = daily.length ? t.total / average - 1 : null, percent = change === null ? '' : (change >= 0 ? '+' : '−') + Math.abs(change * 100).toFixed(0) + '%';
-    const note = '区间日均 ' + short(Math.round(average)) + ' Token（按 ' + recordedDays + ' 个有记录日计算）' + (change === null ? '；今日暂无记录' : '；今日至今 ' + short(t.total) + '，较日均 ' + percent);
-    comparison.innerHTML = '日均 <strong>' + short(Math.round(average)) + '</strong>' + (change === null ? '' : '<span class="fact-delta" data-direction="' + (change >= 0 ? 'up' : 'down') + '">今日较日均 ' + percent + '</span>');
-    comparison.title = note; comparison.setAttribute('aria-label', note); comparison.hidden = false;
+    const note = '区间日均 ' + short(Math.round(average)) + ' Token（按 ' + recordedDays + ' 个有记录日计算）';
+    comparison.innerHTML = '日均 <strong>' + short(Math.round(average)) + '</strong>'; comparison.title = note; comparison.setAttribute('aria-label', note); comparison.hidden = false;
   } else { comparison.textContent = ''; comparison.removeAttribute('title'); comparison.removeAttribute('aria-label'); comparison.hidden = true; }
-  const week = dates(shift(today,-6),today), observed = new Set(rows.map(r => r.date)), dayTotals = new Map();
+  // Today so far, compared with the range's daily average (recorded days only).
+  summary.innerHTML = daily.length ? '今天 <b>' + short(t.total) + '</b>' + (change === null ? '' : ' · 较日均 ' + percent) : '今天暂无记录';
+  summary.title = change === null ? '' : '今天至今 ' + short(t.total) + '，区间日均 ' + short(Math.round(average)) + '（按 ' + recordedDays + ' 个有记录日）';
+  // The last 30 days, one rounded bar each: today in the accent, the busiest day darker,
+  // a day without records a dotted stub (unknown, not zero).
+  const month = dates(shift(today, -29), today), observed = new Set(rows.map(r => r.date)), dayTotals = new Map();
   for (const row of filtered) dayTotals.set(row.date,(dayTotals.get(row.date) || 0) + row.totalTokens);
-  const maximum = Math.max(1,...week.map(day => dayTotals.get(day) || 0));
-  $('overviewWeek').innerHTML = week.map(day => { const known = observed.has(day), value = dayTotals.get(day) || 0;
-    return '<button data-habit-date="' + day + '" class="week-day' + (day === today ? ' is-today' : '') + (!known ? ' is-unrecorded' : '') + '" aria-label="' + day + '：' + (known ? short(value) + ' Token' : '未记录') + '，查看明细"><span class="week-track"><i style="--day-height:' + (known ? Math.max(4,value / maximum * 64) : 0) + 'px"></i></span><span>' + ['日','一','二','三','四','五','六'][new Date(day + 'T12:00:00Z').getUTCDay()] + '</span></button>';
+  const maximum = Math.max(1, ...month.map(day => dayTotals.get(day) || 0));
+  $('overviewWeek').innerHTML = month.map(day => { const known = observed.has(day), value = dayTotals.get(day) || 0;
+    return '<button data-habit-date="' + day + '" data-tip="' + (known ? value : '') + '" class="week-day' + (day === today ? ' is-today' : '') + (!known ? ' is-unrecorded' : '') + (known && value === maximum && value > 0 ? ' is-peak' : '') + '" aria-label="' + day + '：' + (known ? short(value) + ' Token' : '未记录') + '，查看明细"><i style="--h:' + (known ? Math.max(4, value / maximum * 100) : 0) + '%"></i></button>';
   }).join('');
+  $('overviewAxis').innerHTML = '<span>' + month[0].slice(5) + '</span><span>' + month[14].slice(5) + '</span><span>今天</span>';
   $('scopeSummary').textContent = rangeLabel() + ' · ' + scoped.length + ' 条每日聚合 · ' + short(a.total) + ' token · ' + ($('agentFilter').value === 'all' ? '全部 agent' : agents[$('agentFilter').value].name) + ' / ' + ($('modelFilter').value === 'all' ? '全部模型' : displayModel($('modelFilter').value));
   $('totalMix').innerHTML = mixHtml(scoped); $('todayMix').innerHTML = mixHtml(daily);
   $('todayTotals').innerHTML = '<span>Token<strong>' + (daily.length ? short(t.total) : '—') + '</strong></span><span>估算<strong>' + (daily.length ? costHtml(t, '今日估算') : '—') + '</strong></span><span>记录<strong>' + (daily.length ? t.records : '—') + '</strong></span>';
@@ -256,17 +259,23 @@ function renderOverview(rows) {
     sequence : '演示已暂停 · 历史仍可查看';
 }
 function heatStart() { return $('heatRange').value === today.slice(0, 4) ? today.slice(0, 4) + '-01-01' : shift(today, -364); }
+// The calendar always spans a whole year (rolling or calendar) across the card. Weeks
+// before the first record collapse into one labelled block; days after today in the
+// calendar-year view are empty frames. Both keep unknown history out of the zero scale.
+function heatEnd() { return $('heatRange').value === '365' ? today : $('heatRange').value + '-12-31'; }
 function renderHeat(rows) {
   hideHeatTooltip();
   const focusedDate = $('heatmap').contains(document.activeElement) ? document.activeElement.dataset.date : null;
-  const start = heatStart(), daily = new Map();
-  const monday = day => shift(day, -((new Date(day + 'T12:00:00Z').getUTCDay() + 6) % 7)), first = rows.length && monday(coverageStart) > start ? monday(coverageStart) : start, gap = first > start, allDates = dates(first, today);
+  const start = heatStart(), end = heatEnd(), daily = new Map();
+  const monday = day => shift(day, -((new Date(day + 'T12:00:00Z').getUTCDay() + 6) % 7)), days = (from, to) => Math.round((Date.parse(to) - Date.parse(from)) / 86400000);
+  const origin = monday(start), gapWeeks = rows.length && monday(coverageStart) > origin ? days(origin, monday(coverageStart)) / 7 : 0, gap = gapWeeks >= 2;
+  const first = gap ? monday(coverageStart) : start, allDates = dates(first, today), columns = Math.ceil((days(origin, end) + 1) / 7);
   if (selectedDay && (selectedDay < start || selectedDay > today)) selectedDay = null;
   $('heatRange').disabled = false;
   for (const row of filterRows(rows)) daily.set(row.date, (daily.get(row.date) ?? 0) + row.totalTokens);
-  const max = Math.max(1, ...allDates.map(d => daily.get(d) || 0)), leading = (new Date(first + 'T12:00:00Z').getUTCDay() + 6) % 7;
-  const gapText = start + ' 至 ' + shift(first, -1) + ' 没有任何记录（可能早于来源保留的历史）';
-  let html = (gap ? '<span class="heat-gap" title="' + gapText + '" aria-label="' + gapText + '"><span>未观测</span></span>' : '') + '<span class="pad" aria-hidden="true"></span>'.repeat(leading);
+  const max = Math.max(1, ...allDates.map(d => daily.get(d) || 0)), leading = gap ? 0 : days(origin, start);
+  const gapText = start + ' 至 ' + shift(first, -1) + ' 没有记录（可能早于来源保留的历史）';
+  let html = (gap ? '<span class="heat-gap' + (gapWeeks < 5 ? ' is-narrow' : '') + '" style="grid-column:1 / span ' + gapWeeks + '" title="' + gapText + '" aria-label="' + gapText + '"><span>' + (gapWeeks >= 10 ? '未观测 · ' + start.slice(0, 7) + ' 至 ' + shift(first, -1).slice(0, 7) : '未观测') + '</span></span>' : '') + '<span class="pad" aria-hidden="true"></span>'.repeat(leading);
   const observedDates = new Set(rows.map(row => row.date));
   for (const day of allDates) {
     const value = daily.get(day) ?? 0, observed = realData ? observedDates.has(day) : day >= coverageStart && rows.length > 0;
@@ -274,23 +283,19 @@ function renderHeat(rows) {
     const title = day + ' · ' + (observed ? value.toLocaleString('zh-CN') + ' token' : '未观测到历史');
     html += '<button data-date="' + day + '" data-tokens="' + (observed ? value : '') + '" data-level="' + level + '" data-observed="' + observed + '" aria-label="' + title + '" aria-pressed="' + (selectedDay === day) + '">' + '</button>';
   }
+  html += '<span class="future" aria-hidden="true"></span>'.repeat(Math.max(0, days(today, end)));
   $('heatmap').innerHTML = html;
-  const firstMonth = new Date(first.slice(0, 7) + '-01T12:00:00Z'), lastMonth = new Date(today.slice(0, 7) + '-01T12:00:00Z');
-  const monthCount = (lastMonth.getUTCFullYear() - firstMonth.getUTCFullYear()) * 12 + lastMonth.getUTCMonth() - firstMonth.getUTCMonth() + 1;
-  const months = []; for (let i = 0; i < monthCount; i++) { const date = new Date(firstMonth); date.setUTCMonth(date.getUTCMonth() + i); months.push((date.getUTCMonth() + 1) + '月'); }
-  const columns = Math.ceil((allDates.length + leading) / 7);
   $('heatmap').style.setProperty('--heat-columns', String(columns)); $('heatmap').toggleAttribute('data-gap', gap);
-  // Each label spans to the next month's column. A partial first month too
-  // narrow for its label is dropped; a partial current month borrows one column.
+  // One label per month at the column holding its first day; a label with less than two
+  // columns of room is dropped rather than overlapping its neighbour.
   const labels = [];
-  months.forEach((text, i) => { const month = new Date(firstMonth); month.setUTCMonth(month.getUTCMonth() + i); const first = allDates.findIndex(d => d.startsWith(month.toISOString().slice(0, 7)));
-    const column = Math.max(1, Math.floor(((first < 0 ? 0 : first) + leading) / 7) + 1); if (labels.at(-1)?.column === column) labels.pop(); labels.push({ text, column }); });
+  for (let month = start.slice(0, 7) + '-01'; month <= end; month = shift(month.slice(0, 7) + '-28', 7).slice(0, 7) + '-01') {
+    const column = Math.floor(days(origin, month < start ? start : month) / 7) + 1; if (labels.at(-1)?.column === column) labels.pop(); labels.push({ text: Number(month.slice(5, 7)) + '月', column });
+  }
   labels.forEach((label, i) => { label.span = (labels[i + 1]?.column ?? columns + 1) - label.column; });
-  if (labels.length > 1 && labels[0].span < 2) labels.shift();
-  const last = labels.at(-1);
-  if (last && last.span < 2 && labels.length > 1) { last.column = Math.max(1, columns - 1); last.span = columns + 1 - last.column; const previous = labels.at(-2); previous.span = last.column - previous.column; if (previous.span < 2) labels.splice(-2, 1); }
-  $('heatMonths').innerHTML = labels.map(label => '<span style="grid-column:' + (label.column + gap) + ' / span ' + Math.max(1, label.span) + '">' + label.text + '</span>').join('');
-  $('heatMonths').style.gridTemplateColumns = (gap ? 'var(--heat-gap-width) ' : '') + 'repeat(' + columns + ',var(--heat-cell))';
+  const shown = labels.filter((label, i) => label.span >= 2 || i === labels.length - 1 && label.span >= 1 && columns - label.column >= 1);
+  $('heatMonths').innerHTML = shown.map(label => '<span style="grid-column:' + label.column + ' / span ' + Math.max(1, label.span) + '">' + label.text + '</span>').join('');
+  $('heatMonths').style.gridTemplateColumns = 'repeat(' + columns + ',minmax(0,1fr))';
   $('heatMonths').hidden = false;
   renderDay(rows); renderActivity(rows);
   if (focusedDate) $('heatmap').querySelector('[data-date="' + focusedDate + '"]')?.focus({ preventScroll: true });
@@ -312,13 +317,14 @@ function renderActivity(rows) {
 function hideHeatTooltip() {
   const tooltip = $('heatTooltip');
   tooltip.classList.remove('visible'); tooltip.setAttribute('aria-hidden', 'true');
-  document.querySelector('#heatmap [aria-describedby]')?.removeAttribute('aria-describedby');
+  document.querySelector('[aria-describedby="heatTooltip"]')?.removeAttribute('aria-describedby');
 }
 function showHeatTooltip(button) {
   const tooltip = $('heatTooltip');
-  document.querySelector('#heatmap [aria-describedby]')?.removeAttribute('aria-describedby');
+  document.querySelector('[aria-describedby="heatTooltip"]')?.removeAttribute('aria-describedby');
   button.setAttribute('aria-describedby', 'heatTooltip');
-  tooltip.innerHTML = '<span>' + button.dataset.date + '</span><strong>' + (button.dataset.tokens === '' ? '未观测到记录' : Number(button.dataset.tokens).toLocaleString('zh-CN') + ' <small>Token</small>') + '</strong>';
+  const date = button.dataset.date ?? button.dataset.habitDate, tokens = button.dataset.tokens ?? button.dataset.tip;
+  tooltip.innerHTML = '<span>' + date + '</span><strong>' + (tokens === '' ? '未观测到记录' : Number(tokens).toLocaleString('zh-CN') + ' <small>Token</small>') + '</strong>';
   const rect = button.getBoundingClientRect();
   tooltip.style.left = '0px'; tooltip.style.top = '0px';
   const width = tooltip.offsetWidth, height = tooltip.offsetHeight;
@@ -365,7 +371,7 @@ trendTooltip.id = 'trendTooltip'; trendTooltip.className = 'chart-tooltip'; tren
 trendTooltip.setAttribute('role', 'tooltip'); trendTooltip.setAttribute('aria-label', '趋势用量明细');
 $('trendCanvas').parentElement.append(trendTooltip);
 $('trendCanvas').parentElement.addEventListener('pointerleave', () => { trendTooltip.hidden = true; if(trendChart){trendChart.$hoverIndex=null;trendChart.draw();} });
-window.addEventListener('scroll', () => { trendTooltip.hidden = true; }, { passive: true });
+window.addEventListener('scroll', () => { trendTooltip.hidden = true; if (window.uiFocus?.userScrolling()) for (const id of ['trendOptions', 'trendRangePopover']) if ($(id).matches(':popover-open')) $(id).hidePopover(); }, { passive: true });
 function bucketTitle(b) { return !b ? '' : b.hour !== undefined ? b.start.slice(5) + ' ' + pad(b.hour) + ':00 – ' + pad(b.hour + 1) + ':00' : b.start === b.end ? b.start : b.start + ' 至 ' + b.end; }
 function renderTrendTooltip({ chart, tooltip }) {
   if (tooltip.opacity === 0) { trendTooltip.hidden = true; return; }
@@ -465,14 +471,14 @@ function renderTrend(rows) {
     // coordinates and can retarget an interrupted transition instead of
     // treating each new array as a fresh curve rising from zero.
     trendChart.stop();
-    const previous=new Map(trendChart.data.datasets.map(d=>[d.usageKey,d]));
+    const previous=new Map(trendChart.data.datasets.map(d=>[d.usageKey,d])),sameSeries=previous.size===datasets.length&&datasets.every(d=>previous.has(d.usageKey));
     config.data.datasets=datasets.map(next=>previous.has(next.usageKey)?Object.assign(previous.get(next.usageKey),next):next);
     trendChart.setActiveElements([]);trendChart.tooltip.setActiveElements([],{x:0,y:0});
-    trendChart.data=config.data;trendChart.options=config.options;config.data.datasets.forEach((dataset,i)=>trendChart.setDatasetVisibility(i,!hiddenSeries.has(dataset.usageKey)));trendChart.config.plugins[0]=crosshair;trendChart.update(window.uiMotion.mode==='full'?undefined:'none');
+    trendChart.data=config.data;trendChart.options=config.options;config.data.datasets.forEach((dataset,i)=>trendChart.setDatasetVisibility(i,!hiddenSeries.has(dataset.usageKey)));trendChart.config.plugins[0]=crosshair;trendChart.update(window.uiMotion.mode==='full'&&sameSeries?undefined:'none');if(!sameSeries&&trendSeen)revealTrend();
   }else trendChart=new Chart($('trendCanvas'),config);
   $('chartEmpty').hidden=subset.length>0 && datasets.some(d=>d.data.some(Number.isFinite));
-  $('trendTotalLabel').textContent=metric==='cost'?'区间已定价估算':'区间 token 总量';
-  $('trendScope').textContent = ($('agentFilter').value === 'all' ? '全部 Agent' : agents[$('agentFilter').value].name) + ' · ' + (trendRange ? '自定义范围 · 仅此图' : period === 'all' ? '累计用量' : period === 'today' ? '今日用量' : '最近 ' + period + ' 天用量');
+  $('trendTotalLabel').textContent=metric==='cost'?'已定价估算':'token';$('trendTotal').hidden=$('trendTotalLabel').hidden=!trendRange;
+  $('trendScope').textContent = ($('agentFilter').value === 'all' ? '全部 Agent' : agents[$('agentFilter').value].name) + ' · ' + (trendRange ? (start === end ? start.slice(5) : start.slice(5) + ' – ' + end.slice(5)) + ' · 仅此图' : period === 'all' ? '累计' : period === 'today' ? '今天' : '最近 ' + period + ' 天');
   $('trendTotal').innerHTML=subset.length?metric==='cost'?costHtml(a,'区间估算'):short(a.total):'—';
   window.uiDetail.number(metric==='cost'?$('trendTotal').querySelector('.cost-lower'):$('trendTotal'),'trend-'+metric,subset.length?metric==='cost'?a.cost:a.total:null,v=>v===null?'—':metric==='cost'?window.displayValues.usd(v):short(Math.round(v)));
   // Facts follow the plotted unit: recorded days, or active hours of one day.
@@ -506,7 +512,7 @@ function datesLimited(start,end){return (Date.parse(end)-Date.parse(start))/8640
 $('trendRangeReset').addEventListener('click',()=>{trendRange=null;$('trendRangePopover').hidePopover();renderTrend(data());});
 $('trendRangePopover').addEventListener('click',event=>{const button=event.target.closest('[data-trend-preset]');if(!button)return;const preset=button.dataset.trendPreset;trendRange=preset==='page'?null:{start:preset==='today'?today:shift(today,1-Number(preset)),end:today};$('trendRangePopover').hidePopover();renderTrend(data());});
 $('trendRangeFollow').addEventListener('click',()=>{trendRange=null;renderTrend(data());$('trendRangeButton').focus();});
-$('chartLegend').addEventListener('click',event=>{const b=event.target.closest('[data-trend-series]');if(!b)return;const key=b.dataset.trendSeries;if(hiddenSeries.has(key))hiddenSeries.delete(key);else hiddenSeries.add(key);try{localStorage.setItem(hiddenKey,JSON.stringify([...hiddenSeries]));}catch{/* Not remembered. */}renderTrend(data());$('chartLegend').querySelector('[data-trend-series="'+CSS.escape(key)+'"]')?.focus();});
+$('chartLegend').addEventListener('click',event=>{const b=event.target.closest('[data-trend-series]');if(!b)return;const key=b.dataset.trendSeries,visible=hiddenSeries.has(key);if(visible)hiddenSeries.delete(key);else hiddenSeries.add(key);try{localStorage.setItem(hiddenKey,JSON.stringify([...hiddenSeries]));}catch{/* Not remembered. */}const index=trendChart.data.datasets.findIndex(d=>d.usageKey===key);if(index<0)return;trendChart.setDatasetVisibility(index,visible);if(key==='cost')trendChart.options.scales.yCost.display=visible&&metric==='tokens'&&trendMode==='flow';b.setAttribute('aria-pressed',String(visible));b.title=(visible?'隐藏':'显示')+'这一项';trendChart.update(window.uiMotion.mode==='full'?undefined:'none');});
 $('trendCanvas').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Enter','Escape'].includes(event.key)||!trendBuckets.length)return;event.preventDefault();if(event.key==='Escape'){trendChart.tooltip.setActiveElements([],{x:0,y:0});trendTooltip.hidden=true;trendChart.$hoverIndex=null;trendChart.draw();return;}if(event.key==='Enter'){const b=trendBuckets[keyboardTrendIndex];if(b.start===b.end)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}return;}keyboardTrendIndex=Math.max(0,Math.min(trendBuckets.length-1,keyboardTrendIndex+(event.key==='ArrowRight'?1:-1)));const element=trendChart.getDatasetMeta(0).data[keyboardTrendIndex];if(element){trendChart.$hoverIndex=keyboardTrendIndex;trendChart.tooltip.setActiveElements([{datasetIndex:0,index:keyboardTrendIndex}],{x:element.x,y:element.y});if(element.skip)renderTrendTooltip({chart:trendChart,tooltip:{opacity:1,caretX:element.x,caretY:trendChart.chartArea.top+40,dataPoints:[{dataIndex:keyboardTrendIndex}]}});trendChart.draw();}});
 $('trendCanvas').addEventListener('pointerdown',event=>{if(event.button!==0)return;trendPress={x:event.clientX,y:event.clientY};trendDragged=false;event.currentTarget.setPointerCapture(event.pointerId);});
 $('trendCanvas').addEventListener('pointermove',event=>{if(trendPress&&Math.hypot(event.clientX-trendPress.x,event.clientY-trendPress.y)>6)trendDragged=true;});
@@ -699,6 +705,10 @@ document.addEventListener('click', event => {
   if (button.dataset.sourceView) view('sources');
   if (button.dataset.addSource && !usageBridge) { $('sourceDialogText').textContent = agents[button.dataset.addSource].name + ' · 选择只读的用量来源目录。'; $('sourceDialog').showModal(); }
 });
+$('overviewWeek').addEventListener('pointerover', event => { const button = event.target.closest('[data-habit-date]'); if (button) showHeatTooltip(button); });
+$('overviewWeek').addEventListener('pointerleave', hideHeatTooltip);
+$('overviewWeek').addEventListener('focusin', event => { const button = event.target.closest('[data-habit-date]'); if (button?.matches(':focus-visible')) showHeatTooltip(button); });
+$('overviewWeek').addEventListener('focusout', hideHeatTooltip);
 $('heatmap').addEventListener('pointerover', event => { const button = event.target.closest('[data-date]'); if (button) showHeatTooltip(button); });
 $('heatmap').addEventListener('pointerleave', hideHeatTooltip);
 $('heatmap').addEventListener('focusin', event => { const button = event.target.closest('[data-date]'); if (button) showHeatTooltip(button); });
