@@ -102,9 +102,16 @@ body[data-motion='reduced'] .rhythm-hours .hour-grid button:hover i, body[data-m
 .hours-side .insight-facts > button:hover { background: var(--fill); }
 .hours-side .insight-facts small { flex: none; }
 .hours-side .insight-facts b { margin: 0; font-size: 13px; text-align: right; }
-.hours-side .slot-detail { margin-top: 14px; }
-.hours-side .slot-list li { grid-template-columns: 18px minmax(60px, 1fr) 52px 34px; }
-.hours-side .slot-list .share-track { display: none; }
+/* A chosen slot takes the facts' place, in the same quiet list style. */
+.hours-side .slot-detail { margin: 0; padding: 0; border-radius: 0; background: none; }
+.hours-side .slot-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline, var(--line)); }
+.hours-side .slot-head .insight-clear { margin-bottom: 8px; }
+.hours-side .slot-head strong { font-size: 15px; font-weight: 650; }
+.hours-side .slot-head span { margin: 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.hours-side .slot-list { margin: 0; }
+.hours-side .slot-list li { grid-template-columns: 18px minmax(60px, 1fr) 48px auto 38px; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--hairline, var(--line)); font-size: 13px; }
+.hours-side .slot-list li:last-child { border-bottom: 0; }
+.hours-side .slot-list .share-track { height: 4px; background: color-mix(in srgb, var(--text) 6%, transparent); }
 
 /* One day's 24 hours: rounded bars on rounded tracks. */
 .day-hours { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 5px; height: 156px; align-items: end; }
@@ -144,3 +151,4 @@ body[data-motion='reduced'] .day-hours i, body[data-motion='off'] .day-hours i {
 @media (max-width: 960px) { .hours-layout { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .efficiency-card .efficiency-list { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 8px; } }
 @media (max-width: 800px) { .rhythm-card .card-heading, .rhythm-body { padding-left: 16px; padding-right: 16px; } }
+.hours-side .slot-list .share-track span { background: var(--heat3); opacity: 1; }

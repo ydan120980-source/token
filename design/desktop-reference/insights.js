@@ -84,10 +84,12 @@
     for (const cell of $('hourCard').querySelectorAll('.hour-grid button')) cell.setAttribute('aria-pressed', String(Boolean(state.slot) && Number(cell.dataset.d) === state.slot.d && Number(cell.dataset.h) === state.slot.h));
     if (!panel) return;
     markCalendar();
-    if (!state.slot) { panel.hidden = true; panel.innerHTML = ''; return; }
+    const facts = $('hourCard').querySelector('.hour-facts');
+    if (!state.slot) { const closing = !panel.hidden; panel.hidden = true; panel.innerHTML = ''; if (facts) { facts.hidden = false; if (closing) reveal(facts); } return; }
+    if (facts) facts.hidden = true;
     const { d, h } = state.slot, cell = grid.cells[d][h], rows = slotRows(d, h), items = math.shares(rows, 'agent', 4);
     const cost = rows.filter(row => row.estimatedCostUsd !== null && row.estimatedCostUsd !== undefined).reduce((sum, row) => sum + row.estimatedCostUsd, 0);
-    panel.innerHTML = '<div class="slot-head"><div><strong>' + slotName(d, h) + '</strong><span>' + (cell.tokens ? cell.days + ' 天有用量 · ' + ctx.short(cell.tokens) + ' token · ' + money(ctx.usd, cost) : '这个时段没有用量') + '</span></div><button class="icon-button" data-slot-close aria-label="关闭时段明细">' + ctx.icon('ui/x') + '</button></div>' +
+    panel.innerHTML = '<div class="slot-head"><button class="insight-clear" data-slot-close aria-label="返回全部时段概览"><span aria-hidden="true">‹</span>全部时段</button><strong>' + slotName(d, h) + '</strong><span>' + (cell.tokens ? cell.days + ' 天有用量 · ' + ctx.short(cell.tokens) + ' token · ' + money(ctx.usd, cost) : '这个时段没有用量') + '</span></div>' +
       (items.length ? '<ol class="slot-list">' + items.map(item => {
         const agent = item.key ? ctx.agents[item.key] : null;
         return '<li>' + (agent ? ctx.icon(agent.icon) : '<i class="share-dot"></i>') + '<span>' + ctx.escapeHtml(agent ? agent.name : '其他 ' + item.count + ' 个 Agent') + '</span><span class="share-track"><span style="--w:' + (item.tokenShare * 100) + '%"></span></span><b>' + ctx.short(item.tokens) + '</b><em>' + pct(item.tokenShare, 0) + '</em></li>';

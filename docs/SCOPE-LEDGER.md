@@ -2,6 +2,8 @@
 
 User authorizations moved verbatim from `AGENTS.md` on 2026-10-06 (newest first, as originally ordered). These entries remain scope authority; `AGENTS.md` points here. Append new authorizations at the top.
 
+User refinement (2026-10-08, after `7b5f2f1`): the chosen-slot detail block (grey card under the hour facts) does not fit in style or position; rework it.
+
 User refinement (2026-10-08, after `8b6ea81`): build the first screen one-to-one like the proposed wireframe (no bar tracks, lighter figure weight, compact facts and header); in the daily calendar show unobserved days as ordinary blank squares again (no merged block); redesign the hourly view, which looks ugly; make every blank/unobserved placeholder colour lighter.
 
 User direction (2026-10-08, during the r8 fixes, via a design critique): the first screen with pushed-down content and blank space is too ugly; adopt the proposed cover instead: the hero number with its facts on one row, a full-width last-30-days bar strip replacing the seven-day bars (today highlighted, hover value, click opens the day), the today-vs-average delta beside the strip title, and only a light scale on the number while scrolling — no content is moved.
