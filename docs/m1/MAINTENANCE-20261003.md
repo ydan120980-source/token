@@ -31,7 +31,7 @@
 - 删除旧 M1 窗口的 main/preload/renderer/HTML/CSS、旧 exe/ZIP、被替代额度目录与解压副本、临时缓存、相邻复制审计包。
 - 删除当前产品没有引用的上游 agent/hub/shared/electron、macOS native、site、worker、对应 390 余个非 M1 测试与构建/签名/发布脚本。34 个历史选定上游测试在移除前通过；因被测实现已退役，当前不再保留这些测试命令。
 - 生产直接依赖由 10 个减到 2 个（sql.js、tokscale）。移除 8 个不用的生产依赖及直接 macOS 签名依赖；离线 npm 安装移除 21 个包，所需 Electron/Tokscale/Playwright 版本未升级。
-- 保留研究、LICENSE、原先业务统计、额度连接和用户未关联的改动。历史审计归档到 `docs/m1/history/`，上游参考文档归档到 `docs/upstream/`。
+- 保留研究、LICENSE、原先业务统计、额度连接和用户未关联的改动。历史审计与上游参考文档当时归档到 `docs/m1/history/` 与 `docs/upstream/`；2026-10-09 这两处与 `docs/handoff/` 一并移出版本控制，仅作本机参考，不再随仓库分发。
 - 原始上游实现可从基线提交 `f156470` 恢复；清理没有改写 Git 历史或自动提交。
 - 原生/UI/压力测试使用系统 TEMP，结束后清理。统计预览的显式 prepare 工具仍可保存自己的只读投影；不能把该个人文件打入源码包。
 
@@ -120,7 +120,7 @@ CodeGraph 在本会话不可用，采用当前源码引用/资源图、打包清
 
 依据用户提供的工程批评基准（测试弱化/可读性/短视补丁/死代码/职责错位/诚实性六类）启动独立只读审查线程，返回 7 项修复清单；主线程修复后复验。本轮处置：
 
-- **docs/handoff/SESSION-HANDOFF-20261004.md:119 修正**：dist 保留声明与实测不符（实际仅 polish-20261004 一代），已改为以复核修正为准的表述。
+- **会话交接记录中的 dist 保留声明修正**（该记录现已移出版本控制）：原声明与实测不符（实际仅 polish-20261004 一代），已改为以复核修正为准的表述。
 - **src/m1/store.js 导出面收窄**：module.exports 从 { Store, atomic, load, day, price } 收窄为 { Store, atomic, price }；load/day 无任何外部 require 引用（day 仅 store.js:71 内部使用），grep 全仓确认。
 - **src/quota/rpc.js:39 缓冲上限改字节计数**：原 this.buffer.length 为 UTF-16 码元数（worst case 约 4MiB 字节才触发），改为 Buffer.byteLength(this.buffer, 'utf8') 精确 2MiB 字节，且只计未消费积压（行提取后自然递减）。quota-lifecycle.test.js:49-50 与 stress-test.js:108-109 用 ASCII 溢出用例验证仍有效。
 - **scripts/m1/quota-protocol-smoke.js 用法在此记录**（该文件不删）：手动协议冒烟，需显式指定官方 CLI 可执行文件，例 node scripts/m1/quota-protocol-smoke.js "C:\\path\\to\\codex.exe" [--login-handshake]；使用隔离临时 CODEX_HOME，断言空账号、无 auth.json 生成、可选登录启动即取消；不读取本机现有 Codex 认证。

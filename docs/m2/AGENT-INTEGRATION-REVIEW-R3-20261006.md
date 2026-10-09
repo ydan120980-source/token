@@ -4,7 +4,7 @@
 
 ## 执行与固定基线
 
-角色：Agent Usage 接入独立审查，独立只读审查者；模型 gpt-6.1-sol / 推理 xhigh，主线程派发时显式指定、不继承；45 分钟软预算。直接读取主线程的人类“批准”及对应第三轮配置请求，确认本次执行、六维审查和最终回传授权。开始 2026-10-06 01:15:13 UTC，结束完整性复核 01:26:54 UTC（北京时间 09:15–09:26）。
+角色：Agent Usage 接入独立审查，独立只读审查者；由主线程显式指定角色与权限、不继承此前设置。开始 2026-10-06 01:15:13 UTC，结束完整性复核 01:26:54 UTC（北京时间 09:15–09:26）。
 
 没有创建/恢复/派发任何代理，没有修改产品、项目测试/脚本/文档、偏好、dist 或真实数据。仅写 artifacts/review-agent-integration-r3 的 ignored 审查产物，执行合成隔离检查。所有 Electron 检查串行，显式指定独立 usage/quota 和 synthetic fixture home。没有真实账号、认证/配置读取、付费推理或统计上传；没有清理此前被自动审批阻止的审查 ZIP/解压副本。
 
@@ -31,13 +31,13 @@
 
 位置：src/m1/sources.js:152–153，直接原因在 :153 的 Object.assign；对应整份选择规则 src/m1/usage-snapshot.js:8–11。后续未知分类由 src/m1/store.js:175、:178 产生，定价在 src/m1/pricing.js:24 因 usageConflict 拒绝。
 
-复现命令（E:/project/My_project/项目测试/codex/token）：
+复现命令（在仓库根目录执行）：
 
-`& E:/ai/node.exe artifacts/review-agent-integration-r3/recovery-probe.cjs`
+`node artifacts/review-agent-integration-r3/recovery-probe.cjs`
 
 实际 Windows 候选采集与 UI 命令：
 
-`& E:/ai/node.exe artifacts/review-agent-integration-r3/recovery-ui.cjs`
+`node artifacts/review-agent-integration-r3/recovery-ui.cjs`
 
 两个驱动只创建自己的合成临时 home/store，退出后清理这些临时合成目录，不读真实源。完整结果 recovery-probe.json、recovery-ui.json、recovery-ui.png。
 

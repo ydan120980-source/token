@@ -1,6 +1,6 @@
 # Agent Usage 第七版候选验收
 
-日期 2026-10-07，独立候选 `dist/agents-20261007-r7`，主线 `m2/agents-r4`，主开发 Claude Code。授权见 `docs/SCOPE-LEDGER.md` 2026-10-07 各条。本记录为主线程验收，不代表独立审查通过。
+日期 2026-10-07，独立候选 `dist/agents-20261007-r7`，主线 `m2/agents-r4`，主开发 Claude Code。2026-10-07 用户授权各条。本记录为主线程验收，不代表独立审查通过。
 
 ## 包含的提交
 

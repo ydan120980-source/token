@@ -29,3 +29,33 @@ devlog/
 artifacts/
 .planning/
 *.zip
+
+# Working notes that describe this machine and its session history, not the product.
+docs/handoff/
+docs/SCOPE-LEDGER.md
+docs/superpowers/
+# Upstream token-monitor reference docs: not this project's documentation.
+docs/upstream/
+# Per-generation delivery records kept locally for audit, not distributed.
+docs/m1/history/
+docs/m1/ACTIVITY-RANGE-FIX-20261004.md
+docs/m1/ACTIVITY-UI-20261004.md
+docs/m1/DETAIL-UI-20261004.md
+docs/m1/NOWDEX-UI-20261003.md
+docs/m1/UI-POLISH-20261004.md
+docs/m2/AGENT-INTEGRATION-PLAN-20261005.md
+docs/m2/AGENT-INTEGRATION-RESULTS-20261005.md
+docs/m2/AGENT-INTEGRATION-RESULTS-R3-20261006.md
+docs/m2/AGENT-INTEGRATION-RESULTS-R4-20261006.md
+docs/m2/AGENT-INTEGRATION-REVIEW-20261005.md
+docs/m2/AGENT-INTEGRATION-REVIEW-R2-20261006.md
+docs/m2/DESKTOP-REFINEMENT-20261004.md
+docs/m2/RESULTS-R8-20261008.md
+docs/m2/UI-REFINEMENT-RESULTS-R6-20261006.md
+# Stale root-level duplicate kept only for local reference. Anchored so that the
+# tracked renderer design/desktop-reference/preview.js is not affected.
+/preview.js
+
+# Python bytecode left behind by the packaging scripts.
+__pycache__/
+*.pyc
