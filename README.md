@@ -1,41 +1,35 @@
 # Agent Usage
 
-Windows 本地用量统计与 Codex 账号额度。当前保留版为 0.1.0，本地未签名构建。
+Windows 本地 AI 编码 Agent 用量统计 + Codex 账号额度监控。完全离线运行，本地优先。
 
-唯一入口为 `src/quota/main.js`。旧的深色 Agent Usage M1 窗口和已替代的包已删除；五来源采集功能已接入新版“用量”“来源管理”“设置”。`src/m1/` 是共享统计库，不是第二个应用。
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey)
+![Node](https://img.shields.io/badge/node-%3E%3D22.15.0-green)
 
-## 运行当前版本
+## 这是什么
 
-当前一代为 `dist/overview-20261005/`：顶部概览统一筛选范围，紧凑摘要与七日活动；日明细隐藏空模型行、保留未报告字段；趋势浮层透传鼠标与滚轮，拖动不会误开详情；额度再次进入动效有一分钟冷却。完整验收见 [OVERVIEW-20261005.md](docs/m2/OVERVIEW-20261005.md)。上一代 `dist/continuity-20261005/` 保留。
+一个 Windows 桌面应用（Electron），只读解析本机九个 AI 编码 Agent 的会话记录与本地数据库，把 token 用量、模型分布、时间趋势汇总成一个界面，并单独展示 Codex 账号的套餐额度与刷新窗口。
 
-本轮桌面升级：额度条加减速动效、开启后每分钟刷新、趋势缺日淡线连接与 Agent 图标筛选。完整合同及接入准备见 [CONTINUITY-20261005.md](docs/m2/CONTINUITY-20261005.md)。上一轮定价与趋势重整见 [DESKTOP-REFINEMENT-20261004.md](docs/m2/DESKTOP-REFINEMENT-20261004.md)。上一轮公共价格同步与映射合同见 [DESKTOP-FUNCTIONAL-20261004.md](docs/m2/DESKTOP-FUNCTIONAL-20261004.md)。
+## 这不是什么
 
-直接运行 `dist/overview-20261005/win-unpacked/Agent Usage Quota.exe`。必须保留整个 `win-unpacked/` 目录，不能只复制 exe。上一轮 `dist/refinement-20261004/` 与 `dist/functional-20261004/` 保留；`dist/pricing-20261004/` 的成本定价与设置页调整说明见 [PRICING-RESULTS-20261004.md](docs/m2/PRICING-RESULTS-20261004.md)；`dist/m2-desktop-20261004/` 的桌面性能、包与验收说明见 [DESKTOP-RESULTS-20261004.md](docs/m2/DESKTOP-RESULTS-20261004.md)。更早一代 `dist/polish-20261004/` 保留；其动效、滚轮与顶栏实现记录见 [UI-POLISH-20261004.md](docs/m1/UI-POLISH-20261004.md)。
+设计上刻意不做的四件事，也是本项目的安全边界：
 
-`dist/` 下每代交付自成一个目录（`win-unpacked/` + 源码 ZIP + manifest + `SHA256SUMS.txt`），互不覆盖。默认不额外保留内容相同的 Windows ZIP，需要时加 `scripts/m1/package-quota.py --windows-zip`。实际目录大小以各代 manifest 为准；旧文档约 156 MB 的估算已过时。逐路径、逐字节/hash 相同的运行时文件可用 `npm run dist:share` 跨代硬链接共用，每代仍有完整可运行目录；`npm run dist:share:verify` 校验共用状态。2026-10-04 接手时实际只存在 `dist/polish-20261004/`，旧 README 列出的其他代不在当前磁盘中；不自动恢复。
+- **不读取认证文件。** 文件名以 `auth` / `credentials` / `config` / `settings` / `storage` / `token` 开头的文件一律拒绝（`src/m1/policy.js:23`）。Codex 额度走独立官方 CLI 子进程，凭据存在系统 keyring。
+- **不修改来源数据库或配置。** 源 SQLite 字节（含已提交 WAL 页）读入内存后由 sql.js 只读查询，不建连接、不加写锁、不迁移、不 checkpoint（`src/m1/policy.js`、契约见 `docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md`）。
+- **不上传任何数据。** 统计留在 `%APPDATA%\AgentUsage-M1`，凭据留在系统 keyring，服务端不落地。
+- **不发送推理或工具调用。** 额度只读取窗口与用量数字，不含会话内容。
 
-M2 当前聚焦桌面端，手机版延期。范围、同步白名单、配对/密钥候选、持久防回放与只读权限边界见 [DESKTOP-SCOPE-20261004.md](docs/m2/DESKTOP-SCOPE-20261004.md)。这些同步设计尚未接入生产服务。
+采集只依赖本机已有文件。除了获取公开模型价格快照（`https://models.dev/api.json`，独立子进程、固定 URL）和 Codex 官方 CLI 本身，应用不发起其他网络请求。
 
-- “用量”：五来源只读采集，每 15 秒刷新；今日/7 天/30 天/累计、agent/model 筛选、趋势、模型明细、分类与质量说明。
-- “来源管理”：五类来源状态、添加本地目录。添加后暂停采集，确认后在设置恢复。拒绝 UNC、认证路径和产品数据目录重叠。
-- “设置”：暂停/恢复（暂停保留已保存统计）、导出、个人资料和浅色/深色。界面动效支持跟随系统／减少动态／关闭，默认跟随系统；系统减少动态优先。暂停与历史保留只影响用量统计，不影响原始来源及额度连接。
-- “额度监控”：用户在官方页面完成 Codex 授权，显示套餐、剩余窗口、更新时间、错误和冷却。自动刷新每次启动默认关闭，开启后每分钟读取一次，保留失败/限流冷却。真实多个账号尚未验收。
+## 环境要求
 
-本地采集不读取认证、不修改源数据库或其他 agent 的配置，也不上传统计。额度只通过独立官方 CLI 子进程读取，不发送推理/工具调用或消费重置额度。没有云/iOS、其他 provider、开机自启或公开发布。
+- Windows 10 / 11 x64
+- Node.js `>=22.15.0`（见 `package.json` 的 `engines`）
+- 可选：本机已安装 `codex` CLI（仅"额度监控"需要）
 
-已有数据沿用原位置，维护清理未删除这些目录：
+其他平台不在支持范围内：`package.json` 只声明 `win` x64 target，且 `src/m1/policy.js` 的来源根路径按 Windows 约定解析。
 
-| 数据 | 位置 |
-| --- | --- |
-| 用量历史和采集偏好 | `%APPDATA%\AgentUsage-M1` |
-| 额度连接、缓存和独立 CLI home | `%APPDATA%\AgentUsage-M1-Quota` |
-| 上次独立真实验收连接 | `%APPDATA%\AgentUsage-M1-Quota-Acceptance-20261003` |
-
-关闭窗口会退出并停止采集/额度服务。原 M1 托盘界面已删除。
-
-## 开发与验证
-
-Windows x64，Node 24、npm、Git。PowerShell 使用 `npm.cmd`。
+## 快速开始
 
 ```powershell
 npm.cmd ci --ignore-scripts --no-audit --no-fund
@@ -43,55 +37,130 @@ node node_modules/electron/install.js
 npm.cmd start
 ```
 
+第二条命令是必需的：`--ignore-scripts` 会跳过 Electron 的 postinstall，该脚本才会真正下载 Electron 二进制；跳过它 `npm start` 会直接失败。
+
+首次启动后界面可能显示空数据，这是正常的——本机还没有任何 Agent 的会话记录。数据目录 `%APPDATA%\AgentUsage-M1` 也在首次运行时才创建。
+
+只想看界面（不启动 Electron、不调用原生采集）：
+
 ```powershell
-npm.cmd run verify
-npm.cmd run test:native
-npm.cmd run test:ui
+node design/desktop-reference/serve.js
+# 打开 http://127.0.0.1:4178/
+```
+
+这是合成数据的开发预览，不连接真实来源、不能登录账号。
+
+## 支持的来源
+
+| Agent | 读取位置 | 读取内容 |
+| --- | --- | --- |
+| Codex | `~/.codex/sessions`, `~/.codex/archived_sessions` | 会话 JSONL |
+| Claude Code | `~/.claude/projects`, `~/.claude/transcripts` | 会话 JSONL |
+| OpenCode | `~/.local/share/opencode` | 消息 JSON / SQLite |
+| WorkBuddy | `~/.workbuddy/projects`, `workbuddy.db` | JSONL / SQLite |
+| MiMo Code | `~/.local/share/mimocode` | SQLite |
+| Gemini CLI | `~/.gemini/tmp`（路径含 `chats`） | 会话 JSON/JSONL |
+| Cursor | `~/.cursor/projects` | SDK `index.db` / `runs.ndjson` / usage CSV |
+| ZCode | `~/.zcode/cli/db/db.sqlite` | SQLite |
+| DeepSeek Harness | `~/.dsh/sessions`, `~/.dsh/profiles/desktop/sessions` | 会话 JSONL（含 zstd） |
+
+路径定义在 `src/m1/policy.js:6`。逐个来源的字段口径、去重规则与已知限制见 [AGENT-INTEGRATION-CONTRACT-20261005.md](docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md)。
+
+**账号额度目前仅支持 Codex。** 其余来源只统计用量，不读取账号套餐。
+
+已知缺口需要在贡献前了解：Gemini CLI 与 Cursor 目前**只有格式合成样本与 Electron 测试，没有真实调用样本**，因此不能认为这两个来源的真实数据已被验收；ZCode 没有官方数据库合同，按投影字段读取。
+
+## 数据位置
+
+| 内容 | 位置 |
+| --- | --- |
+| 用量历史与采集偏好 | `%APPDATA%\AgentUsage-M1` |
+| 额度连接、缓存、独立 CLI home | `%APPDATA%\AgentUsage-M1-Quota` |
+
+删除这两个目录即可完全清除本应用产生的数据。应用不会删除你的原始 Agent 记录。
+
+## 隐私与数据处理
+
+见 [docs/PRIVACY.md](docs/PRIVACY.md)。关键是：统计只包含白名单字段（模型名、token 桶、时间戳、来源标识），不含会话正文、标题、绝对路径、邮箱、凭据或设备名。
+
+## 定价模型
+
+内置 `src/m1/models-dev-prices.json` 定价快照，可手动同步公开价格数据。三条硬规则：
+
+- 未知用量永远不填 0；缺失保持 `null` 并显示为"未知"。
+- 未知价格永远不当作免费；显示为"未定价"。
+- 冲突保护不为了凑总额而关闭。
+
+因此界面上的 API 等价估算只是估算，未定价的模型会单列而不是计成 0。
+
+价格快照的更新流程见 [docs/m1/PRICING-SYNC-20261004.md](docs/m1/PRICING-SYNC-20261004.md)；用 `npm run pricing:check` 检查当前快照是否偏离已评审来源，`npm run pricing:sync` 重新生成。
+
+## 开发
+
+```powershell
+npm.cmd run verify          # ESLint + 单元测试（117 项）
+npm.cmd run test:native     # 需要 tokscale 原生二进制
+npm.cmd run test:ui         # 需要 Playwright + 显示器
 npm.cmd run test:quota:ui
-npm.cmd run test:motion:ui
-npm.cmd run test:detail:ui
-npm.cmd run test:polish:ui
-npm.cmd run test:desktop:performance
 npm.cmd run test:stress
-npm.cmd run test:stress:ui
 npm.cmd run experiment:crypto
-npm.cmd run pricing:check
+npm.cmd run audit:runtime
 ```
 
-UI/压力测试均使用独立合成来源和存储目录，不连接真实账号。临时数据位于系统 TEMP，结束后自动清理；脱敏证据保存在被忽略的 `artifacts/`。只有 `validate:local` 读取真实用量来源，须遵循项目隐私验收边界，不作为例行测试自动执行。
+`verify` 之外的大多数脚本需要 Playwright、Electron 或真实显示器。所有维护用 UI 测试都使用独立的 usage/quota 目录和合成 fixture home，不触碰真实数据。
 
-构建与实际 exe 验证：
+**唯一会读取你真实用量来源的是 `npm run validate:local`**，它不是例行测试，不纳入 `verify`。
+
+贡献流程、数据语义铁律与已知陷阱见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## 项目结构
+
+```
+src/quota/      Electron 主进程、IPC、额度 RPC、窗口外壳（产品入口）
+src/m1/         共享统计库：来源策略、解析、存储、定价（不是第二个应用）
+design/desktop-reference/   渲染层 HTML/CSS/JS
+scripts/m1/     开发与验收脚本
+tests/m1/       单元测试
+docs/m1/, docs/m2/   设计与验收记录
+```
+
+`src/m1/` 是共享库，不是"M1 版应用"——历史上曾有一个独立的 M1 界面，已删除。
+
+## 打包
 
 ```powershell
-npm.cmd run dist:win:dir -- --config.directories.output=dist/m2-desktop-20261004
-$env:QUOTA_PACKAGED_EXE = (Resolve-Path 'dist/m2-desktop-20261004/win-unpacked/Agent Usage Quota.exe').Path
-npm.cmd run test:ui
-npm.cmd run test:quota:ui
-npm.cmd run test:stress:ui
-npm.cmd run test:visual:ui
-Remove-Item Env:QUOTA_PACKAGED_EXE
-node scripts/m1/audit-package.js dist/m2-desktop-20261004/win-unpacked
-& 'C:/Users/yudan/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe' -X utf8 scripts/m1/package-quota.py --windows-dir dist/m2-desktop-20261004/win-unpacked --output-dir dist/m2-desktop-20261004 --acceptance-doc docs/m2/DESKTOP-RESULTS-20261004.md
-npm.cmd run dist:share -- --anchor-generation polish-20261004
-npm.cmd run dist:share:verify
+npm.cmd run dist:win:dir -- --config.directories.output=dist/r10
 ```
 
-构建新一代应使用新的 `--config.directories.output`，不能原地重建已交付或已共享的目录。`audit:package` 默认读 `dist/win-unpacked`，指定代时直接向脚本传位置参数。`package-quota.py` 默认只写源码 ZIP、manifest 和 `SHA256SUMS.txt` 并记录目录形态；`--acceptance-doc` 指定这一代验收文档，需先实际完成验收再打包。需要传统 Windows ZIP 时加 `--windows-zip`。`dist:share` 在新增一代后运行；它对 90 秒内被写入的树会拒绝执行（`--quiet-seconds` 可调），应先确认构建完成，且从不处理 ZIP。
+输出为未签名的 `win-unpacked/` 目录，必须整体保留（不能只复制 exe）。
 
-源码 ZIP 按白名单打包当前工作树，不要求提交，也不自动提交用户修改；排除认证、真实输入、统计/账号缓存、日志、依赖和运行产物。ZIP 校验 CRC，并生成 SHA-256 清单。`package:source` 仅创建源码包。
+## 已知限制
 
-## 维护与证据
+- 构建产物**未签名**（`signAndEditExecutable: false`），Windows SmartScreen 会警告。`@tokscale` 原生二进制在 spawn 前不校验哈希。
+- 数据损坏时应用会显示错误并退出，**没有自动恢复到备份的入口**。备份文件确实会生成（`backups/statistics-before-*.json`），但需要手动替换。
+- 原生验证（tokscale 交叉校验）失败会丢弃整轮采集结果，而不是保留本轮扫描。
+- 摘要首次统计 2 万行数据时主线程会阻塞约 334–364 ms。
+- 物理 DPI 缩放、Windows 窗口吸附、长时间连续运行未做系统化验收。曾出现过一次窗口关闭错误，根因未定位。
+- 没有内核级网络审计；网络封锁是 Node 层的 API 拦截（`src/m1/policy.js:66`）。
+- 未使用读屏软件实测；无障碍检查见 [A11Y-REVIEW-20261008.md](docs/m2/A11Y-REVIEW-20261008.md)。
+- 配对、跨设备同步、生产密钥与 iOS 端均未开始。本项目目前只有 Windows 桌面端。
 
-- [M2 桌面端范围与同步边界](docs/m2/DESKTOP-SCOPE-20261004.md)
-- [M2 桌面端第一批实现、性能与验收](docs/m2/DESKTOP-RESULTS-20261004.md)
-- [当前交付的界面范围与已执行检查](docs/m1/NOWDEX-UI-20261003.md)
-- [本轮审计、压力测试、删除依据和剩余验收](docs/m1/MAINTENANCE-20261003.md)
+## 文档索引
+
+- [数据合同与去重](docs/m1/DATA-CONTRACT.md)
 - [Codex 登录与额度边界](docs/m1/CODEX-QUOTA.md)
-- [统计合同与去重](docs/m1/DATA-CONTRACT.md)
-- [内置定价快照与构建期同步](docs/m1/PRICING-SYNC-20261004.md)
-- [依赖来源与上游保留方式](docs/m1/UPSTREAM.md)
-- [本地加密实验](docs/m1/CRYPTO-EXPERIMENT.md)
+- [九来源接入合同](docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md)
+- [桌面端范围与同步边界](docs/m2/DESKTOP-SCOPE-20261004.md)
+- [上游来源与复用边界](docs/m1/UPSTREAM.md)
+- [第三方资产归属](design/desktop-reference/LICENSES.md)
 
-研究仍在 `research/agent-usage/`。历史审计在 `docs/m1/history/`，原上游参考文档在 `docs/upstream/`。被删除的上游实现可从本仓库基线提交 `f156470` 恢复，不属于当前运行或打包路径。
+## 贡献与安全
 
-维护构建的合成验收不能替代新构建的真实账号、多个真实账号、物理显示器 DPI、系统对话框和休眠唤醒验收。上次真实连接保留，真实 logout 仍按用户选择延期。
+- 贡献流程：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 安全报告：[SECURITY.md](SECURITY.md)
+
+## 许可与归属
+
+MIT，见 [LICENSE](LICENSE)。第三方组件、图标、字体与定价数据来源见 [NOTICE](NOTICE) 与 [design/desktop-reference/LICENSES.md](design/desktop-reference/LICENSES.md)。
+
+本项目源自 [token-monitor](https://github.com/Javis603/token-monitor)（MIT，Javis）的维护分支，上游 provenance 与复用边界见 [docs/m1/UPSTREAM.md](docs/m1/UPSTREAM.md)。

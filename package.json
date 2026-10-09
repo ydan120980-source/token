@@ -2,7 +2,7 @@
   "name": "agent-usage",
   "productName": "Agent Usage Quota",
   "version": "0.1.0",
-  "description": "Private Windows local usage and Codex account quota",
+  "description": "Windows-local usage statistics for nine AI coding agents, plus Codex account quota monitoring",
   "main": "src/quota/main.js",
   "scripts": {
     "start": "electron .",
@@ -82,8 +82,13 @@
     "tokscale",
     "claude-code",
     "codex",
-    "hermes",
-    "token-monitor",
+    "opencode",
+    "workbuddy",
+    "mimocode",
+    "gemini-cli",
+    "cursor",
+    "zcode",
+    "deepseek-harness",
     "token-usage",
     "cost-tracking",
     "llm",
@@ -96,11 +101,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Javis603/token-monitor.git"
+    "url": "git+https://github.com/CHANGE-ME/agent-usage.git"
   },
-  "homepage": "https://github.com/Javis603/token-monitor#readme",
+  "homepage": "https://github.com/CHANGE-ME/agent-usage#readme",
   "bugs": {
-    "url": "https://github.com/Javis603/token-monitor/issues"
+    "url": "https://github.com/CHANGE-ME/agent-usage/issues"
   },
   "dependencies": {
     "sql.js": "1.14.2",
@@ -119,5 +124,5 @@
     "node": ">=22.15.0"
   },
   "private": true,
-  "author": "Agent Usage M1 local project"
+  "author": "Agent Usage contributors"
 }

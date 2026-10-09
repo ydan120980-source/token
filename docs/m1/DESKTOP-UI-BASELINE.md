@@ -26,7 +26,7 @@ The record below describes the earlier tokens.ci iteration. Its data boundaries 
 
 ## Authority and status
 
-The user selected https://tokens.ci/u/ydan120980-source as the desktop layout/analysis reference. Nowdex remains the mobile reference. Eight subsequent browser comments requested model, period, activity-size, total-trend, habit and profile changes. The user clarified the activity/profile target is **the Codex application's own profile page**. Its exact screenshot is still required.
+The user selected a public token-statistics profile page on tokens.ci as the desktop layout/analysis reference. The specific profile is not reproduced here. Nowdex remains the mobile reference. Eight subsequent browser comments requested model, period, activity-size, total-trend, habit and profile changes. The user clarified the activity/profile target is **the Codex application's own profile page**. Its exact screenshot is still required.
 
 The browser preview in design/desktop-reference now supports read-only projection of the existing M1 saved statistics. It does not replace the M1 runtime, Windows executable, package lock or fixed Tokscale version. The new preparation helper reuses Store.snapshot through the Store prototype and avoids the constructor, which writes state. No new agent scan, authentication read or source configuration change occurs. M1 remains at user review; these records authorize no later phase.
 
@@ -36,7 +36,7 @@ The public tokens.ci profile was inspected in the in-app browser on 2026-10-03. 
 
 Observed structure: horizontal navigation, approximately 1200 CSS px outer column, warm pale background, white cards, subtle borders, restrained blue controls, Geist / monospace typography, profile header, overview, Today card, contribution graph, stacked area trends, inline token distribution, weekday patterns and expandable models. Clicking a reference heatmap day was verified; public submission, sharing, 3D and every reference computation were not audited.
 
-References: [selected profile](https://tokens.ci/u/ydan120980-source), [repository](https://github.com/missuo/tokens), [MIT license](https://github.com/missuo/tokens/blob/main/LICENSE). The submission pipeline is not adopted.
+References: [reference site repository](https://github.com/missuo/tokens), [MIT license](https://github.com/missuo/tokens/blob/main/LICENSE). The submission pipeline is not adopted.
 
 The enlarged activity graph is provisional from the user's size/interaction comments. It has not been compared against the native Codex profile.
 
@@ -87,7 +87,7 @@ The loopback Node server uses Host/method/Fetch Metadata checks, fixed assets an
 - Browser/server Node syntax checks pass. Server guards reject wrong Host, cross-site data, write methods and unlisted paths; HEAD returns no body.
 - At the recorded check, saved statistics contained 223 daily rows / 33 model identifiers. Today showed gpt-6.1-sol. Values may advance while the existing collector runs.
 - Existing Codex total-mismatch / WorkBuddy invalid-reasoning counters and source acceptance flags remain unchanged.
-- Browser checks cover 1168 × 778, 900 × 760 and 480 × 800, without document horizontal overflow; details are in design-qa.md.
+- Browser checks cover 1168 × 778, 900 × 760 and 480 × 800, without document horizontal overflow.
 - Exact Codex native profile comparison, new Windows executable, Electron IPC, native 100%/150% DPI, OS picker/save dialog and production lifecycle/offline acceptance were not performed here. Prior M1 acceptance remains in docs/m1/ACCEPTANCE.md.
 
 3D, public ranking/sharing/embeds/login/uploads, subscription quota and multi-device history stay outside this iteration.

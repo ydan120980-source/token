@@ -1,0 +1,60 @@
+# Third-party notices
+
+Agent Usage is distributed under the MIT license (see `LICENSE`). It includes,
+bundles or depends on the following third-party work.
+
+## Bundled in the repository
+
+| Component | Version | License | Location |
+| --- | --- | --- | --- |
+| Geist / Geist Mono | `geist` 1.7.2 | SIL Open Font License 1.1 | `design/desktop-reference/assets/fonts/` — full text in `LICENSE.txt` |
+| Tabler Icons | `@tabler/icons` 3.48.0 | MIT | `design/desktop-reference/assets/ui/` — full text in `LICENSE` |
+| Chart.js | `chart.js` 4.5.1 | MIT | `design/desktop-reference/assets/vendor/chart.umd.min.js` — full text in `LICENSE.md` |
+| models.dev price snapshot | 2026-10-04 | see `src/m1/MODELS-DEV-LICENSE.txt` | `src/m1/models-dev-prices.json` |
+| Agent brand icons | — | retained under the upstream MIT baseline | `design/desktop-reference/assets/agents/` — see `docs/m1/UPSTREAM.md` |
+
+Additional attribution, including the design reference that informed the
+renderer, is in `design/desktop-reference/LICENSES.md`.
+
+## Runtime dependencies
+
+| Package | Version | License |
+| --- | --- | --- |
+| sql.js | 1.14.2 | MIT |
+| tokscale | 4.17.0 | MIT (junhoyeo) |
+
+`tokscale` ships platform binaries through `@tokscale/cli` and
+`@tokscale/cli-win32-x64-msvc`, unpacked beside the app at
+`resources/app.asar.unpacked/`. Their licenses are preserved inside the
+installed package directories.
+
+## Development dependencies
+
+Electron 43.4.0 (MIT), electron-builder 26.16.1 (MIT), ESLint 10 (MIT),
+Playwright 1.63.0 (Apache-2.0, development and acceptance only).
+
+## Upstream lineage
+
+This project is a maintenance branch derived from
+[token-monitor](https://github.com/Javis603/token-monitor) v0.65.0, commit
+`db325fdf46ea7f7328feeb47a4f2005fe339909f`, MIT, copyright Javis. Unused upstream
+implementations were removed; what was kept, why, and how it is reused is
+documented in `docs/m1/UPSTREAM.md`. Upstream's publisher identity, code signing,
+update service and release pipeline are not inherited.
+
+## Pricing data
+
+The built-in USD token price catalog is derived from the public
+[LiteLLM price file](https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json)
+and the models.dev public API. Snapshot time, source SHA-256 and the exact
+provider/model entries retained are recorded in `src/m1/prices.json`;
+`docs/m1/PRICING-SYNC-20261004.md` documents the sync contract. Only explicit USD
+token prices are extracted; missing cache prices are never inferred and model
+aliases are never fuzzy-matched.
+
+## Trademarks
+
+Codex, Claude, Gemini, Cursor and the other agent names and marks are trademarks
+of their respective owners. They are used here only to identify the local
+sources this tool reads. Their presence does not imply affiliation with, or
+endorsement by, those projects.
