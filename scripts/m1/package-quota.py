@@ -106,7 +106,7 @@ else:
     source_entries += [(root / name, name) for name in
                        ["package.json", "package-lock.json", "eslint.config.js", ".gitignore", ".gitattributes",
                         "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE", "CHANGELOG.md", "LICENSE",
-                        "README.md", "docs/PRIVACY.md", "docs/UPSTREAM-PROVENANCE.md"]]
+                        "README.md", "docs/PRIVACY.md", "docs/UPSTREAM-PROVENANCE.md", "docs/AGENT-HANDOFF.md"]]
     assert not any(part in {"node_modules", "artifacts", ".cache", ".git", "dist", "handoff", "upstream"}
                    for _, name in source_entries for part in Path(name).parts)
     assert not any(Path(name).name in {"auth.json", "quota-cache.json", "statistics.json", "runtime.json"}

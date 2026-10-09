@@ -147,6 +147,7 @@ npm.cmd run dist:win:dir -- --config.directories.output=dist/r10
 
 ## 文档索引
 
+- [Agent 交接说明](docs/AGENT-HANDOFF.md)——给第一次接手本项目的 AI 编码 Agent
 - [数据合同与去重](docs/m1/DATA-CONTRACT.md)
 - [Codex 登录与额度边界](docs/m1/CODEX-QUOTA.md)
 - [九来源接入合同](docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md)
