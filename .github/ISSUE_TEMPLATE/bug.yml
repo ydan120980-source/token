@@ -1,0 +1,78 @@
+name: Bug report
+description: 报告一个可复现的问题
+title: '[Bug] '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 提交前请先脱敏
+
+        **请不要粘贴真实会话内容、会话标题、本机绝对路径、账号标识、认证文件内容或任何个人数据。**
+        统计问题只需要错误码与复现步骤；日志请先自行删除上述信息再粘贴。
+
+        安全问题请勿在此提交，请走 [SECURITY.md](../blob/main/SECURITY.md) 的私密渠道。
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 应用版本（`package.json` 的 version）或 commit SHA
+      placeholder: '0.1.0 / 77fe5b7'
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows 版本
+      placeholder: 'Windows 11 23H2 (22631)'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runmode
+    attributes:
+      label: 运行方式
+      options:
+        - 打包版（win-unpacked）
+        - 源码运行（npm start）
+        - 浏览器预览（serve.js）
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 用合成数据或空数据目录即可复现吗？如果必须依赖你的真实记录，请只描述形状，不要粘贴内容。
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 如有错误码（形如 `SOURCE_BUSY`、`NATIVE_TOTAL_MISMATCH`）请原样写出。界面问题可附脱敏截图。
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 日志片段（已脱敏）、是否首次启动、是否可稳定复现等。
+    validations:
+      required: false
