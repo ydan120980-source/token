@@ -653,11 +653,11 @@ try {
 $('dataBadge').textContent = bootstrapFailed ? '统计读取失败 · 未载入数据' : localSnapshot?.previewReadError ? '读取失败 · 历史保留' : realData ? '本机快照 · 日志模型名' : '合成数据 · 示例模型';
 if (realData) $('demoState').parentElement.hidden = true;
 $('sourceNotice').textContent = realData ? '这里展示已保存的 M1 来源状态。当前预览不会重新扫描来源或修改目录。' : '合成样本演示；目录选择不会访问本机文件。';
-$('collectionHelp').textContent = usageBridge ? '只读五类本地来源的用量字段；暂停后保留已保存统计。本地采集与账号额度各自独立：模型名按日志字段展示，统计不会自动归属到账号。' : realData ? '预览只读已保存统计。模型名按日志字段展示，路由别名不能证明服务端实际模型。' : '仅演示暂停与恢复，不影响正式采集服务；当前是合成数据与示例模型，不能用来判断你的实际使用。';
+$('collectionHelp').textContent = usageBridge ? '只读九类本地来源的用量字段；暂停后保留已保存统计。本地采集与账号额度各自独立：模型名按日志字段展示，统计不会自动归属到账号。' : realData ? '预览只读已保存统计。模型名按日志字段展示，路由别名不能证明服务端实际模型。' : '仅演示暂停与恢复，不影响正式采集服务；当前是合成数据与示例模型，不能用来判断你的实际使用。';
 $('exportHelp').textContent = realData ? '导出本机统计快照的白名单字段；不包含原始记录或身份信息。' : '只导出合成统计，模型名称明确标为示例。';
 if (realData) { $('refresh').innerHTML = icon('ui/refresh') + '重新载入'; $('sourceRefresh').textContent = '重新载入状态'; }
 const profileKey = 'agentusage-preview.profile.v1';
-let profile = { name: 'ydan120980', bio: '记录每一次 AI 协作', tone: 'indigo', photo: null }, profileDraft, avatarReadToken = 0;
+let profile = { name: '本机用户', bio: '记录每一次 AI 协作', tone: 'indigo', photo: null }, profileDraft, avatarReadToken = 0;
 try { const saved = JSON.parse(localStorage.getItem(profileKey)); if (saved && typeof saved.name === 'string' && saved.name.trim() && saved.name.length <= 48) profile = { name: saved.name,
  bio: typeof saved.bio === 'string' ? saved.bio.slice(0, 80) : '',
  tone: ['indigo', 'teal', 'coral'].includes(saved.tone) ? saved.tone : 'indigo',
@@ -827,7 +827,7 @@ window.addEventListener('focus', checkCalendar);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') hideHeatTooltip(); else checkCalendar(); });
 window.addEventListener('unload', () => clearInterval(calendarTimer));
 if (usageBridge) {
-  $('sourceNotice').textContent = '只读取五类本地来源的用量字段。添加目录后暂停采集，确认后恢复。';
+  $('sourceNotice').textContent = '只读取九类本地来源的用量字段。添加目录后暂停采集，确认后恢复。';
   $('sourceRows').addEventListener('click', async event => { const button = event.target.closest('[data-add-source]'); if (button) { try { applyUsageState(await usageBridge.chooseSource(button.dataset.addSource)); } catch { toast('该目录不可读取或与产品数据目录重叠。'); } } });
   let reading = false, again = false;
   async function loadUsage() { if (reading) { again = true; return; } reading = true; try { do { again = false; applyUsageState(await usageBridge.get(usageRevision)); } while (again); } catch { toast('读取统计失败，历史数据已保留。'); } finally { reading = false; } }

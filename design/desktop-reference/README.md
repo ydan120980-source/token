@@ -18,7 +18,7 @@ This mode uses clearly labelled synthetic statistics and 示例模型. To show s
 node design/desktop-reference/serve.js --saved-m1
 ```
 
-On this development host, & 'E:/ai/node.exe' can replace node. Open http://127.0.0.1:4178/ and stop the terminal process with Ctrl+C. If the preview already occupies that port, use the existing process.
+Open http://127.0.0.1:4178/ and stop the terminal process with Ctrl+C. If the preview already occupies that port, use the existing process.
 
 Saved mode requires %APPDATA%\AgentUsage-M1\statistics.json. It reads only this existing product store, through a statistical whitelist. It avoids the Store constructor, which writes state. It does not rescan agent logs/databases, read authentication, change source configuration or write to the product store. 重新载入 reads the latest saved values and retains current filters. A failed reread retains the last valid projection; an invalid initial store prevents startup.
 
@@ -52,14 +52,15 @@ LocalUsagePreviewV1 is a reduced statistical projection of UsageSnapshotV1, not 
 
 The review server binds 127.0.0.1:4178 only, rejects unexpected Host/cross-site data requests/write methods, serves a static whitelist and initiates no external requests. This is development transport, not a production HTTP API.
 
-See docs/m1/DESKTOP-UI-BASELINE.md, docs/m1/history/design-qa.md and docs/m1/MAINTENANCE-20261003.md. Synthetic helpers remain available:
+See docs/m1/DESKTOP-UI-BASELINE.md. Synthetic helpers remain available:
 
 ```powershell
 node --test tests/m1/ui-preview-data.test.js
 node --test tests/m1/ui-layout.test.js
 ```
 
-The current Windows renderer is packaged and tested at forced 100/150 scale. Browser development mode cannot invoke native collection or login; desktop mode exposes restricted offline usage IPC and separate quota IPC. Physical DPI/OS-dialog checks for this maintenance build remain unperformed. Shared motion follows the system by default; reduced and off modes are available in settings. See docs/m1/UI-MOTION-20261004.md.
-# Codex 额度入口（2026-10-03）
+The current Windows renderer is packaged and tested at forced 100/150 scale. Browser development mode cannot invoke native collection or login; desktop mode exposes restricted offline usage IPC and separate quota IPC. Physical DPI/OS-dialog checks for this maintenance build remain unperformed. Shared motion follows the system by default; reduced and off modes are available in settings.
+
+## Codex 额度入口
 
 浏览器侧栏增加“额度监控”，示例卡片只供视觉评审。真实登录在 Windows Electron 中执行 `npm run start:quota`；说明见 `docs/m1/CODEX-QUOTA.md`。当前先接 Codex，其他 provider 仍待后续接入。界面动效默认跟随系统，可选择减少动态或关闭；系统要求减少动态时不会启用完整动效。

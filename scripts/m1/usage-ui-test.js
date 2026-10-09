@@ -82,7 +82,7 @@ async function state(page, predicate) {
       assert.equal(paused.snapshot.daily.reduce((sum, r) => sum + r.totalTokens, 0), 704);
       evidencePausedRows = paused.snapshot.daily.length;
       assert.equal((await page.evaluate(() => window.quotaBridge.get())).state.autoRefresh, 'off'); assert.deepEqual(errors, []);
-      evidence.push({ packaged: Boolean(process.env.QUOTA_PACKAGED_EXE), scale, fiveSources: true, filtersAndPeriods: true, sourceSelectionAndOverlapGuard: true, manualAndScheduledRefresh: true, pricingSaveRecalculateReset: true, codexPreviewCancelBackupApply: true, visibilityLatencyMs, pauseResume: true, whitelistExport: true, pauseRetainsHistory: true, pausedRows: evidencePausedRows, noPageErrors: true, noAccountRequests: true });
+      evidence.push({ packaged: Boolean(process.env.QUOTA_PACKAGED_EXE), scale, nineSources: true, filtersAndPeriods: true, sourceSelectionAndOverlapGuard: true, manualAndScheduledRefresh: true, pricingSaveRecalculateReset: true, codexPreviewCancelBackupApply: true, visibilityLatencyMs, pauseResume: true, whitelistExport: true, pauseRetainsHistory: true, pausedRows: evidencePausedRows, noPageErrors: true, noAccountRequests: true });
     } finally { await app.close(); }
     const restored = await electron.launch({ executablePath, args, timeout: 60000 });
     try { const page = await restored.firstWindow(), value = await state(page, s => s.enabled === false); assert.equal(value.snapshot.daily.length, evidencePausedRows); assert.equal(value.collecting, false); evidence.at(-1).restartPreservesPauseAndHistory = true; }
