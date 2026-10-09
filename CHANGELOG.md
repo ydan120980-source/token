@@ -34,4 +34,4 @@
 - 物理 DPI 缩放、Windows 窗口吸附与长时间运行未系统化验收。
 - 无 CI 之外的内核级网络审计；网络封锁为 Node 层拦截。
 
-[0.1.0]: https://github.com/CHANGE-ME/agent-usage/releases/tag/v0.1.0
+[0.1.0]: https://github.com/ydan120980-source/token/releases/tag/v0.1.0

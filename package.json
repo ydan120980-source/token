@@ -101,11 +101,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CHANGE-ME/agent-usage.git"
+    "url": "git+https://github.com/ydan120980-source/token.git"
   },
-  "homepage": "https://github.com/CHANGE-ME/agent-usage#readme",
+  "homepage": "https://github.com/ydan120980-source/token#readme",
   "bugs": {
-    "url": "https://github.com/CHANGE-ME/agent-usage/issues"
+    "url": "https://github.com/ydan120980-source/token/issues"
   },
   "dependencies": {
     "sql.js": "1.14.2",
