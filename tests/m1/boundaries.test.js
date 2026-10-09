@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { fixtures } = require('./fixtures');
+const { remove } = require('./temp');
 const { Service } = require('../../src/m1/service');
 const { scanSources } = require('../../src/m1/sources');
 test('network entry points deny even synthetic attempts in a separate process', () => {
@@ -17,7 +18,7 @@ test('partial JSONL preserves valid lines; source error retained; pause, overlap
   const file = path.join(f.roots.claude[0], 'project/session.jsonl'); fs.appendFileSync(file, '{"unfinished":');
   const scan = await scanSources(f.roots, 's', { reads: 0 }); assert.equal(scan.claude.partial, true); assert.equal(scan.claude.skipped, 1); assert.equal(scan.claude.records[0].totalTokens, 170);
   const service = new Service(path.join(dir, 'app'), f.roots);
-  t.after(async () => { await service.close(); fs.rmSync(dir, { recursive: true, force: true }); });
+  t.after(async () => { await service.close(); await remove(dir); });
   await Promise.all([service.refresh(), service.refresh()]); assert.equal(service.store.state.sequence, 1);
   await service.setEnabled(false); assert.equal(service.get().enabled, false); assert.equal(service.timer?._destroyed ?? true, true);
   const second = new Service(path.join(dir, 'app')); assert.equal(second.get().enabled, false); assert.equal(second.get().snapshot.daily.reduce((s, r) => s + r.totalTokens, 0), f.total); await second.close();
@@ -27,7 +28,7 @@ test('partial JSONL preserves valid lines; source error retained; pause, overlap
 });
 test('worker timeout retains statistics and backoff follows 30/60/120 seconds', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-timeout-')), f = fixtures(path.join(dir, 'home')), service = new Service(path.join(dir, 'app'), f.roots);
-  t.after(async () => { await service.close(); fs.rmSync(dir, { recursive: true, force: true }); });
+  t.after(async () => { await service.close(); await remove(dir); });
   await service.refresh(); const sequence = service.store.state.sequence;
   service.timeoutMs = 1;
   // Unchanged sources now answer within a millisecond; forget the ingested stamp so
@@ -36,7 +37,7 @@ test('worker timeout retains statistics and backoff follows 30/60/120 seconds', 
 });
 test('exit during native aggregation reaps Tokscale child process', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-reap-')), f = fixtures(path.join(dir, 'home')), service = new Service(path.join(dir, 'app'), f.roots);
-  t.after(async () => { await service.close(); fs.rmSync(dir, { recursive: true, force: true }); });
+  t.after(async () => { await service.close(); await remove(dir); });
   const file = path.join(f.roots.claude[0], 'project/session.jsonl'), base = JSON.parse(fs.readFileSync(file, 'utf8'));
   fs.writeFileSync(file, Array.from({ length: 10000 }, (_, i) => JSON.stringify({ ...base, uuid: 'u' + i, message: { ...base.message, id: 'm' + i } })).join('\n'));
   const running = service.refresh(), until = Date.now() + 10000;

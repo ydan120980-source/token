@@ -13,16 +13,27 @@ class QuotaService {
     this.now = clock.now || Date.now; this.setTimer = clock.setTimeout || setTimeout; this.clearTimer = clock.clearTimeout || clearTimeout;
     this.clients = new Map(); this.busy = new Set(); this.busyCounts = new Map(); this.generations = new Map(); this.identities = new Map(); this.reaping = new Set(); this.removing = new Set();
     this.login = null; this.closing = false; this.tail = Promise.resolve(); this.autoRefresh = 'off'; this.autoTimer = null; this.nextAutoAt = null; this.lastBatch = null;
-    fs.mkdirSync(directory, { recursive: true }); this.file = path.join(directory, 'quota-cache.json'); this.accounts = [];
+    fs.mkdirSync(directory, { recursive: true }); this.file = path.join(directory, 'quota-cache.json'); this.accounts = []; this.recovered = null;
     if (fs.existsSync(this.file)) {
-      const saved = JSON.parse(fs.readFileSync(this.file, 'utf8'));
-      if (!Array.isArray(saved.accounts) || saved.accounts.length > 20) throw new Error('QUOTA_CACHE_INVALID');
-      this.accounts = saved.accounts.filter(a => a && /^[a-f0-9-]{36}$/.test(a.id) && a.provider === 'codex').map(a => ({ id: a.id, provider: 'codex', alias: label(a.alias, 'Codex 账号'), plan: label(a.plan), status: 'cached', quota: projectCachedQuota(a.quota), lastAttempt: validDate(a.lastAttempt), errorCode: Object.hasOwn(MESSAGES, a.errorCode) ? a.errorCode : null, nextRefreshAt: validDate(a.nextRefreshAt) }));
+      let saved = null, damaged = false;
+      try {
+        saved = JSON.parse(fs.readFileSync(this.file, 'utf8'));
+        if (!Array.isArray(saved?.accounts) || saved.accounts.length > 20) damaged = true;
+      } catch { damaged = true; }
+      if (damaged) {
+        // A damaged cache must not stop the application. Move the bytes aside and
+        // start with no accounts; the user re-adds a connection from the UI.
+        const stamp = new Date().toISOString().replaceAll(':', '-');
+        const target = path.join(directory, 'quarantine', 'quota-cache-' + stamp + '.json');
+        try { fs.mkdirSync(path.dirname(target), { recursive: true }); fs.renameSync(this.file, target); this.recovered = { file: 'quota-cache.json', quarantined: path.posix.join('quarantine', path.basename(target)), code: 'QUOTA_CACHE_INVALID' }; }
+        catch { this.recovered = { file: 'quota-cache.json', quarantined: null, code: 'QUARANTINE_FAILED' }; }
+      }
+      if (!damaged) this.accounts = saved.accounts.filter(a => a && /^[a-f0-9-]{36}$/.test(a.id) && a.provider === 'codex').map(a => ({ id: a.id, provider: 'codex', alias: label(a.alias, 'Codex 账号'), plan: label(a.plan), status: 'cached', quota: projectCachedQuota(a.quota), lastAttempt: validDate(a.lastAttempt), errorCode: Object.hasOwn(MESSAGES, a.errorCode) ? a.errorCode : null, nextRefreshAt: validDate(a.nextRefreshAt) }));
     }
   }
   notify() { if (!this.closing) this.changed(); }
   state() {
-    return { schemaVersion: 'QuotaStateV1', executableAvailable: Boolean(this.executable), autoRefresh: this.autoRefresh, nextAutoAt: this.nextAutoAt, lastBatch: this.lastBatch && { ...this.lastBatch }, operationBusy: this.runtimeBusy(),
+    return { schemaVersion: 'QuotaStateV1', executableAvailable: Boolean(this.executable), autoRefresh: this.autoRefresh, nextAutoAt: this.nextAutoAt, lastBatch: this.lastBatch && { ...this.lastBatch }, operationBusy: this.runtimeBusy(), recovered: this.recovered ? { ...this.recovered } : null,
       accounts: this.accounts.map(a => ({ ...structuredClone(a), busy: this.busy.has(a.id), duplicateKnown: this.identities.has(a.id) && [...this.identities].some(([id, identity]) => id !== a.id && identity === this.identities.get(a.id)) })), pendingLogin: this.login ? { accountId: this.login.id } : null };
   }
   persist() {

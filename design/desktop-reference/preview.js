@@ -561,7 +561,18 @@ function renderModels(rows) {
     (a.coverage * 100).toFixed(1) +
     '%</td></tr>'; }).join('') || '<tr><td colspan="5">此筛选条件下暂无模型记录。</td></tr>';
 }
+function recoveryNotice(snapshot) {
+  // A damaged state file is moved to quarantine/ and the app keeps running with
+  // empty defaults. Say so plainly instead of silently showing zero usage.
+  const files = Array.isArray(snapshot?.recovered) ? snapshot.recovered : [];
+  if (!files.length) return null;
+  const where = files.some(entry => entry.quarantined) ? '已移入数据目录下的 quarantine 文件夹' : '无法移入 quarantine，请手动检查';
+  return '检测到受损的数据文件（' + files.map(entry => entry.file).join('、') + '），' + where + '，本次以空数据启动，原文件未被改写。';
+}
 function renderSources() {
+  const notice = recoveryNotice(localSnapshot);
+  if (notice) { $('sourceNotice').textContent = notice; $('sourceNotice').hidden = false; }
+  else if (usageBridge) { $('sourceNotice').textContent = '只读取九类本地来源的用量字段。添加目录后暂停采集，确认后恢复。'; $('sourceNotice').hidden = true; }
   if (realData) {
     const issues = {SOURCE_USAGE_REGRESSION:'较旧快照未覆盖已记录用量',SOURCE_USAGE_CONFLICT:'本次扫描发现计量分类冲突；仍有冲突的记录暂停精确定价',DEEPSEEK_FORMAT_UNSUPPORTED:'会话版本暂不支持，保留已有统计',DEEPSEEK_SEED_INVALID:'分叉记录缺少有效继承边界',DEEPSEEK_ENCODING_CONFLICT:'同一会话出现两种编码，请保留一个读取来源',SOURCE_COMPRESSION_INVALID:'压缩记录尚未完整或已损坏，稍后重试',CURSOR_CSV_SCHEMA:'CSV 需要逐请求的时间、模型、输入、输出、缓存读写字段',CURSOR_SOURCE_MODE_CONFLICT:'SDK 和 CSV 无法证明是否重复；当前统计库请沿用一种来源',USAGE_UNREPORTED:'部分调用没有报告用量',SOURCE_ROW_INVALID:'部分记录字段不完整，已保留有效记录',DEEPSEEK_LOG_INCOMPLETE:'会话序列不连续，仅保留有效前缀'};
     const states = { verified: '已验证', partial: '部分支持', unverified: '未验收', 'not-detected': '未检测到', error: '读取失败' };
@@ -802,8 +813,9 @@ function applyUsageState(state) {
   if (snapshotChanged) { templates.length = 0; for (const row of localSnapshot.daily) templates.push(row); loadHourly(); fillSources(); fillModels(); renderSources(); publishAgentUsage(); }
   updateCollection();
   window.uiSelect?.syncAll();
-  $('dataBadge').textContent = state.error || (state.collecting ? '正在读取本地统计…' : '本机离线统计 · 已更新');
-  $('dataBadge').hidden = !state.error;
+  const recovery = recoveryNotice(state.snapshot);
+  $('dataBadge').textContent = state.error || (recovery ? '数据已恢复 · 部分文件受损' : state.collecting ? '正在读取本地统计…' : '本机离线统计 · 已更新');
+  $('dataBadge').hidden = !state.error && !recovery;
   $('dataBadge').setAttribute('role', 'status');
   $('refresh').disabled = state.collecting; window.uiMotion.busy($('refresh'), state.collecting); window.uiMotion.busy($('sourceRefresh'), state.collecting); const refreshLabel = state.collecting ? '正在采集…' : '刷新统计', every = state.refreshIntervalMs ?? 15000; $('refresh').innerHTML = icon('ui/refresh') + '<span class="sr-only">' + refreshLabel + '</span>'; $('refresh').title = refreshLabel + (state.collecting ? '' : every ? ' · 每 ' + (every >= 60000 ? every / 60000 + ' 分钟' : every / 1000 + ' 秒') + '自动刷新（设置中修改）' : ' · 自动刷新已关闭'); $('refresh').setAttribute('aria-label', refreshLabel);
   if ($('main').dataset.currentView === 'usage') {

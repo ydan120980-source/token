@@ -7,7 +7,7 @@ const { Store, atomic } = require('./store');
 // are shown on the source cards; they are not read failures and must not back off.
 const DATA_NOTICES = new Set(['USAGE_UNREPORTED', 'SOURCE_USAGE_CONFLICT', 'SOURCE_USAGE_REGRESSION', 'SOURCE_ROW_INVALID', 'DEEPSEEK_FORMAT_UNSUPPORTED', 'DEEPSEEK_SEED_INVALID', 'DEEPSEEK_ENCODING_CONFLICT', 'DEEPSEEK_LOG_INCOMPLETE', 'CURSOR_SOURCE_MODE_CONFLICT', 'CURSOR_CSV_SCHEMA', 'CURSOR_CSV_INVALID', 'SOURCE_COMPRESSION_UNSUPPORTED']);
 class Service {
-  constructor(dir, sourceRoots, update = () => {}) { this.store = new Store(dir, sourceRoots); this.update = update; this.timer = null; this.current = null; this.retry = 0; this.lastError = null; this.audit = null; this.closed = false; this.timeoutMs = 60000; this.collector = null; this.requests = 0; this.stamp = null; this.stampSequence = null; this.scanHadError = false; this.checkedAt = null; this.lastCollection = null; }
+  constructor(dir, sourceRoots, update = () => {}) { this.store = new Store(dir, sourceRoots); this.update = update; this.timer = null; this.current = null; this.retry = 0; this.lastError = null; this.audit = null; this.closed = false; this.timeoutMs = 60000; this.collector = null; this.requests = 0; this.stamp = null; this.stampSequence = null; this.scanHadError = false; this.checkedAt = null; this.lastCollection = null; this.terminations = new Set(); }
   async refresh(maintenance = false) {
     if (this.closed) return this.get();
     if (this.current) { if (maintenance) throw new Error('MAINTENANCE_BUSY'); try { await this.current; } catch {} return this.get(); }
@@ -20,7 +20,7 @@ class Service {
       this.worker = worker;
       let timedOut = false;
       const settle = () => { clearTimeout(timer); worker.off('message', onMessage); worker.off('error', onError); worker.off('exit', onExit); };
-      const discard = () => { if (this.collector === worker) this.collector = null; void worker.terminate(); };
+      const discard = () => { if (this.collector === worker) this.collector = null; this.stop(worker); };
       const timer = setTimeout(() => { timedOut = true; this.killChild(); discard(); }, this.timeoutMs);
       const onMessage = result => {
         if (result.id !== id) return;
@@ -79,7 +79,16 @@ class Service {
     worker.on('error', forget); worker.on('exit', forget);
     return worker;
   }
-  async dropCollector() { const collector = this.collector; this.collector = null; if (collector) await collector.terminate(); }
+  // Terminating a worker is asynchronous: it can still hold the fixture files it
+  // is reading. Track every termination so close() only resolves once the workers
+  // are actually gone, which is what callers wait for before deleting a directory.
+  stop(worker) {
+    const done = worker.terminate().catch(() => {}).finally(() => this.terminations.delete(done));
+    this.terminations.add(done);
+    return done;
+  }
+  async drain() { while (this.terminations.size) await Promise.all([...this.terminations]); }
+  async dropCollector() { const collector = this.collector; this.collector = null; if (collector) await this.stop(collector); }
   interval() { const value = this.store.settings.refreshIntervalMs; return [0,5000,15000,30000,60000,300000].includes(value) ? value : 15000; }
   setRefreshInterval(value) {
     if (![0,5000,15000,30000,60000,300000].includes(value)) throw new Error('REFRESH_INTERVAL_INVALID');
@@ -89,7 +98,7 @@ class Service {
   }
   schedule() { clearTimeout(this.timer); this.timer = null; if (!this.closed && this.store.settings.enabled && this.interval() > 0) this.timer = setTimeout(() => this.refresh(), this.retry ? Math.max(this.interval(),[30000, 60000, 120000][this.retry - 1]) : this.interval()); }
   killChild() { if (this.childPid) { try { process.kill(this.childPid); } catch {} this.childPid = null; } }
-  async setEnabled(enabled) { this.store.setEnabled(enabled); if (!enabled) { clearTimeout(this.timer); this.killChild(); if (this.worker) await this.worker.terminate(); await this.dropCollector(); } else if (!this.current) void this.refresh(); this.update(); }
-  async close() { this.closed = true; clearTimeout(this.timer); this.killChild(); if (this.worker) await this.worker.terminate(); await this.dropCollector(); }
+  async setEnabled(enabled) { this.store.setEnabled(enabled); if (!enabled) { clearTimeout(this.timer); this.killChild(); if (this.worker) await this.stop(this.worker); await this.dropCollector(); } else if (!this.current) void this.refresh(); this.update(); }
+  async close() { this.closed = true; clearTimeout(this.timer); this.killChild(); if (this.worker) await this.stop(this.worker); await this.dropCollector(); await this.drain(); }
 }
 module.exports = { Service };

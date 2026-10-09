@@ -7,6 +7,7 @@ const { parseObjects } = require('../../src/m1/sources');
 const { Service } = require('../../src/m1/service');
 const { Store } = require('../../src/m1/store');
 const { fixtures } = require('./fixtures');
+const { remove } = require('./temp');
 function record(model, write, input = 1000000) { return { ...normalize('codex', { input_tokens: input, output_tokens: 100000, cached_input_tokens: 400000, cache_write_tokens: write, reasoning_output_tokens: 10000 }, { time:'2026-10-03', model, id:'a' }, 's'), requestInputTokens: input }; }
 test('official bucket ledger: old absent writes, new unknown writes, explicit writes, long context, reasoning only once', () => {
   const old = evaluate(record('gpt-4.1',undefined)); assert.equal(old.lower, 2.2); assert.equal(old.upper,2.2);
@@ -37,7 +38,7 @@ test('Codex exact last usage handles lane changes, unchanged notifications, rese
 });
 test('Codex maintenance previews without writes; scoped backup, retained unavailable history, stale/incomplete rejection', async t => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'maintenance-test-')), f=fixtures(path.join(dir,'home')), service=new Service(path.join(dir,'app'),f.roots);
-  t.after(async()=>{await service.close();fs.rmSync(dir,{recursive:true,force:true});});
+  t.after(async()=>{await service.close(); await remove(dir);});
   await service.refresh(); await service.setEnabled(false);
   const phantom={...record('gpt-4.1',0),id:'unavailable',sessionKey:'unavailable'}; service.store.state.records[phantom.id]=phantom;
   const file=path.join(service.store.dir,'statistics.json'), before=fs.readFileSync(file), nonCodex=JSON.stringify(Object.values(service.store.state.records).filter(r=>r.agent!=='codex'));

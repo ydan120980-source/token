@@ -72,6 +72,39 @@ test('SQLite committed WAL is read in memory without writes or checkpoints', asy
   try { assert.deepEqual(rows, [{ n: 37 }]); assert.deepEqual(hashes(dir), before); } finally { db.close(); }
 });
 test('UNC and auth paths rejected', () => { assert.throws(() => localPath('\\\\server\\share')); assert.throws(() => localPath(path.resolve('auth.json'))); });
+test('damaged or structurally invalid statistics are quarantined, not fatal', t => {
+  const dir = temporary(t), app = path.join(dir, 'app'), file = path.join(app, 'statistics.json');
+  fs.mkdirSync(app, { recursive: true });
+  // Truncated JSON: previously threw LOCAL_STORAGE_INVALID and aborted start-up.
+  const truncated = '{"version":1,"deviceId":"fixture","records":';
+  fs.writeFileSync(file, truncated);
+  const store = new Store(app, {});
+  assert.equal(store.snapshot().daily.length, 0); assert.equal(store.state.sequence, 0);
+  assert.equal(store.snapshot().recovered.length, 1);
+  assert.equal(store.snapshot().recovered[0].file, 'statistics.json');
+  assert.equal(store.snapshot().recovered[0].code, 'INVALID_JSON');
+  assert.match(store.snapshot().recovered[0].quarantined, /^quarantine\/statistics-.*\.json$/);
+  assert.equal(fs.readFileSync(path.join(app, store.snapshot().recovered[0].quarantined), 'utf8'), truncated, 'the bytes stay on disk for inspection');
+  const rewritten = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(rewritten.sequence, 0, 'a fresh ledger replaces the damaged one, so the next start is clean');
+  assert.notEqual(rewritten.deviceId, 'fixture');
+  // Parsable but structurally wrong: same treatment, reported under its own code.
+  fs.writeFileSync(file, JSON.stringify({ version: 1, deviceId: 'fixture', salt: 's', sequence: 'not-a-number', records: {}, statuses: {} }));
+  const second = new Store(app, {});
+  assert.equal(second.snapshot().recovered.length, 1);
+  assert.equal(second.snapshot().recovered[0].code, 'LOCAL_STORAGE_INVALID');
+  // Other state files recover independently and the app keeps working defaults.
+  fs.writeFileSync(path.join(app, 'preferences.json'), '{oops');
+  fs.writeFileSync(path.join(app, 'billing.json'), 'also broken');
+  const third = new Store(app, {});
+  assert.deepEqual(third.snapshot().recovered.map(entry => entry.file).sort(), ['billing.json', 'preferences.json']);
+  assert.equal(third.settings.enabled, true);
+  assert.deepEqual(third.snapshot().recovered.map(entry => entry.file).sort(), ['billing.json', 'preferences.json'], 'the recovery record survives later snapshots');
+  // Exactly one quarantine directory per damaged file, and it is not created for a clean start.
+  const clean = new Store(path.join(dir, 'clean'), {});
+  assert.deepEqual(clean.snapshot().recovered, []);
+  assert.ok(!fs.existsSync(path.join(dir, 'clean', 'quarantine')));
+});
 test('calendar ranges include today and respect month/year boundaries', () => {
   const { startFor } = require('../../design/desktop-reference/usage-math');
   assert.equal(startFor('2026-01-03', '7'), '2025-12-28');

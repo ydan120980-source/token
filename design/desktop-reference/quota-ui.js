@@ -101,6 +101,11 @@
     byId('quotaChoose').hidden = !bridge; byId('quotaExample').hidden = Boolean(bridge);
     if (state.pendingLogin) { byId('quotaLoginStatus').textContent = '请在官方浏览器页面完成授权，完成后会读取额度。'; byId('quotaCancel').hidden = false; }
     else { byId('quotaCancel').hidden = true; if (byId('quotaLoginDialog').open && byId('quotaLoginStatus').textContent) { byId('quotaLoginStatus').textContent = state.accounts.some(a => a.status === 'login-failed') ? '登录未完成，可关闭后重试。' : '连接流程结束，请查看账号卡片的状态。'; byId('quotaLoginStart').disabled = false; } }
+    // A damaged cache is quarantined instead of blocking start-up; explain the
+    // empty list so the user knows why the accounts disappeared.
+    if (state.recovered && !requesting) {
+      byId('quotaError').textContent = '检测到受损的 ' + state.recovered.file + (state.recovered.quarantined ? '，已移入数据目录下的 quarantine 文件夹' : '，且无法移入 quarantine') + '，账号列表已重置，请重新连接。';
+    }
   }
   async function action(fn) { if (requesting) return; requesting = true; byId('quotaError').textContent = ''; renderQuota(); try { const result = await fn(); if (result?.state) state = result.state; if (!result?.ok) byId('quotaError').textContent = result?.error || '操作失败，上次数据保留。'; } catch { byId('quotaError').textContent = '桌面连接失败，上次数据保留。'; } finally { requesting = false; renderQuota(); if (byId('quotaLoginDialog').open && !state.pendingLogin) { byId('quotaLoginStart').disabled = false; if (byId('quotaError').textContent) byId('quotaLoginStatus').textContent = byId('quotaError').textContent; } } }
   async function refreshAll() { if (!bridge || example) return; await action(() => bridge.refreshAll()); }

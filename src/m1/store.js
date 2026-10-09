@@ -13,8 +13,35 @@ function atomic(file, value) {
   const temporary = file + '.tmp-' + crypto.randomBytes(6).toString('hex');
   fs.writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 }); fs.renameSync(temporary, file);
 }
-function load(file, fallback) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { if (error.code !== 'ENOENT') throw new Error('LOCAL_STORAGE_INVALID', { cause: error }); return fallback; }
+/**
+ * Move a damaged file aside instead of failing the whole application. The bytes
+ * stay on disk for a human to inspect, and the next start no longer trips over
+ * them. The caller keeps the empty fallback either way, so this is best effort.
+ */
+function quarantineFile(file, code = 'INVALID_JSON') {
+  const name = path.basename(file);
+  const directory = path.join(path.dirname(file), 'quarantine');
+  const stamp = new Date().toISOString().replaceAll(':', '-');
+  const target = path.join(directory, name.replace(/\.json$/, '') + '-' + stamp + '.json');
+  try {
+    fs.mkdirSync(directory, { recursive: true });
+    fs.renameSync(file, target);
+    return { file: name, quarantined: path.posix.join('quarantine', path.basename(target)), code };
+  } catch { return { file: name, quarantined: null, code: code === 'INVALID_JSON' ? 'QUARANTINE_FAILED' : code }; }
+}
+function freshState() { return { version: 1, deviceId: crypto.randomUUID(), salt: crypto.randomBytes(32).toString('hex'), sequence: 0, records: {}, statuses: {} }; }
+function validState(state) { return Boolean(state) && state.version === 1 && typeof state.deviceId === 'string' && state.deviceId.length > 0 && typeof state.salt === 'string' && state.records && typeof state.records === 'object' && state.statuses && typeof state.statuses === 'object' && Number.isSafeInteger(state.sequence); }
+function load(file, fallback, recovered) {
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); } catch (error) {
+    if (error.code === 'ENOENT') return fallback;
+    if (recovered) { recovered.push(quarantineFile(file)); return fallback; }
+    throw new Error('LOCAL_STORAGE_INVALID', { cause: error });
+  }
+  try { return JSON.parse(text); } catch (error) {
+    if (recovered) { recovered.push(quarantineFile(file)); return fallback; }
+    throw new Error('LOCAL_STORAGE_INVALID', { cause: error });
+  }
 }
 const dayFormatters = new Map();
 const hourFormatters = new Map();
@@ -22,24 +49,25 @@ function hourOf(time, timezone) { if (!hourFormatters.has(timezone)) hourFormatt
 function day(time, timezone) { if (!dayFormatters.has(timezone)) dayFormatters.set(timezone, new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })); return dayFormatters.get(timezone).format(new Date(time)); }
 class Store {
   constructor(dir, defaults = roots()) {
-    this.dir = dir;
+    this.dir = dir; this.recovered = [];
     const own = localPath(dir).toLowerCase();
     function checkRoots(selected) { for (const list of Object.values(selected)) for (const source of list) { const normalized = localPath(source).toLowerCase(); if (normalized === own || normalized.startsWith(own + path.sep) || own.startsWith(normalized + path.sep)) throw new Error('SOURCE_PRODUCT_OVERLAP'); } }
     checkRoots(defaults);
-    this.state = load(path.join(dir, 'statistics.json'), { version: 1, deviceId: crypto.randomUUID(), salt: crypto.randomBytes(32).toString('hex'), sequence: 0, records: {}, statuses: {} });
-    this.settings = load(path.join(dir, 'preferences.json'), { enabled: true, roots: defaults });
+    const statistics = path.join(dir, 'statistics.json');
+    this.state = load(statistics, freshState(), this.recovered);
+    this.settings = load(path.join(dir, 'preferences.json'), { enabled: true, roots: defaults }, this.recovered);
     // Add newly supported default roots in memory; preserve every saved choice
     // (including an intentionally empty list), pause setting and old ledger.
     this.settings.roots = {...defaults, ...this.settings.roots};
     checkRoots(this.settings.roots);
-    this.validation = load(path.join(dir, 'validation.json'), {});
-    this.overrides = load(path.join(dir, 'pricing.json'), {});
-    this.billing = load(path.join(dir, 'billing.json'), { autoSync:true, defaults:{}, mappings:{} });
+    this.validation = load(path.join(dir, 'validation.json'), {}, this.recovered);
+    this.overrides = load(path.join(dir, 'pricing.json'), {}, this.recovered);
+    this.billing = load(path.join(dir, 'billing.json'), { autoSync:true, defaults:{}, mappings:{} }, this.recovered);
     this.downloadedCatalog = false; this.persistedDigest = null;
-    try { const saved = load(path.join(dir,'model-pricing.json'), null); this.remoteCatalog = runtimeCatalog.verify(saved || runtimeCatalog.embedded); this.downloadedCatalog = Boolean(saved); } catch { this.remoteCatalog = runtimeCatalog.verify(runtimeCatalog.embedded); }
+    try { const saved = load(path.join(dir,'model-pricing.json'), null, this.recovered); this.remoteCatalog = runtimeCatalog.verify(saved || runtimeCatalog.embedded); this.downloadedCatalog = Boolean(saved); } catch { this.remoteCatalog = runtimeCatalog.verify(runtimeCatalog.embedded); }
     this.modelCatalog = runtimeCatalog.merged(this.remoteCatalog);
     this.modelCatalogHash = runtimeCatalog.hash(this.modelCatalog);
-    if (this.state.version !== 1 || !this.state.deviceId || typeof this.state.salt !== 'string' || !this.state.records || !this.state.statuses || !Number.isSafeInteger(this.state.sequence)) throw new Error('LOCAL_STORAGE_INVALID');
+    if (!validState(this.state)) { this.recovered.push(quarantineFile(statistics, 'LOCAL_STORAGE_INVALID')); this.state = freshState(); }
     this.state.duplicateIds ||= {};
     // Keep the original records recoverable; suppress proven historical copies.
     const shared = new Map(); let migrated = false;
@@ -225,7 +253,8 @@ class Store {
       coverageStart: daily[0]?.date || null, daily, hourly,
       priceCatalog: { version: this.remoteCatalog ? catalog.version + '+models-dev/1' : catalog.version, obtainedAt: this.remoteCatalog?.obtainedAt || catalog.obtainedAt, sha256: this.catalogHash(), overrideSha256: this.overrideHash(), billingSha256:runtimeCatalog.hash(this.billing), currency: 'USD', kind: 'API-equivalent-estimate', source: this.remoteCatalog?.source || catalog.source, basis: catalog.basis },
       sources: SOURCES.map(agent => this.state.statuses[agent] || { agent, label: LABELS[agent], status: 'unverified', lastSuccess: null, realSampleVerified: false }),
-      deferred: [{ agent: 'trae', status: 'variant-and-connection-unverified' }]
+      deferred: [{ agent: 'trae', status: 'variant-and-connection-unverified' }],
+      recovered: (this.recovered || []).map(entry => ({ ...entry }))
     };
   }
   setEnabled(enabled) {

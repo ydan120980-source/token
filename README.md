@@ -98,7 +98,7 @@ node design/desktop-reference/serve.js
 ## 开发
 
 ```powershell
-npm.cmd run verify          # ESLint + 单元测试（117 项）
+npm.cmd run verify          # ESLint + 单元测试（119 项）
 npm.cmd run test:native     # 需要 tokscale 原生二进制
 npm.cmd run test:ui         # 需要 Playwright + 显示器
 npm.cmd run test:quota:ui
@@ -137,7 +137,7 @@ npm.cmd run dist:win:dir -- --config.directories.output=dist/r10
 ## 已知限制
 
 - 构建产物**未签名**（`signAndEditExecutable: false`），Windows SmartScreen 会警告。`@tokscale` 原生二进制在 spawn 前不校验哈希。
-- 数据损坏时应用会显示错误并退出，**没有自动恢复到备份的入口**。备份文件确实会生成（`backups/statistics-before-*.json`），但需要手动替换。
+- 存储文件损坏时不会退出：损坏文件被移入数据目录下的 `quarantine/`，应用以空数据启动并在界面上说明，原始字节保留供人工检查。旧的自动备份仍在（`backups/statistics-before-*.json`），但没有"从备份一键回滚"的按钮。
 - 原生验证（tokscale 交叉校验）失败会丢弃整轮采集结果，而不是保留本轮扫描。
 - 摘要首次统计 2 万行数据时主线程会阻塞约 334–364 ms。
 - 物理 DPI 缩放、Windows 窗口吸附、长时间连续运行未做系统化验收。曾出现过一次窗口关闭错误，根因未定位。

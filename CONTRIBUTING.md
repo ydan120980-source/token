@@ -22,7 +22,7 @@ npm.cmd run verify
 npm.cmd run verify
 ```
 
-包含 ESLint 与全部单元测试（当前 117 项）。除此之外，按改动范围还应运行：
+包含 ESLint 与全部单元测试（当前 119 项）。除此之外，按改动范围还应运行：
 
 | 改动区域 | 需要的额外检查 |
 | --- | --- |
@@ -42,14 +42,17 @@ npm.cmd run verify
 3. **替换选中快照时必须完整套用。** 新快照中不存在的属性要移除，同时保留 first-owner 身份与对象引用（见 `src/m1/sources.js`）。
 4. **快照选择必须顺序无关。** 规则：valid 优先于 invalid，其次总额更大（即使 partial），再次质量/已知字段。`tests/m1/snapshot-order.test.js` 会对每种顺序对照参考规则校验。改动 `src/m1/usage-snapshot.js` 必须让该测试通过。
 5. **原生验证每次必须在新建目录运行。** tokscale 的源消息缓存假定文件只追加，复用投影会冻结后续所有采集。`src/m1/native.js` 已按此实现。
+6. **受损的存储文件隔离，绝不静默丢弃。** `src/m1/store.js` 的 `load()` 与 `src/quota/service.js` 的构造器把无法解析或结构非法的文件 `rename` 到数据目录下的 `quarantine/`，然后用空默认值继续启动，并把记录通过 `snapshot().recovered` / `state().recovered` 透出到界面。不要改回"抛错退出"，也不要在隔离前写任何东西覆盖原字节。
 
 ## 已知陷阱
 
+- **`quarantine/` 是唯一被允许"移动用户数据"的地方。** 它只做 `rename`，不删不改；隔离失败（例如文件被占用）要降级为 `QUARANTINE_FAILED` 并继续以默认值启动，而不是抛错。
 - **Playwright `page.waitForFunction` 对 async 谓词会立即 resolve。** 轮询桥接状态请用 `scripts/m1/ui-settle.js` 的 `until`，不要用 `waitForFunction`。
 - **来源状态 `partial` 描述的是扫描，不是定价。** 一条记录是否已定价取决于该记录当前的质量字段，两者独立。
 - **`package.json` 的 `build.files` 是白名单。** `docs/m1/UPSTREAM.md` 与 `docs/m1/CODEX-QUOTA.md` 必须留在原位——移动或改名会让打包内容与磁盘不一致，`npm run audit:package` 会失败。
 - **`@electron/asar` 是传递依赖。** `scripts/m1/audit-package.js` require 它，但 `package.json` 未声明；改动依赖时注意。
 - **`.gitattributes` 强制 LF。** 不要改成 CRLF：Windows 上检出 CRLF 会让按内容匹配的测试失败。
+- **删除临时目录要用 `tests/m1/temp.js` 的 `remove()`，不要直接 `fs.rmSync`。** 关闭 `Service` 后，Windows 释放 worker 文件句柄是异步的：随后几毫秒内 `fs.rmSync` 可能报 `EPERM`。这是调度竞态而非泄漏，`remove()` 会在 5 秒预算内重试并只对 `EPERM`/`EBUSY`/`ENOTEMPTY` 生效。
 
 ## 代码约定
 

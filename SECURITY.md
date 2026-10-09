@@ -29,7 +29,7 @@
 
 - **未签名构建。** `signAndEditExecutable: false`，Windows SmartScreen 会告警。`@tokscale` 原生二进制在 spawn 前不校验哈希。
 - **网络封锁是 Node 层拦截，不是内核级管控。** `src/m1/policy.js:66` 的 `disableNetwork` 覆盖 `fetch`、`node:http/https`、`node:net`、`node:tls` 的常用入口，未覆盖 `http2`、`dgram`、全局 `WebSocket`、`net.Socket.prototype.connect` 或原生模块。当前代码不调用这些 API，但这不是沙箱级保证。
-- **数据损坏无自动恢复。** 存储文件损坏时会显示错误并退出，不会从备份自动恢复。
+- **数据损坏走隔离，不是自动回滚。** 损坏的 `statistics.json` / `preferences.json` / `billing.json` / `model-pricing.json` / `quota-cache.json` 会被移入数据目录下的 `quarantine/`，应用以空默认值继续启动，界面上说明发生了什么。原始字节保留供检查，但**没有从 `backups/` 自动恢复数据的入口**。
 
 ## 支持范围
 

@@ -8,6 +8,7 @@ const { EventEmitter } = require('node:events');
 const { spawn } = require('node:child_process');
 const { QuotaService } = require('../../src/quota/service');
 const { AccountRpc } = require('../../src/quota/rpc');
+const { remove } = require('./temp');
 const { PassThrough } = require('node:stream');
 test('RPC read timeout is bounded at 60 seconds and safely removes pending state', async t => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
@@ -26,7 +27,7 @@ test('account update invalidates an in-flight result and keeps it historical', a
     return {};
   }; return rpc; };
   const service = new QuotaService(directory, 'codex.exe', () => {}, factory);
-  t.after(async () => { await service.close(); fs.rmSync(directory, { recursive: true, force: true }); });
+  t.after(async () => { await service.close(); await remove(directory); });
   await service.begin('A'); const id = service.login.id; current.emit('login', { loginId: 'login', success: true });
   current.emit('accountUpdated'); await service.tail; await new Promise(resolve => setImmediate(resolve));
   assert.equal(service.account(id).status, 'ready'); const previous = structuredClone(service.account(id).quota);
@@ -58,6 +59,27 @@ test('selected logout consumes its own auth notification without canceling remov
   const rpc = new EventEmitter(); rpc.initialize = async () => {}; rpc.close = () => {};
   rpc.request = async method => { if (method === 'account/logout') rpc.emit('accountUpdated', { authMode: null, plan: null }); return {}; };
   const service = new QuotaService(directory, 'codex.exe', () => {}, () => rpc);
-  t.after(async () => { await service.close(); fs.rmSync(directory, { recursive: true, force: true }); });
+  t.after(async () => { await service.close(); await remove(directory); });
   await service.remove(id); assert.equal(service.accounts.length, 0); assert.equal(service.clients.size, 0);
+});
+test('a damaged quota cache is quarantined and the app starts with no accounts', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'quota-cache-recovery-')), file = path.join(directory, 'quota-cache.json');
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  // Truncated JSON previously escaped as a raw SyntaxError; an oversized account
+  // list threw QUOTA_CACHE_INVALID; both aborted start-up.
+  for (const [bytes, code] of [['{"accounts":[', 'QUOTA_CACHE_INVALID'], [JSON.stringify({ accounts: new Array(21).fill({ id: 'x', provider: 'codex' }) }), 'QUOTA_CACHE_INVALID']]) {
+    fs.writeFileSync(file, bytes);
+    const service = new QuotaService(directory, 'codex.exe', () => {}, () => { throw new Error('unused'); });
+    await service.close();
+    assert.equal(service.accounts.length, 0, 'no accounts are invented from the damaged file');
+    assert.equal(service.state().recovered.code, code);
+    assert.equal(service.state().recovered.file, 'quota-cache.json');
+    assert.match(service.state().recovered.quarantined, /^quarantine\/quota-cache-.*\.json$/);
+    assert.equal(fs.readFileSync(path.join(directory, service.state().recovered.quarantined), 'utf8'), bytes, 'the bytes stay on disk for inspection');
+    assert.ok(!fs.existsSync(file));
+    fs.rmSync(path.join(directory, 'quarantine'), { recursive: true, force: true });
+  }
+  const healthy = new QuotaService(directory, 'codex.exe', () => {}, () => { throw new Error('unused'); });
+  await healthy.close();
+  assert.equal(healthy.state().recovered, null, 'a clean start reports no recovery');
 });

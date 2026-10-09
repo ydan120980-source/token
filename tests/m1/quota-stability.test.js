@@ -9,6 +9,7 @@ const { PassThrough } = require('node:stream');
 const { QuotaService } = require('../../src/quota/service');
 const { AccountRpc } = require('../../src/quota/rpc');
 const { rpcErrorCode } = require('../../src/quota/errors');
+const { remove } = require('./temp');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 const quota = identity => ({ accountId: identity, rateLimits: { primary: { usedPercent: 150, windowDurationMins: 300, resetsAt: 1 } } });
@@ -28,7 +29,7 @@ class Rpc extends EventEmitter {
 function fixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'quota-stability-')), rpcs = [], timers = new Map(); let time = Date.parse('2026-10-03T01:00:00Z'), next = 0;
   const service = new QuotaService(directory, 'codex.exe', () => {}, () => { const rpc = new Rpc(); rpcs.push(rpc); return rpc; }, { now: () => time, setTimeout: (fn, delay) => { timers.set(++next, { fn, delay }); return next; }, clearTimeout: id => timers.delete(id) });
-  t.after(async () => { await service.close(); fs.rmSync(directory, { recursive: true, force: true }); });
+  t.after(async () => { await service.close(); await remove(directory); });
   const add = async alias => { await service.begin(alias); const id = service.login.id; rpcs.at(-1).emit('login', { loginId: 'login', success: true }); await service.tail; await tick(); return id; };
   return { service, rpcs, timers, add, advance: ms => { time += ms; } };
 }
