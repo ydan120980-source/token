@@ -23,7 +23,7 @@ parser.add_argument('--windows-zip', action='store_true',
                     help='also emit AgentUsage-CodexQuota-Windows-x64.zip (duplicates win-unpacked)')
 parser.add_argument('--refresh-records', action='store_true',
                     help='rewrite manifest and SHA256SUMS from existing artifacts only')
-parser.add_argument('--acceptance-doc', default='docs/m1/UI-POLISH-20261004.md',
+parser.add_argument('--acceptance-doc', default='docs/m2/RESULTS-R9-20261008.md',
                     help='workspace document describing this generation acceptance')
 options = parser.parse_args()
 acceptance = (root / options.acceptance_doc).resolve()
@@ -81,12 +81,33 @@ else:
         binary = archive(output / WINDOWS_ZIP_NAME,
                          [(p, p.relative_to(windows).as_posix()) for p in sorted(windows.rglob("*")) if p.is_file()]) \
             if options.windows_zip else describe_dir(windows)
-    folders = ["src/m1", "src/quota", "scripts/m1", "tests/m1", "design/desktop-reference", "assets", "docs/m1", "docs/m2", "docs/handoff", "research/agent-usage"]
+    folders = ["src/m1", "src/quota", "scripts/m1", "tests/m1", "design/desktop-reference", "assets", "docs/m1", "docs/m2", "research/agent-usage", ".github"]
+    # Paths kept on disk for local reference but deliberately outside the distributable archive.
+    # Kept in sync with the "Working notes" section of .gitignore.
+    excluded = [("docs", "m1", "history")]
+    excluded_files = {
+        "docs/m1/ACTIVITY-RANGE-FIX-20261004.md", "docs/m1/ACTIVITY-UI-20261004.md",
+        "docs/m1/DETAIL-UI-20261004.md", "docs/m1/NOWDEX-UI-20261003.md",
+        "docs/m1/UI-POLISH-20261004.md",
+        "docs/m2/AGENT-INTEGRATION-PLAN-20261005.md",
+        "docs/m2/AGENT-INTEGRATION-RESULTS-20261005.md",
+        "docs/m2/AGENT-INTEGRATION-RESULTS-R3-20261006.md",
+        "docs/m2/AGENT-INTEGRATION-RESULTS-R4-20261006.md",
+        "docs/m2/AGENT-INTEGRATION-REVIEW-20261005.md",
+        "docs/m2/AGENT-INTEGRATION-REVIEW-R2-20261006.md",
+        "docs/m2/DESKTOP-REFINEMENT-20261004.md",
+        "docs/m2/RESULTS-R8-20261008.md",
+        "docs/m2/UI-REFINEMENT-RESULTS-R6-20261006.md",
+    }
     source_entries = [(p, p.relative_to(root).as_posix()) for folder in folders
-                      for p in sorted((root / folder).rglob("*")) if p.is_file()]
+                      for p in sorted((root / folder).rglob("*")) if p.is_file()
+                      and p.relative_to(root).as_posix() not in excluded_files
+                      and not any(tuple(Path(p.relative_to(root)).parts[:len(prefix)]) == prefix for prefix in excluded)]
     source_entries += [(root / name, name) for name in
-                       ["package.json", "package-lock.json", "eslint.config.js", ".gitignore", "AGENTS.md", "LICENSE", "README.md"]]
-    assert not any(part in {"node_modules", "artifacts", ".cache", ".git", "dist"}
+                       ["package.json", "package-lock.json", "eslint.config.js", ".gitignore", ".gitattributes",
+                        "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE", "CHANGELOG.md", "LICENSE",
+                        "README.md", "docs/PRIVACY.md", "docs/UPSTREAM-PROVENANCE.md"]]
+    assert not any(part in {"node_modules", "artifacts", ".cache", ".git", "dist", "handoff", "upstream"}
                    for _, name in source_entries for part in Path(name).parts)
     assert not any(Path(name).name in {"auth.json", "quota-cache.json", "statistics.json", "runtime.json"}
                    for _, name in source_entries)

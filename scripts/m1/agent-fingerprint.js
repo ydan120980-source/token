@@ -3,7 +3,7 @@ const fs = require('node:fs'), path = require('node:path'), crypto = require('no
 const root = path.resolve(__dirname,'../..'), files = [];
 function walk(dir) { for (const entry of fs.readdirSync(dir,{withFileTypes:true})) { const file = path.join(dir,entry.name); if (entry.isDirectory()) walk(file); else if (entry.isFile()) files.push(file); } }
 for (const folder of ['src/m1','src/quota','design/desktop-reference','scripts/m1','tests/m1']) walk(path.join(root,folder));
-for (const name of ['package.json','package-lock.json','eslint.config.js','AGENTS.md','docs/m2/AGENT-INTEGRATION-PLAN-20261005.md','docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md']) files.push(path.join(root,name));
+for (const name of ['package.json','package-lock.json','eslint.config.js','AGENTS.md','docs/m2/AGENT-INTEGRATION-CONTRACT-20261005.md']) files.push(path.join(root,name));
 const entries = files.sort().map(file => ({file:path.relative(root,file).replaceAll('\\','/'),sha256:crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}));
 const sha256 = crypto.createHash('sha256').update(entries.map(e => e.file + '\0' + e.sha256 + '\n').join('')).digest('hex');
 const output = path.resolve(root,process.argv[2] || 'artifacts/m2-agents/source-fingerprint.json');
