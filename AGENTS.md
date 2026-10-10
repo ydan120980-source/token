@@ -23,6 +23,7 @@ Human-facing overview: `README.md`. Contribution rules and data-semantics invari
 - Never fill unknown usage/price with zero and never disable conflict protection to make totals price; unknown stays null and displays as unknown/unpriced.
 - When replacing a selected usage snapshot, apply it completely: remove attributes absent from the new snapshot, keep first-owner identity and object references (`src/m1/sources.js`).
 - Snapshot selection (`src/m1/usage-snapshot.js`) must stay order-independent: valid over invalid, then larger total (even if partial), then quality/known fields; `tests/m1/snapshot-order.test.js` checks every order against a reference rule.
+- `tokscale.exe` is SHA-256-checked before every spawn against `TOKSCALE` in `src/m1/native.js`; upgrading tokscale means updating that version and hash with the lockfile, never skipping the check.
 - Native verification must run in a fresh directory each time; tokscale's source-message cache assumes append-only files and a reused projection freezes every later collection.
 - Playwright `page.waitForFunction` resolves immediately for async predicates; poll bridge state with `until` from `scripts/m1/ui-settle.js`.
 - Source status `partial` describes the scan; whether a record is priced depends on that record's current quality.

@@ -27,7 +27,7 @@
 
 请在报告前了解当前**已知**的限制，这些是记录在案的设计现状而非新漏洞：
 
-- **未签名构建。** `signAndEditExecutable: false`，Windows SmartScreen 会告警。`@tokscale` 原生二进制在 spawn 前不校验哈希。
+- **未签名构建。** `signAndEditExecutable: false`，Windows SmartScreen 会告警。`@tokscale` 原生二进制在每次 spawn 前按 `src/m1/native.js` 中固定的 SHA-256 校验，不符时以 `NATIVE_BINARY_MISMATCH` 拒绝且不启动（目前这会让该轮采集整体失败，与其他原生校验失败相同）。校验与启动之间仍有极短的检查-使用间隔；它防的是二进制损坏或被单独替换，不替代代码签名，也不防已能写入安装目录的本地攻击者。
 - **网络封锁是 Node 层拦截，不是内核级管控。** `src/m1/policy.js:66` 的 `disableNetwork` 覆盖 `fetch`、`node:http/https`、`node:net`、`node:tls` 的常用入口，未覆盖 `http2`、`dgram`、全局 `WebSocket`、`net.Socket.prototype.connect` 或原生模块。当前代码不调用这些 API，但这不是沙箱级保证。
 - **数据损坏走隔离，不是自动回滚。** 损坏的 `statistics.json` / `preferences.json` / `billing.json` / `model-pricing.json` / `quota-cache.json` 会被移入数据目录下的 `quarantine/`，应用以空默认值继续启动，界面上说明发生了什么。原始字节保留供检查，但**没有从 `backups/` 自动恢复数据的入口**。
 

@@ -14,6 +14,11 @@ for (const folder of ['src/quota', 'src/m1', 'design/desktop-reference']) walk(p
 for (const relative of ['LICENSE', 'docs/m1/UPSTREAM.md', 'docs/m1/CODEX-QUOTA.md']) check(path.join(root, relative));
 const packaged = JSON.parse(asar.extractFile(archive, 'package.json')), current = require('../../package.json');
 for (const key of ['main', 'name', 'version', 'dependencies']) assert.deepEqual(packaged[key], current[key], key);
+// The native binary ships outside the archive; the packaged copy must be the pinned release.
+const { TOKSCALE, trustedBinary } = require('../../src/m1/native');
+const unpacked = path.join(directory, 'resources/app.asar.unpacked/node_modules/@tokscale/cli-win32-x64-msvc');
+assert.equal(JSON.parse(fs.readFileSync(path.join(unpacked, 'package.json'), 'utf8')).version, TOKSCALE.version);
+trustedBinary(path.join(unpacked, 'bin/tokscale.exe'));
 fs.mkdirSync(path.join(root, 'artifacts/maintenance'), { recursive: true });
-fs.writeFileSync(path.join(root, 'artifacts/maintenance/asar-results.json'), JSON.stringify({ currentProductSourceMatches: true, files, retiredPathsAbsent: true, packageRuntimeMetadataMatches: true, packageDevelopmentFieldsPrunedByBuilder: true, dependencies: ['sql.js', 'tokscale'] }, null, 2));
-console.log('PASS: ' + files.length + ' source/assets/docs match ASAR byte-for-byte; runtime package metadata matches.');
+fs.writeFileSync(path.join(root, 'artifacts/maintenance/asar-results.json'), JSON.stringify({ currentProductSourceMatches: true, files, retiredPathsAbsent: true, packageRuntimeMetadataMatches: true, packageDevelopmentFieldsPrunedByBuilder: true, dependencies: ['sql.js', 'tokscale'], unpackedNativeBinary: { version: TOKSCALE.version, sha256: TOKSCALE.sha256 } }, null, 2));
+console.log('PASS: ' + files.length + ' source/assets/docs match ASAR byte-for-byte; runtime package metadata matches; unpacked tokscale ' + TOKSCALE.version + ' matches its pinned SHA-256.');
