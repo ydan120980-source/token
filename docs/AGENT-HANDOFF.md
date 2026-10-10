@@ -142,7 +142,7 @@ docs/                      设计、合同与验收记录
 
 ### 已知缺口（诚实清单，不要当它们不存在）
 
-- **构建产物未签名**（`signAndEditExecutable: false`）。`@tokscale` 的原生二进制在 spawn 前**不校验哈希**。自用可接受，对外分发前必须处理。
+- **构建产物未签名**（`signAndEditExecutable: false`）。`@tokscale` 的原生二进制在每次 spawn 前按固定 SHA-256 校验（`src/m1/native.js` 的 `TOKSCALE`），打包审计也核对 `app.asar.unpacked` 里的副本；升级 tokscale 必须同步改这个哈希。签名需要证书，未处理，对外分发前必须解决。
 - **原生验证失败会丢弃整轮采集结果**，而不是保留本轮扫描（`src/m1/worker.js` 的 scan 与 native 校验在同一 async 链上）。
 - 存储文件损坏时**只做隔离，不做自动回滚**；`backups/` 里仍有迁移前备份，但没有"一键恢复"入口。
 - **网络封锁是 Node 层的 API 拦截**，只覆盖 `fetch` / `http` / `https` / `net` / `tls`；没有内核级审计，且未覆盖 `http2` / `dgram` / `WebSocket`。

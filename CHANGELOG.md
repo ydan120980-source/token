@@ -2,6 +2,12 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 的结构，版本号遵循语义化版本。
 
+## [Unreleased]
+
+### 安全
+
+- `@tokscale` 原生二进制在每次 spawn 前按固定 SHA-256 校验，不符时以 `NATIVE_BINARY_MISMATCH` 拒绝；`npm run audit:package` 同时核对打包目录 `app.asar.unpacked` 中的副本。构建仍未签名。
+
 ## [0.1.0] - 2026-10-08
 
 首个发布版本。Windows 本地优先，完全离线。

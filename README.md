@@ -136,7 +136,7 @@ npm.cmd run dist:win:dir -- --config.directories.output=dist/r10
 
 ## 已知限制
 
-- 构建产物**未签名**（`signAndEditExecutable: false`），Windows SmartScreen 会警告。`@tokscale` 原生二进制在 spawn 前不校验哈希。
+- 构建产物**未签名**（`signAndEditExecutable: false`），Windows SmartScreen 会警告。`@tokscale` 原生二进制在每次 spawn 前按 `src/m1/native.js` 中固定的 SHA-256 校验，不符时以 `NATIVE_BINARY_MISMATCH` 拒绝且不启动（目前这会让该轮采集整体失败，与其他原生校验失败相同）。校验与启动之间仍有极短的检查-使用间隔；它防的是二进制损坏或被单独替换，不替代代码签名，也不防已能写入安装目录的本地攻击者。
 - 存储文件损坏时不会退出：损坏文件被移入数据目录下的 `quarantine/`，应用以空数据启动并在界面上说明，原始字节保留供人工检查。旧的自动备份仍在（`backups/statistics-before-*.json`），但没有"从备份一键回滚"的按钮。
 - 原生验证（tokscale 交叉校验）失败会丢弃整轮采集结果，而不是保留本轮扫描。
 - 摘要首次统计 2 万行数据时主线程会阻塞约 334–364 ms。
