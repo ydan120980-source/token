@@ -98,7 +98,7 @@ node design/desktop-reference/serve.js
 ## 开发
 
 ```powershell
-npm.cmd run verify          # ESLint + 单元测试（119 项）
+npm.cmd run verify          # ESLint + 全部单元测试，要求 fail 0
 npm.cmd run test:native     # 需要 tokscale 原生二进制
 npm.cmd run test:ui         # 需要 Playwright + 显示器
 npm.cmd run test:quota:ui

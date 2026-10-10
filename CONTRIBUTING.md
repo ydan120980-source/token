@@ -22,7 +22,7 @@ npm.cmd run verify
 npm.cmd run verify
 ```
 
-包含 ESLint 与全部单元测试（当前 119 项）。除此之外，按改动范围还应运行：
+包含 ESLint 与全部单元测试，要求 `fail 0`（不在文档里记录测试数：并行分支都会改它）。除此之外，按改动范围还应运行：
 
 | 改动区域 | 需要的额外检查 |
 | --- | --- |
@@ -66,6 +66,24 @@ npm.cmd run verify
 - 每个被接受的增量都要提交，代码、测试与文档放在同一个提交里。
 - 不要提交 `dist/`、`artifacts/`、`.planning/`、`.cache/`——已在 `.gitignore`。
 - 不要提交真实 Agent 会话内容、路径、账号标识或任何个人数据到代码、测试、文档或 issue 里。
+
+## 协作流程
+
+本仓库由多位维护者（人与各自的 AI 编码会话）共同开发，维护者直接拥有仓库写权限。
+
+- **分支**：每项工作开一个主题分支（`fix/…`、`feat/…`、`docs/…`），通过 PR 合入 `main`，不直接推 `main`。开工前与推送前都 `git pull --rebase origin main`。
+- **合入条件**：CI 的 `verify` 通过，且 PR 描述写明本地实际跑过哪些检查、哪些没跑（按四态：已实现 / 合成测试过 / 真实数据验证过 / 未执行）。
+- **历史不可改写**：不 force push `main`，不改写已推送的历史。在可能含未推送提交的工作树上不要用 `git reset --hard` / `git clean`——本项目曾因此永久丢失两个已提交的增量。
+- **发布验收归属**：界面套件、打包版与解压副本验收、`dist/<代次>` 候选和 `docs/m2/RESULTS-*` 验收记录由**发布验收负责人**在有桌面的 Windows 机器上完成。没有界面测试条件的维护者照常提交，但涉及渲染层的改动要等负责人跑过相应 `test:*:ui` 套件才算验收。
+- **范围决定**：超出九个来源或"额度仅 Codex"的工作，先在 issue 里取得项目所有者的决定再动手。
+- **提交身份**：建议使用 GitHub 提供的 noreply 邮箱提交（`git config user.email <id>+<login>@users.noreply.github.com`），仓库是公开的。
+
+## Windows 工具链陷阱
+
+- PowerShell 里用 `npm.cmd` 而不是 `npm`，避开 `npm.ps1` 的执行策略限制。
+- PowerShell 没有 heredoc；多行提交信息写进文件再 `git commit -F <文件>`。
+- 工作区路径含非 ASCII 字符时，Node 24 的 `fs.cpSync` 可能直接以退出码 127 结束进程且无任何输出；辅助脚本里请逐文件复制（在 Node 24.13.1 上复现；其他版本未验证）。
+- `scripts/m1/python.js` 导出的是 `{ python }` 函数，调用时写 `python()`。
 
 ## 报告问题
 
