@@ -1,6 +1,6 @@
 # Agent 交接说明
 
-> **读者**：第一次接手本项目、**没有任何历史上下文**的 AI 编码 Agent（本项目的双主开发都在用 Claude Code）。
+> **读者**：第一次接手本项目、**没有任何历史上下文**的 AI 编码 Agent（本项目由多位维护者协作，主要使用 Claude Code）。
 > 本文假设你是刚 clone 完仓库、对项目一无所知。读完本文你应该能独立跑起来、改对地方、不踩已知的坑。
 > 面向人类的上手说明是 [README.md](../README.md)，贡献规则与数据语义铁律是 [CONTRIBUTING.md](../CONTRIBUTING.md)。本文是给 Agent 的第三份，偏"接手时你需要知道但没人会主动告诉你"的部分。
 
@@ -36,7 +36,7 @@ npm.cmd run verify                      # ESLint + 全部单元测试
 
 在 Windows PowerShell 里用 `npm.cmd` 而不是 `npm`，可以避开 `npm.ps1` 的执行策略问题。
 
-`verify` 应当输出 `fail 0`，当前是 **119 项测试 / 23 个测试文件**。这是唯一能在任何机器上无条件跑通的自检；不需要显示器、不需要 Electron、不需要原生二进制。
+`verify` 应当输出 `fail 0`。这是唯一能在任何机器上无条件跑通的自检；不需要显示器、不需要 Electron、不需要原生二进制。
 
 只想看界面（不启动 Electron、不连真实数据）：
 
@@ -117,7 +117,7 @@ docs/                      设计、合同与验收记录
 
 | 命令 | 需要什么 | 何时跑 |
 | --- | --- | --- |
-| `npm run verify` | 无 | **每次改动必跑**。ESLint + 119 项单元测试 |
+| `npm run verify` | 无 | **每次改动必跑**。ESLint + 全部单元测试 |
 | `npm run test:native` | tokscale 原生二进制 | 动 `src/m1/` 的采集、解析、存储 |
 | `npm run test:*:ui` | Playwright + Electron + 显示器 | 动渲染层 |
 | `npm run test:stress` | Node | 动并发、存储、调度 |
@@ -135,8 +135,8 @@ docs/                      设计、合同与验收记录
 
 ## 7. 当前状态
 
-- 分支：`main`。**工作树应当是干净的。**
-- 测试：119 项，23 个测试文件。CI 全绿。
+- 分支：工作在主题分支上进行，经 PR 合入 `main`。**工作树应当是干净的。**
+- 测试：`verify` 应为 `fail 0`，CI 全绿。
 - 来源：九来源只读采集已实现；额度仅 Codex。
 - 交付：`dist/` 下的候选**不会被提交**（已被 `.gitignore` 忽略），每次候选是新的 `dist/<generation>` 目录。历史候选不保证保留、也不必再验证。
 
@@ -162,6 +162,7 @@ docs/                      设计、合同与验收记录
 - 不要往代码、测试、文档或 issue 里写**真实 Agent 会话内容、本机路径、账号标识或个人数据**。
 - 提交日志前自行删除其中的本机路径与账号信息。
 - 安全漏洞走 [SECURITY.md](../SECURITY.md) 的私密渠道，不要发公开 issue。
+- **多人协作**：主题分支 + PR，不直推 `main`，不 force push，不改写已推送历史；发布验收（界面套件、打包与解压验收、候选与 `RESULTS-*` 记录）归发布验收负责人。你如果没有显示器跑不了界面测试，照常提交，但在 PR 里写明没跑，不要声称已验收。完整规则见 [CONTRIBUTING.md](../CONTRIBUTING.md) 的"协作流程"与"Windows 工具链陷阱"。
 
 ---
 

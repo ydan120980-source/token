@@ -13,7 +13,7 @@ Human-facing overview: `README.md`. Contribution rules and data-semantics invari
 
 ## Commands
 
-- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`, 119 tests)
+- Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`; do not record the test count in living docs, parallel branches all change it)
 - Required checks for a release candidate: `npm run test:native`, `npm run test:ui`, `npm run test:quota:ui`, `npm run test:stress`, `npm run experiment:crypto`, `npm run audit:runtime`, plus Windows packaged/extracted UI smoke checks
 - Build: `npm run dist:win:dir`; source archive: `npm run package:source`; share runtime across generations: `npm run dist:share`
 - All maintenance UI tests must specify their own usage/quota directories and a synthetic fixture home. `validate:local` is the only script that reads real sources and is never part of routine verification.
@@ -31,3 +31,10 @@ Human-facing overview: `README.md`. Contribution rules and data-semantics invari
 ## Git
 
 Commit each accepted increment (code, tests and its docs) so history is the audit trail; delivery reports cite the commit. `dist/`, `artifacts/`, `.planning/` and `.cache/` stay untracked.
+
+Several maintainers (people and their agent sessions) share this repository; the workflow is in `CONTRIBUTING.md` ("协作流程"). In short:
+
+- Work on a topic branch and merge through a pull request; do not push to `main` directly. `git pull --rebase origin main` before starting and before pushing.
+- Never force-push `main`, never rewrite published history, and never run `git reset --hard` / `git clean` on a tree that may hold unpushed commits.
+- Release-candidate acceptance (UI suites, packaged and extracted checks, `dist/<generation>`, the `docs/m2/RESULTS-*` record) belongs to the release owner on a Windows machine with a desktop. Other maintainers state in the PR which checks they ran and which they could not; a renderer change is not accepted until the release owner has run the matching UI suites.
+- Scope beyond the nine sources or Codex-only quota needs the project owner's decision recorded in an issue before work starts.
