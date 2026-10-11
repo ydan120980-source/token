@@ -16,6 +16,24 @@ const { fixtures } = require('../../tests/m1/fixtures');
 const NOW = Date.parse('2026-10-11T06:00:00Z');
 const near = (actual, expected, tolerance, label) => assert.ok(Math.abs(actual - expected) <= tolerance, label + ' by ' + Math.round(actual - expected) + ' px');
 const frames = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+// How far a clipping ancestor cuts into a mark's painted box: its border box after
+// transforms, grown by its outer box-shadows (offset, blur and spread).
+const paintClip = ([selector, index]) => {
+  const all = document.querySelectorAll(selector), el = all[index < 0 ? all.length + index : index], box = el.getBoundingClientRect();
+  const paint = { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+  for (const shadow of getComputedStyle(el).boxShadow.split(/,(?![^(]*\))/)) {
+    if (shadow.includes('inset') || !shadow.includes('px')) continue;
+    const [x, y, blur = 0, spread = 0] = shadow.match(/-?[\d.]+px/g).map(parseFloat);
+    paint.left = Math.min(paint.left, box.left + x - blur - spread); paint.right = Math.max(paint.right, box.right + x + blur + spread);
+    paint.top = Math.min(paint.top, box.top + y - blur - spread); paint.bottom = Math.max(paint.bottom, box.bottom + y + blur + spread);
+  }
+  for (let a = el.parentElement; a; a = a.parentElement) {
+    const style = getComputedStyle(a), clip = a.getBoundingClientRect(), x = style.overflowX !== 'visible', y = style.overflowY !== 'visible';
+    const cut = Math.max(x ? clip.left - paint.left : 0, x ? paint.right - clip.right : 0, y ? clip.top - paint.top : 0, y ? paint.bottom - clip.bottom : 0);
+    if (cut > 1) return (a.id ? '#' + a.id : '.' + a.classList[0]) + ' cuts ' + Math.round(cut) + ' px';
+  }
+  return '';
+};
 
 // Several agents over five months, and three agents today, so filtering by one agent
 // changes the height of the sections above the trend card.
@@ -88,6 +106,17 @@ async function size(app, page, width, height) {
         await page.mouse.move(2, 2);
         assert.ok(Math.min(Math.abs(tip.y + tip.height - pointer.y), Math.abs(tip.y - pointer.y)) < 60, 'tooltip ' + Math.round(pointer.y - tip.y - tip.height) + ' px above the pointer');
       });
+      // The first and last marks of a row keep their whole hover ring and shadow.
+      await check('edgeHoverNotClipped', async () => {
+        await size(app, page, 1024, 736);
+        for (const [selector, index] of [['#overviewWeek button', 0], ['#overviewWeek button', -1], ['#heatmap button[data-date]', 0], ['#heatmap button[data-date]', -1]]) {
+          const mark = index < 0 ? page.locator(selector).last() : page.locator(selector).nth(index);
+          await mark.scrollIntoViewIfNeeded(); await mark.hover(); await settle(page);
+          const cut = await page.evaluate(paintClip, [selector, index]);
+          assert.equal(cut, '', selector + (index < 0 ? ' last' : ' first') + ': ' + cut);
+        }
+        await page.mouse.move(2, 2); await page.evaluate(() => window.scrollTo(0, 0));
+      });
       await check('punchCardFits', async () => {
         await size(app, page, 1024, 736);
         await page.locator('#hourCard').scrollIntoViewIfNeeded(); await settle(page);
@@ -153,5 +182,5 @@ async function size(app, page, width, height) {
     } finally { await app.close(); }
   } finally { await cleanup(dir); }
   fs.writeFileSync(path.join(output, 'layout-ui-results.json'), JSON.stringify(evidence, null, 2));
-  console.log('PASS: layout geometry and interaction regressions (overflow, cover, expand, tooltip, punch card, calendar, filter hold, range calendar, legend).');
+  console.log('PASS: layout geometry and interaction regressions (overflow, cover, expand, tooltip, edge hover, punch card, calendar, filter hold, range calendar, legend).');
 })().catch(error => { console.error(error.stack); process.exitCode = 1; });
