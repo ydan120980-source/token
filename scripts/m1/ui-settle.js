@@ -1,5 +1,6 @@
 'use strict';
 /* global document */
+const { remove } = require('../../tests/m1/temp');
 // Wait on actual finite effects, not fixed sleeps or force-clicks.
 async function settle(page) {
   await page.waitForFunction(() => (!window.uiDetail || window.uiDetail.activeCount === 0) && document.getAnimations().every(animation => animation.playState !== 'running' || animation.effect.getTiming().iterations === Infinity), null, { timeout: 5000 });
@@ -24,4 +25,15 @@ async function showView(page, name) {
   }
   await page.waitForFunction(view => document.getElementById('main').dataset.currentView === view, name, { timeout: 5000 }); await settle(page);
 }
-module.exports = { settle, until, showView };
+// A test window opens in front, possibly under the cursor of whoever is using the
+// desktop; a real mouse move then replaces Playwright's injected hover. Ignoring OS
+// mouse events leaves the window to the injected pointer only.
+async function isolatePointer(app) {
+  await app.evaluate(({ BrowserWindow }) => { for (const win of BrowserWindow.getAllWindows()) win.setIgnoreMouseEvents(true); });
+}
+// Teardown must not replace a suite's own result: removal retries Windows' transient
+// locks, and a directory that still cannot be removed is reported, not thrown.
+async function cleanup(dir) {
+  try { await remove(dir); } catch (error) { process.stderr.write('cleanup left ' + dir + ' (' + error.code + ')\n'); }
+}
+module.exports = { settle, until, showView, isolatePointer, cleanup };

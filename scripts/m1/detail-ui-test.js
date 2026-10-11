@@ -3,7 +3,7 @@
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), assert = require('node:assert/strict');
 const {_electron:electron} = require('playwright');
 const {Store,atomic} = require('../../src/m1/store'), {normalize} = require('../../src/m1/normalize');
-const {fixtures} = require('../../tests/m1/fixtures'), {settle} = require('./ui-settle');
+const {fixtures} = require('../../tests/m1/fixtures'), {settle,cleanup} = require('./ui-settle');
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(),'agent-usage-detail-')), results = [];
   const output = process.env.DETAIL_EVIDENCE_DIR || 'artifacts/detail'; fs.mkdirSync(output,{recursive:true});
@@ -80,5 +80,5 @@ const {fixtures} = require('../../tests/m1/fixtures'), {settle} = require('./ui-
       } finally {await app.close();}
     }
     fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2)); console.log(JSON.stringify(results.map(({frames,...row})=>({...row,numberFrames:frames.samples.length}))));
-  } finally {fs.rmSync(root,{recursive:true,force:true});}
+  } finally {await cleanup(root);}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

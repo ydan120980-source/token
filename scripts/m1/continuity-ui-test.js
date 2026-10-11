@@ -4,7 +4,7 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {_electron:electron}=require('playwright');
 const {Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../src/m1/normalize'),{fixtures}=require('../../tests/m1/fixtures');
-const {settle}=require('./ui-settle');
+const {settle,cleanup}=require('./ui-settle');
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'agent-usage-continuity-')),output=process.env.CONTINUITY_EVIDENCE_DIR||'artifacts/m2-motion/continuity-source',evidence=[];fs.mkdirSync(output,{recursive:true});
  try{
@@ -82,5 +82,5 @@ const {settle}=require('./ui-settle');
    }finally{await app.close();}
   }
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(evidence,null,2));console.log('PASS: quota acceleration/retarget, minute cadence, honest gap connections and logo filters at 100%/150%.');
- }finally{fs.rmSync(root,{recursive:true,force:true});}
+ }finally{await cleanup(root);}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

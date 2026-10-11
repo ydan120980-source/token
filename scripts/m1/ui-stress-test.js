@@ -6,7 +6,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const { performance } = require('node:perf_hooks');
 const { _electron: electron } = require('playwright');
-const { settle } = require('./ui-settle');
+const { settle, cleanup } = require('./ui-settle');
 const { Store } = require('../../src/m1/store');
 const { normalize } = require('../../src/m1/normalize');
 const { fixtures } = require('../../tests/m1/fixtures');
@@ -46,6 +46,6 @@ const { fixtures } = require('../../tests/m1/fixtures');
         }
       } finally { await app.close(); }
     }
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await cleanup(root); }
   fs.writeFileSync('artifacts/maintenance/ui-stress-results.json', JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence));
 })().catch(error => { console.error(error.stack); process.exitCode = 1; });
