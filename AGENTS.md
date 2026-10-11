@@ -14,7 +14,7 @@ Human-facing overview: `README.md`. Contribution rules and data-semantics invari
 ## Commands
 
 - Lint + unit tests: `npm run verify` (ESLint clean; `node --test` reports `fail 0`; do not record the test count in living docs, parallel branches all change it)
-- Required checks for a release candidate: `npm run test:native`, `npm run test:ui`, `npm run test:quota:ui`, `npm run test:stress`, `npm run experiment:crypto`, `npm run audit:runtime`, plus Windows packaged/extracted UI smoke checks
+- What to run when (dev loop / PR / release candidate) is in `CONTRIBUTING.md` "测试分层". A release candidate runs the headless checks (`test:native`, `test:stress`, `experiment:crypto`, `audit:runtime`), `dist:win:dir` + `audit:package`, every `scripts/m1/*-ui-test.js` against the packaged build, and one collecting suite on a byte-checked extracted copy under a path with spaces and non-ASCII characters. Source-mode full UI runs are not repeated at release time.
 - Build: `npm run dist:win:dir`; source archive: `npm run package:source`; share runtime across generations: `npm run dist:share`
 - All maintenance UI tests must specify their own usage/quota directories and a synthetic fixture home. `validate:local` is the only script that reads real sources and is never part of routine verification.
 
