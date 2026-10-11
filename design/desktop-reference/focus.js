@@ -28,6 +28,24 @@
     const ease = rest * rest * (3 - 2 * rest);
     if (ease > .001) cost.style.scale = String(1 + .06 * ease); else cost.style.removeProperty('scale');
   }
+  // The cover (profile, figure, 30-day strip, today card) fills the window so the next
+  // section starts below the fold. Spare height is shared out by rhythm.css through --cover
+  // (strip height and the gaps); the coefficients sum to one, so the activity block's
+  // position without it is its position minus the current value, and the result is stable.
+  let coverFrame = 0;
+  function fitCover() {
+    coverFrame = 0;
+    const page = document.getElementById('usage'), next = document.getElementById('activityBlock'); if (!page || !next || page.hidden) return;
+    const current = parseFloat(page.style.getPropertyValue('--cover')) || 0;
+    const natural = next.getBoundingClientRect().top + scrollY - current;
+    const cover = Math.round(Math.min(320, Math.max(0, innerHeight + 16 - natural)));
+    if (cover !== current) page.style.setProperty('--cover', cover + 'px');
+  }
+  const scheduleCover = () => { if (!coverFrame) coverFrame = requestAnimationFrame(fitCover); };
+  addEventListener('resize', scheduleCover);
+  addEventListener('ui-view-change', scheduleCover);
+  if (window.ResizeObserver) { const observer = new ResizeObserver(scheduleCover); for (const selector of ['#usage > .profile', '#usage .usage-overview', '#usage .card.today']) { const element = document.querySelector(selector); if (element) observer.observe(element); } }
+  scheduleCover();
   const schedule = () => { if (!frame) frame = requestAnimationFrame(apply); };
   addEventListener('scroll', schedule, { passive: true });
   addEventListener('resize', schedule);

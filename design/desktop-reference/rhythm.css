@@ -15,8 +15,10 @@
 #usage > .profile .profile-left { gap: 12px; align-items: center; }
 #usage > .profile .profile-title h1 { font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
 #usage > .profile .range-tabs button { min-height: 30px; padding: 4px 14px; font-size: 12px; }
-#usage .usage-overview { margin-top: 34px; padding-bottom: 26px; }
-#usage .overview-scope { margin-bottom: 4px; }
+/* --cover is the spare window height focus.js shares out so the cover fills the first screen;
+   the coefficients below sum to one. */
+#usage .usage-overview { margin-top: calc(40px + var(--cover, 0px) * .18); padding-bottom: calc(32px + var(--cover, 0px) * .14); }
+#usage .overview-scope { margin-bottom: 6px; }
 #totalCost { transform-origin: 0 100%; font-size: clamp(60px, 7vw, 96px); font-weight: 560; letter-spacing: -.03em; }
 #totalCost .cost-value, #totalCost .cost-lower, #totalCost .cost-upper { font-weight: inherit; }
 #totalCost:has(.cost-expanded) { scale: 1 !important; transition: scale 220ms var(--ease-out, ease-out); }
@@ -24,10 +26,10 @@
 .usage-overview .hero-row .totals { flex: 1 1 auto; min-width: 0; margin: 0; }
 .usage-overview .overview-facts { flex: none; gap: 8px 24px; margin: 0 0 22px; padding-right: 0; font-size: 13px; }
 .usage-overview .overview-facts strong { font-size: 18px; font-weight: 560; }
-.usage-overview .recent-activity, .usage-overview:has(.cost-expanded) .recent-activity { position: static; width: auto; margin: 26px 0 0; opacity: 1; pointer-events: auto; color: inherit; }
-.recent-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 14px; color: var(--muted); font-size: 13px; }
+.usage-overview .recent-activity, .usage-overview:has(.cost-expanded) .recent-activity { position: static; width: auto; margin: calc(30px + var(--cover, 0px) * .14) 0 0; opacity: 1; pointer-events: auto; color: inherit; }
+.recent-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 18px; color: var(--muted); font-size: 13px; }
 .recent-head b { color: var(--text); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
-#overviewWeek.overview-week { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: clamp(4px, .55vw, 8px); align-items: end; height: 128px; }
+#overviewWeek.overview-week { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: clamp(4px, .55vw, 8px); align-items: end; height: calc(132px + var(--cover, 0px) * .34); }
 #overviewWeek .week-day { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 0; height: 100%; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 999px; background: transparent; }
 #overviewWeek .week-day i { display: block; width: 100%; height: max(var(--h), 5px); border-radius: 999px; background: color-mix(in srgb, var(--text) 22%, transparent); transform-origin: 50% 100%; transition: background-color 160ms, filter 160ms; }
 #overviewWeek .week-day.is-peak i { background: color-mix(in srgb, var(--text) 58%, transparent); }
@@ -40,7 +42,8 @@ body.dark #overviewWeek .week-day:hover i, body.dark #overviewWeek .week-day:foc
 .recent-axis span:nth-child(2) { text-align: center; }
 .recent-axis span:last-child { text-align: right; }
 #usage .card.today .inline-totals strong { font-size: 18px; }
-@media (max-width: 760px) { #overviewWeek.overview-week { height: 96px; } }
+#usage #activityBlock { margin-top: calc(60px + var(--cover, 0px) * .2); }
+@media (max-width: 760px) { #overviewWeek.overview-week { height: calc(96px + var(--cover, 0px) * .34); } }
 
 /* Back chips share the segmented controls' quiet style: neutral fill, drawn chevron. */
 .insight-clear { gap: 7px; height: 28px; padding: 0 12px 0 11px; border-radius: 9px; background: var(--fill); color: var(--text); font-weight: 500; }
@@ -59,10 +62,13 @@ body.dark #overviewWeek .week-day:hover i, body.dark #overviewWeek .week-day:foc
 .rhythm-caption { margin: 0 0 12px; font-size: 13px; font-weight: 600; }
 .rhythm-caption span { color: var(--muted); font-weight: 400; font-size: 12px; }
 .rhythm-card .heat-body { padding: 0; }
-#activityBlock .heat-grid-scroll { width: auto; max-width: none; margin: 0 -4px; padding: 4px; overflow-x: auto; overflow-y: hidden; }
+/* Room for a hovered cell's lift and ring at the grid's edges, so they are not clipped. */
+#activityBlock .heat-grid-scroll { width: auto; max-width: none; margin: -8px; padding: 8px; overflow-x: auto; overflow-y: hidden; }
 #activityBlock .heat-grid-scroll .heat-scroll { width: auto; min-width: 620px; padding: 0; }
 #activityBlock .heatmap { width: 100%; min-width: 620px; flex: none; gap: 3px; grid-template-rows: repeat(7, auto); grid-template-columns: repeat(var(--heat-columns, 53), minmax(0, 1fr)); }
 #activityBlock .heatmap button, #activityBlock .heatmap .pad, #activityBlock .heatmap .future { width: 100%; height: auto; aspect-ratio: 1; border-radius: 4px; }
+/* Hover is a quiet ring; the solid ring stays for keyboard focus and the selected day. */
+#activityBlock .heatmap button:hover:not(:focus-visible) { box-shadow: 0 0 0 2px var(--card), 0 0 0 3px color-mix(in srgb, var(--text) 30%, transparent); }
 #activityBlock .heatmap button[data-level='0'] { background: color-mix(in srgb, var(--heat0) 70%, transparent); }
 #activityBlock .heatmap button[data-observed='false'] { border: 0; opacity: 1; background: color-mix(in srgb, var(--heat0) 42%, transparent); }
 #activityBlock .heatmap .future { border: 0; background: color-mix(in srgb, var(--heat0) 28%, transparent); }
@@ -78,16 +84,19 @@ body.dark #overviewWeek .week-day:hover i, body.dark #overviewWeek .week-day:foc
 .hours-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px 36px; align-items: start; }
 /* Week × hour as a punch card: one dot per slot, its size and tone growing with use, on a
    faint guide line per weekday. Quieter than squares, and distinct from the calendar. */
-.rhythm-hours .hour-grid { grid-template-columns: 26px repeat(24, minmax(14px, 1fr)); gap: 2px 0; min-width: 460px; }
+/* Columns shrink with the card and dots never exceed their column, so the card needs no
+   horizontal scroll and a hovered dot is never clipped. */
+.rhythm-hours .hour-scroll { overflow: visible; padding: 0; margin: 0; }
+.rhythm-hours .hour-grid { grid-template-columns: 26px repeat(24, minmax(0, 1fr)); gap: 2px 0; min-width: 0; }
 .rhythm-hours .hour-grid .hour-day { padding-right: 8px; text-align: right; }
-.rhythm-hours .hour-grid button { position: relative; display: grid; place-items: center; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 8px; background: transparent !important; box-shadow: none !important; transform: none !important; }
+.rhythm-hours .hour-grid button { position: relative; container-type: inline-size; display: grid; place-items: center; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 8px; background: transparent !important; box-shadow: none !important; transform: none !important; }
 .rhythm-hours .hour-grid button::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: color-mix(in srgb, var(--text) 5%, transparent); }
-.rhythm-hours .hour-grid button i { position: relative; width: var(--s); height: var(--s); border-radius: 50%; background: var(--heat3); transition: scale 180ms var(--ease-out, ease-out), box-shadow 160ms; }
+.rhythm-hours .hour-grid button i { position: relative; width: min(var(--s), calc(100cqw - 4px)); height: auto; aspect-ratio: 1; border-radius: 50%; background: var(--heat3); transition: scale 180ms var(--ease-out, ease-out), box-shadow 160ms; }
 .rhythm-hours .hour-grid button.lv0 i { background: color-mix(in srgb, var(--text) 9%, transparent); }
 .rhythm-hours .hour-grid button.lv1 i { background: var(--heat1); }
 .rhythm-hours .hour-grid button.lv2 i { background: var(--heat2); }
 .rhythm-hours .hour-grid button.lv4 i { background: var(--heat4); }
-.rhythm-hours .hour-grid button:hover i { scale: 1.25; }
+.rhythm-hours .hour-grid button:hover i { scale: 1.12; box-shadow: 0 0 0 2px var(--card), 0 0 0 3px color-mix(in srgb, var(--text) 26%, transparent); }
 .rhythm-hours .hour-grid button.lv0:hover i { scale: 1.5; }
 .rhythm-hours .hour-grid button[aria-pressed='true'] i { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--text); }
 .rhythm-hours .hour-grid button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
