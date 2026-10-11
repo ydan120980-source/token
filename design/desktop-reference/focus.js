@@ -32,17 +32,19 @@
   // section starts below the fold. Spare height is shared out by rhythm.css through --cover
   // (strip height and the gaps); the coefficients sum to one, so the activity block's
   // position without it is its position minus the current value, and the result is stable.
-  let coverFrame = 0;
+  // Content changes refit only near the top: lower down, a refit would move what the user is
+  // reading. A window resize always refits.
+  let coverFrame = 0, coverForced = false;
   function fitCover() {
-    coverFrame = 0;
-    const page = document.getElementById('usage'), next = document.getElementById('activityBlock'); if (!page || !next || page.hidden) return;
+    const forced = coverForced; coverFrame = 0; coverForced = false;
+    const page = document.getElementById('usage'), next = document.getElementById('activityBlock'); if (!page || !next || page.hidden || (!forced && scrollY > 40)) return;
     const current = parseFloat(page.style.getPropertyValue('--cover')) || 0;
     const natural = next.getBoundingClientRect().top + scrollY - current;
     const cover = Math.round(Math.min(320, Math.max(0, innerHeight + 16 - natural)));
     if (cover !== current) page.style.setProperty('--cover', cover + 'px');
   }
   const scheduleCover = () => { if (!coverFrame) coverFrame = requestAnimationFrame(fitCover); };
-  addEventListener('resize', scheduleCover);
+  addEventListener('resize', () => { coverForced = true; scheduleCover(); });
   addEventListener('ui-view-change', scheduleCover);
   if (window.ResizeObserver) { const observer = new ResizeObserver(scheduleCover); for (const selector of ['#usage > .profile', '#usage .usage-overview', '#usage .card.today']) { const element = document.querySelector(selector); if (element) observer.observe(element); } }
   scheduleCover();

@@ -267,6 +267,7 @@ function heatStart() { return $('heatRange').value === today.slice(0, 4) ? today
 // without records are plain blank squares (unknown, not zero); days after today in the
 // calendar-year view are fainter non-interactive squares.
 function heatEnd() { return $('heatRange').value === '365' ? today : $('heatRange').value + '-12-31'; }
+let lastHeatKey = '', heatSweepTimer = 0;
 function renderHeat(rows) {
   hideHeatTooltip();
   const focusedDate = $('heatmap').contains(document.activeElement) ? document.activeElement.dataset.date : null;
@@ -299,6 +300,14 @@ function renderHeat(rows) {
   $('heatMonths').innerHTML = shown.map(label => '<span style="grid-column:' + label.column + ' / span ' + Math.max(1, label.span) + '">' + label.text + '</span>').join('');
   $('heatMonths').style.gridTemplateColumns = 'repeat(' + columns + ',minmax(0,1fr))';
   $('heatMonths').hidden = false;
+  // A different range sweeps in column by column; data refreshes of the same range do not.
+  const heatKey = start + '/' + end;
+  if (lastHeatKey && heatKey !== lastHeatKey && window.uiMotion?.mode === 'full' && !document.hidden) {
+    [...$('heatmap').children].forEach((cell, i) => cell.style.setProperty('--c', String(Math.floor(i / 7))));
+    for (const id of ['heatmap', 'heatMonths']) { const element = $(id); delete element.dataset.sweep; void element.offsetWidth; element.dataset.sweep = ''; }
+    clearTimeout(heatSweepTimer); heatSweepTimer = setTimeout(() => { delete $('heatmap').dataset.sweep; delete $('heatMonths').dataset.sweep; }, 900);
+  }
+  lastHeatKey = heatKey;
   renderDay(rows); renderActivity(rows);
   if (focusedDate) $('heatmap').querySelector('[data-date="' + focusedDate + '"]')?.focus({ preventScroll: true });
 }
@@ -417,7 +426,12 @@ function revealTrend() {
   function tick(now) { if(chart!==trendChart || window.uiMotion.mode!=='full'){chart.$reveal=1;chart.draw();return;}chart.$reveal=1-(1-Math.min(1,(now-start)/720))**3;chart.$revealFrames++;chart.draw();if(chart.$reveal<1)revealFrame=requestAnimationFrame(tick); }
   revealFrame=requestAnimationFrame(tick);
 }
-const curveReveal={id:'curveReveal',beforeDatasetsDraw(chart){const a=chart.chartArea;chart.ctx.save();chart.ctx.beginPath();chart.ctx.rect(a.left-5,a.top-6,(a.right-a.left+10)*(chart.$reveal??1),a.bottom-a.top+12);chart.ctx.clip();},afterDatasetsDraw(chart){chart.ctx.restore();}};
+// Legend toggles fade a series through its own $alpha (line and fill); $fill carries the
+// faded fill gradient while it is below 1, otherwise the dataset's own fill is used.
+const fadeColor=(hex,alpha)=>'rgba('+parseInt(hex.slice(1,3),16)+','+parseInt(hex.slice(3,5),16)+','+parseInt(hex.slice(5,7),16)+','+alpha.toFixed(3)+')';
+const seriesFade={id:'seriesFade',beforeDatasetsDraw(chart){const a=chart.chartArea;for(const d of chart.data.datasets){if((d.$alpha??1)>=1||!a||d.fill===false){d.$fill=undefined;continue;}const g=chart.ctx.createLinearGradient(0,a.top,0,a.bottom);g.addColorStop(0,fadeColor(d.borderColor,(trendMode==='total'?.25:.14)*d.$alpha));g.addColorStop(1,fadeColor(d.borderColor,0));d.$fill=g;}}};
+// Chart.js caches segment styles until the next update, so each frame drops that line's cache.
+function fadeSeries(chart,dataset,to,duration,done){cancelAnimationFrame(dataset.$fadeFrame);const from=dataset.$alpha??1,start=performance.now();const tick=now=>{if(chart!==trendChart)return;const p=Math.max(0,Math.min(1,(now-start)/duration));dataset.$alpha=from+(to-from)*(1-(1-p)**3);const line=chart.getDatasetMeta(chart.data.datasets.indexOf(dataset))?.dataset;if(line)delete line._segments;chart.draw();if(p<1)dataset.$fadeFrame=requestAnimationFrame(tick);else{dataset.$alpha=to;done?.();}};dataset.$fadeFrame=requestAnimationFrame(tick);}const curveReveal={id:'curveReveal',beforeDatasetsDraw(chart){const a=chart.chartArea;chart.ctx.save();chart.ctx.beginPath();chart.ctx.rect(a.left-5,a.top-6,(a.right-a.left+10)*(chart.$reveal??1),a.bottom-a.top+12);chart.ctx.clip();},afterDatasetsDraw(chart){chart.ctx.restore();}};
 const trendObserver=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)&&!trendSeen){trendSeen=true;revealTrend();}},{threshold:.25});
 trendObserver.observe($('trendCanvas'));
 window.addEventListener('ui-view-change',event=>{if(event.detail==='usage')trendSeen=false;});
@@ -456,18 +470,18 @@ function renderTrend(rows) {
   const observedDates=new Set(rows.map(row=>row.date));
   const datasets = selected.map(entry=>{const buckets=bucket(entry.values);if($('newest').checked)buckets.reverse();const values=buckets.map(b=>b.value),blocked=hourly?values.reduce((list,v)=>(list.push(list.at(-1)+Number(!Number.isFinite(v))),list),[0]):window.chartUi.gapPlan(buckets,values,observedDates,coverageStart,$('display').value);
     const kind=context=>window.chartUi.segmentKind(context.p0DataIndex,context.p1DataIndex,blocked,values);
-    const secondary=metric==='tokens'&&entry.unit==='cost';return {hidden:hiddenSeries.has(entry.key),label:entry.label,usageMetric:entry.unit||metric,yAxisID:secondary?'yCost':'y',data:values,usageBuckets:buckets,borderColor:entry.color,borderDash:secondary?[5,5]:[],backgroundColor:context=>{const area=context.chart.chartArea;if(!area)return entry.color+'20';const fill=context.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);fill.addColorStop(0,entry.color+(trendMode==='total'?'40':'24'));fill.addColorStop(1,entry.color+'00');return fill;},borderWidth:secondary?2:2.4,fill:secondary?false:'origin',pointRadius:dayList.length===1?4:0,pointHoverRadius:5,pointHoverBorderWidth:2,pointHoverBackgroundColor:entry.color,cubicInterpolationMode:'monotone',tension:.35,spanGaps:true,segment:{borderColor:context=>kind(context)==='unknown'?'transparent':kind(context)==='bridge'?entry.color+'66':entry.color,borderDash:context=>kind(context)==='bridge'?[2,4]:secondary?[5,5]:[],backgroundColor:context=>kind(context)==='recorded'?undefined:'transparent'}};});
+    const secondary=metric==='tokens'&&entry.unit==='cost';return {hidden:hiddenSeries.has(entry.key),$alpha:1,label:entry.label,usageMetric:entry.unit||metric,yAxisID:secondary?'yCost':'y',data:values,usageBuckets:buckets,borderColor:entry.color,borderDash:secondary?[5,5]:[],backgroundColor:context=>{const area=context.chart.chartArea;if(!area)return entry.color+'20';const fill=context.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);fill.addColorStop(0,entry.color+(trendMode==='total'?'40':'24'));fill.addColorStop(1,entry.color+'00');return fill;},borderWidth:secondary?2:2.4,fill:secondary?false:'origin',pointRadius:dayList.length===1?4:0,pointHoverRadius:5,pointHoverBorderWidth:2,pointHoverBackgroundColor:entry.color,cubicInterpolationMode:'monotone',tension:.35,spanGaps:true,segment:{borderColor:context=>{const k=kind(context),alpha=context.chart.data.datasets[context.datasetIndex]?.$alpha??1;return k==='unknown'?'transparent':alpha<1?fadeColor(entry.color,(k==='bridge'?.4:1)*alpha):k==='bridge'?entry.color+'66':entry.color;},borderDash:context=>kind(context)==='bridge'?[2,4]:secondary?[5,5]:[],backgroundColor:context=>kind(context)==='recorded'?context.chart.data.datasets[context.datasetIndex]?.$fill:'transparent'}};});
   trendTooltip.hidden=true;if(trendChart)trendChart.$hoverIndex=null;
   const crosshair={id:'usageCrosshair',afterDraw(chart){const active=chart.tooltip?.getActiveElements();if(chart.$hoverIndex==null&&!active?.length)return;const x=chart.$hoverIndex!=null?chart.scales.x.getPixelForValue(chart.$hoverIndex):active[0].element.x,{ctx,chartArea:area}=chart;ctx.save();ctx.strokeStyle=theme.text+'66';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x,area.top);ctx.lineTo(x,area.bottom);ctx.stroke();ctx.restore();}};
   const gapHover={id:'gapHover',afterEvent(chart,args){const event=args.event,a=chart.chartArea;if(event.type==='mouseout'){chart.$hoverIndex=null;return;}if(event.type!=='mousemove'||event.x<a.left||event.x>a.right||event.y<a.top||event.y>a.bottom)return;const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(chart.scales.x.getValueForPixel(event.x))));chart.$hoverIndex=index;const active=chart.data.datasets.flatMap((d,i)=>chart.isDatasetVisible(i)&&Number.isFinite(d.data[index])?[{datasetIndex:i,index}]:[]);chart.setActiveElements(active);chart.tooltip.setActiveElements(active,{x:event.x,y:event.y});args.changed=true;renderTrendTooltip({chart,tooltip:{opacity:1,caretX:event.x,caretY:event.y,dataPoints:[{dataIndex:index}]}});}};
   const animation=window.uiMotion.mode==='full'?{duration:650,easing:'easeOutQuart'}:false;
-  const config={type:'line',data:{labels:dayList,datasets},plugins:[crosshair,curveReveal,gapHover],options:{animation,responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},onClick:(event)=>{if(trendDragged)return;const area=trendChart.chartArea;if(event.x>=area.left&&event.x<=area.right&&event.y>=area.top&&event.y<=area.bottom){const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(trendChart.scales.x.getValueForPixel(event.x)))),b=trendBuckets[index];if(grain==='day'||hourly)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}}},plugins:{legend:{display:false},tooltip:{enabled:false,external:renderTrendTooltip}},scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8,color:theme.text,font:{size:12},callback:(_v,i)=>hourly?dayList[i]:dayList[i]?.slice(5)}},y:{beginAtZero:true,grid:{color:theme.grid+'90',lineWidth:1},border:{display:false},ticks:{maxTicksLimit:5,color:theme.text,font:{size:12},callback:v=>metric==='cost'?'$'+v:short(v)}},yCost:{display:metric==='tokens'&&trendMode==='flow'&&!hiddenSeries.has('cost'),position:'right',beginAtZero:true,grid:{drawOnChartArea:false},border:{display:false},ticks:{maxTicksLimit:5,color:'#c8757e',font:{size:12},callback:v=>'$'+v}}}}};
+  const config={type:'line',data:{labels:dayList,datasets},plugins:[crosshair,curveReveal,gapHover,seriesFade],options:{animation,responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},onClick:(event)=>{if(trendDragged)return;const area=trendChart.chartArea;if(event.x>=area.left&&event.x<=area.right&&event.y>=area.top&&event.y<=area.bottom){const index=Math.max(0,Math.min(trendBuckets.length-1,Math.round(trendChart.scales.x.getValueForPixel(event.x)))),b=trendBuckets[index];if(grain==='day'||hourly)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}}},plugins:{legend:{display:false},tooltip:{enabled:false,external:renderTrendTooltip}},scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8,color:theme.text,font:{size:12},callback:(_v,i)=>hourly?dayList[i]:dayList[i]?.slice(5)}},y:{beginAtZero:true,grid:{color:theme.grid+'90',lineWidth:1},border:{display:false},ticks:{maxTicksLimit:5,color:theme.text,font:{size:12},callback:v=>metric==='cost'?'$'+v:short(v)}},yCost:{display:metric==='tokens'&&trendMode==='flow',position:'right',beginAtZero:true,afterFit:scale=>{scale.width=56;},grid:{drawOnChartArea:false},border:{display:false},ticks:{maxTicksLimit:5,color:hiddenSeries.has('cost')?'transparent':'#c8757e',font:{size:12},callback:v=>'$'+v}}}}};
   for(let i=0;i<datasets.length;i++) datasets[i].usageKey=selected[i].key;
   if(trendChart){
     // Keep both the chart and matching datasets: Chart.js retains presented
     // coordinates and can retarget an interrupted transition instead of
     // treating each new array as a fresh curve rising from zero.
-    trendChart.stop();
+    trendChart.stop();for(const d of trendChart.data.datasets)cancelAnimationFrame(d.$fadeFrame);
     const previous=new Map(trendChart.data.datasets.map(d=>[d.usageKey,d])),sameSeries=previous.size===datasets.length&&datasets.every(d=>previous.has(d.usageKey));
     config.data.datasets=datasets.map(next=>previous.has(next.usageKey)?Object.assign(previous.get(next.usageKey),next):next);
     trendChart.setActiveElements([]);trendChart.tooltip.setActiveElements([],{x:0,y:0});
@@ -509,7 +523,14 @@ function datesLimited(start,end){return (Date.parse(end)-Date.parse(start))/8640
 $('trendRangeReset').addEventListener('click',()=>{trendRange=null;$('trendRangePopover').hidePopover();renderTrend(data());});
 $('trendRangePopover').addEventListener('click',event=>{const button=event.target.closest('[data-trend-preset]');if(!button)return;const preset=button.dataset.trendPreset;trendRange=preset==='page'?null:{start:preset==='today'?today:shift(today,1-Number(preset)),end:today};$('trendRangePopover').hidePopover();renderTrend(data());});
 $('trendRangeFollow').addEventListener('click',()=>{trendRange=null;renderTrend(data());$('trendRangeButton').focus();});
-$('chartLegend').addEventListener('click',event=>{const b=event.target.closest('[data-trend-series]');if(!b)return;const key=b.dataset.trendSeries,visible=hiddenSeries.has(key);if(visible)hiddenSeries.delete(key);else hiddenSeries.add(key);try{localStorage.setItem(hiddenKey,JSON.stringify([...hiddenSeries]));}catch{/* Not remembered. */}const index=trendChart.data.datasets.findIndex(d=>d.usageKey===key);if(index<0)return;trendChart.setDatasetVisibility(index,visible);if(key==='cost')trendChart.options.scales.yCost.display=visible&&metric==='tokens'&&trendMode==='flow';b.setAttribute('aria-pressed',String(visible));b.title=(visible?'隐藏':'显示')+'这一项';trendChart.update(window.uiMotion.mode==='full'?undefined:'none');});
+$('chartLegend').addEventListener('click',event=>{const b=event.target.closest('[data-trend-series]');if(!b)return;const key=b.dataset.trendSeries,visible=hiddenSeries.has(key);if(visible)hiddenSeries.delete(key);else hiddenSeries.add(key);try{localStorage.setItem(hiddenKey,JSON.stringify([...hiddenSeries]));}catch{/* Not remembered. */}const index=trendChart.data.datasets.findIndex(d=>d.usageKey===key);if(index<0)return;b.setAttribute('aria-pressed',String(visible));b.title=(visible?'隐藏':'显示')+'这一项';
+  // Every series toggles the same way: it fades (Chart.js show/hide) while the others rescale. The cost axis keeps a fixed width and only its labels fade, so the plot never shifts sideways.
+  if(key==='cost')trendChart.options.scales.yCost.ticks.color=visible?'#c8757e':'transparent';
+  const dataset=trendChart.data.datasets[index],chart=trendChart;cancelAnimationFrame(dataset.$fadeFrame);
+  if(window.uiMotion.mode!=='full'){dataset.$alpha=1;chart.setDatasetVisibility(index,visible);chart.update('none');return;}
+  // Shown: it takes its final place at once and fades in while the others rescale. Hidden: it fades out in place, then the others rescale.
+  if(visible){dataset.$alpha=0;chart.setDatasetVisibility(index,true);chart.update(ctx=>ctx.datasetIndex===index?'none':undefined);fadeSeries(chart,dataset,1,520);}
+  else fadeSeries(chart,dataset,0,200,()=>{chart.setDatasetVisibility(index,false);dataset.$alpha=1;chart.update();});});
 $('trendCanvas').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Enter','Escape'].includes(event.key)||!trendBuckets.length)return;event.preventDefault();if(event.key==='Escape'){trendChart.tooltip.setActiveElements([],{x:0,y:0});trendTooltip.hidden=true;trendChart.$hoverIndex=null;trendChart.draw();return;}if(event.key==='Enter'){const b=trendBuckets[keyboardTrendIndex];if(b.start===b.end)goToDay(b.start);else{trendRange={start:b.start,end:b.end};$('trendGrain').value='day';renderTrend(data());}return;}keyboardTrendIndex=Math.max(0,Math.min(trendBuckets.length-1,keyboardTrendIndex+(event.key==='ArrowRight'?1:-1)));const element=trendChart.getDatasetMeta(0).data[keyboardTrendIndex];if(element){trendChart.$hoverIndex=keyboardTrendIndex;trendChart.tooltip.setActiveElements([{datasetIndex:0,index:keyboardTrendIndex}],{x:element.x,y:element.y});if(element.skip)renderTrendTooltip({chart:trendChart,tooltip:{opacity:1,caretX:element.x,caretY:trendChart.chartArea.top+40,dataPoints:[{dataIndex:keyboardTrendIndex}]}});trendChart.draw();}});
 $('trendCanvas').addEventListener('pointerdown',event=>{if(event.button!==0)return;trendPress={x:event.clientX,y:event.clientY};trendDragged=false;event.currentTarget.setPointerCapture(event.pointerId);});
 $('trendCanvas').addEventListener('pointermove',event=>{if(trendPress&&Math.hypot(event.clientX-trendPress.x,event.clientY-trendPress.y)>6)trendDragged=true;});
@@ -613,7 +634,23 @@ function updateCollection() { const interval=usageStatus.refreshIntervalMs??1500
  $('settingsPause').disabled = realData && !usageBridge; $('settingsPause').textContent = usageBridge ? enabled ? '暂停采集' : '恢复采集' : realData ? '只读快照' : enabled ? '暂停演示采集' : '恢复演示采集';
  // The pause control is a switch, so its state must be exposed with the label.
  $('settingsPause').setAttribute('role', 'switch'); $('settingsPause').setAttribute('aria-checked', String(Boolean(enabled))); }
-function render() { syncCalendar(); const rows = data(); recorded = window.insightsMath.recordedFields(templates); window.usageCalendar = { today, min: coverageStart, recorded: new Set(filterRows(rows).map(r => r.date)) }; renderOverview(rows); renderHeat(rows); renderTrend(rows); renderInsights(rows); renderModels(rows); updateCollection(); window.uiSelect?.syncAll(); window.uiSegments?.syncAll(); window.uiMotion.indicators(); }
+// A filter used lower on the page (agent chips, source/model, share card) re-renders the
+// sections above it, which changes their height; keep the section holding the control where
+// it was, so the page does not jump away from the pointer.
+// Near the bottom the page may get shorter than the scroll position needs; it keeps its
+// height (blank space below) until the user scrolls up far enough not to see that space.
+function keepPlace(section, top, height) {
+  const page = $('usage');
+  if (page.offsetHeight < height) { page.style.minHeight = height + 'px'; window.addEventListener('scroll', releasePage, { passive: true }); }
+  const fix = () => { const delta = section.getBoundingClientRect().top - top; if (Math.abs(delta) > .5) window.scrollBy({ top: delta, behavior: 'instant' }); };
+  fix(); requestAnimationFrame(() => { fix(); requestAnimationFrame(fix); });
+}
+function releasePage() {
+  const page = $('usage'), content = [...page.children].reduce((bottom, child) => child.hidden ? bottom : Math.max(bottom, child.getBoundingClientRect().bottom), 0);
+  if (content < innerHeight) return; // the kept space is still on screen
+  page.style.removeProperty('min-height'); window.removeEventListener('scroll', releasePage);
+}
+function render(interactive = false) { const held = interactive ? document.activeElement?.closest?.('#usage > section') : null, heldTop = held?.getBoundingClientRect().top, heldHeight = held ? $('usage').offsetHeight : 0; syncCalendar(); const rows = data(); recorded = window.insightsMath.recordedFields(templates); window.usageCalendar = { today, min: coverageStart, recorded: new Set(filterRows(rows).map(r => r.date)) }; renderOverview(rows); renderHeat(rows); renderTrend(rows); renderInsights(rows); renderModels(rows); updateCollection(); window.uiSelect?.syncAll(); window.uiSegments?.syncAll(); window.uiMotion.indicators(); if (held) keepPlace(held, heldTop, heldHeight); }
 function view(name) {
   if ($('main').dataset.currentView === name) return;
   // Save the actual presentation position before hiding a long page clamps scrollY.

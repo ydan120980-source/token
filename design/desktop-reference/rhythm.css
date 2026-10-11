@@ -68,7 +68,14 @@ body.dark #overviewWeek .week-day:hover i, body.dark #overviewWeek .week-day:foc
 #activityBlock .heatmap { width: 100%; min-width: 620px; flex: none; gap: 3px; grid-template-rows: repeat(7, auto); grid-template-columns: repeat(var(--heat-columns, 53), minmax(0, 1fr)); }
 #activityBlock .heatmap button, #activityBlock .heatmap .pad, #activityBlock .heatmap .future { width: 100%; height: auto; aspect-ratio: 1; border-radius: 4px; }
 /* Hover is a quiet ring; the solid ring stays for keyboard focus and the selected day. */
-#activityBlock .heatmap button:hover:not(:focus-visible) { box-shadow: 0 0 0 2px var(--card), 0 0 0 3px color-mix(in srgb, var(--text) 30%, transparent); }
+/* Palette changes cross-fade (they only change the --heat colours); a new range sweeps in
+   column by column (preview.js sets --c and data-sweep only in full motion). */
+#activityBlock .heatmap button, #activityBlock .heat-footer .intensity span { transition: background-color 280ms var(--motion-ease, ease-out), transform 140ms var(--motion-ease, ease-out), box-shadow 140ms var(--motion-ease, ease-out), opacity 140ms var(--motion-ease, ease-out); }
+#heatmap[data-sweep] > * { animation: heat-sweep 340ms var(--motion-ease, ease-out) both; animation-delay: calc(var(--c, 0) * 7ms); }
+#heatMonths[data-sweep] > span { animation: heat-fade 320ms var(--motion-ease, ease-out) both; }
+@keyframes heat-sweep { from { opacity: 0; transform: scale(.55); } }
+@keyframes heat-fade { from { opacity: 0; } }
+body[data-motion='off'] #activityBlock .heatmap button, body[data-motion='off'] #activityBlock .heat-footer .intensity span { transition: none; }#activityBlock .heatmap button:hover:not(:focus-visible) { box-shadow: 0 0 0 2px var(--card), 0 0 0 3px color-mix(in srgb, var(--text) 30%, transparent); }
 #activityBlock .heatmap button[data-level='0'] { background: color-mix(in srgb, var(--heat0) 70%, transparent); }
 #activityBlock .heatmap button[data-observed='false'] { border: 0; opacity: 1; background: color-mix(in srgb, var(--heat0) 42%, transparent); }
 #activityBlock .heatmap .future { border: 0; background: color-mix(in srgb, var(--heat0) 28%, transparent); }
@@ -91,7 +98,7 @@ body.dark #overviewWeek .week-day:hover i, body.dark #overviewWeek .week-day:foc
 .rhythm-hours .hour-grid .hour-day { padding-right: 8px; text-align: right; }
 .rhythm-hours .hour-grid button { position: relative; container-type: inline-size; display: grid; place-items: center; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 8px; background: transparent !important; box-shadow: none !important; transform: none !important; }
 .rhythm-hours .hour-grid button::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: color-mix(in srgb, var(--text) 5%, transparent); }
-.rhythm-hours .hour-grid button i { position: relative; width: min(var(--s), calc(100cqw - 4px)); height: auto; aspect-ratio: 1; border-radius: 50%; background: var(--heat3); transition: scale 180ms var(--ease-out, ease-out), box-shadow 160ms; }
+.rhythm-hours .hour-grid button i { position: relative; width: min(var(--s), calc(100cqw - 4px)); height: auto; aspect-ratio: 1; border-radius: 50%; background: var(--heat3); transition: scale 180ms var(--ease-out, ease-out), box-shadow 160ms, background-color 280ms var(--ease-out, ease-out); }
 .rhythm-hours .hour-grid button.lv0 i { background: color-mix(in srgb, var(--text) 9%, transparent); }
 .rhythm-hours .hour-grid button.lv1 i { background: var(--heat1); }
 .rhythm-hours .hour-grid button.lv2 i { background: var(--heat2); }
