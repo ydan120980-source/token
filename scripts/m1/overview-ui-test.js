@@ -4,7 +4,7 @@
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
 const {_electron:electron}=require('playwright');
 const {Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../src/m1/normalize'),{fixtures}=require('../../tests/m1/fixtures');
-const {settle}=require('./ui-settle');
+const {settle,cleanup}=require('./ui-settle');
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'agent-usage-overview-')),output=process.env.OVERVIEW_EVIDENCE_DIR||'artifacts/m2-overview/source',results=[];fs.mkdirSync(output,{recursive:true});
  try { for(const scale of [1,1.5]) {
@@ -65,6 +65,6 @@ const {settle}=require('./ui-settle');
    await page.locator('[data-view="usage"]').click();await page.locator('#theme').click();await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(800,600));await page.evaluate(()=>window.scrollTo(0,0));await settle(page);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:path.join(output,'overview-dark-narrow-'+scale+'.png')});
    assert.deepEqual(errors,[]);assert.equal(fs.existsSync(path.join(quota,'codex-homes')),false);results.push({scale,packaged:Boolean(process.env.QUOTA_PACKAGED_EXE),sharedScope:true,transparentTooltipAndWheel:true,unknownValuesPreserved:true,emptyModelHidden:true,nonemptyUnknownRetained:true,reentryCooldown:true,reducedMotion:true,errors});
   }finally{await app.close();}
- }}finally{fs.rmSync(root,{recursive:true,force:true});}
+ }}finally{await cleanup(root);}
  fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log('PASS: overview scope, honest day detail, tooltip pointer/wheel pass-through, quota cooldown at 100%/150%.');
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

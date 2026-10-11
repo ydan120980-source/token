@@ -1,7 +1,7 @@
 'use strict';
 /* global document, requestAnimationFrame, getComputedStyle, innerWidth, PointerEvent, DOMMatrixReadOnly */
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
-const {_electron:electron}=require('playwright'),{settle,until}=require('./ui-settle');
+const {_electron:electron}=require('playwright'),{settle,until,cleanup}=require('./ui-settle');
 const {Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../src/m1/normalize'),{fixtures}=require('../../tests/m1/fixtures');
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'agent-usage-polish-')), results=[],output=process.env.POLISH_EVIDENCE_DIR||'artifacts/polish/source';fs.mkdirSync(output,{recursive:true});
@@ -60,5 +60,5 @@ const {Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../sr
    }finally{await app.close();}
   }
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
- }finally{fs.rmSync(root,{recursive:true,force:true});}
+ }finally{await cleanup(root);}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

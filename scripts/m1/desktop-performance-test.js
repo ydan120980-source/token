@@ -5,7 +5,7 @@ const { _electron: electron } = require('playwright');
 const { Store, atomic } = require('../../src/m1/store');
 const { normalize } = require('../../src/m1/normalize');
 const { fixtures } = require('../../tests/m1/fixtures');
-const { settle } = require('./ui-settle');
+const { settle, cleanup } = require('./ui-settle');
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-usage-desktop-performance-'));
   const output = process.env.DESKTOP_EVIDENCE_DIR || 'artifacts/m2-desktop/source';
@@ -104,5 +104,5 @@ const { settle } = require('./ui-settle');
       } finally { await app.close(); }
     }
     fs.writeFileSync(path.join(output, 'performance.json'), JSON.stringify(results, null, 2)); console.log(JSON.stringify(results));
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await cleanup(root); }
 })().catch(error => { console.error(error.stack); process.exitCode = 1; });

@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright');
-const { settle } = require('./ui-settle');
+const { settle, cleanup } = require('./ui-settle');
 const { Store, atomic } = require('../../src/m1/store');
 const { normalize } = require('../../src/m1/normalize');
 const { fixtures } = require('../../tests/m1/fixtures');
@@ -84,5 +84,5 @@ const { fixtures } = require('../../tests/m1/fixtures');
       } finally { await app.close(); }
     }
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(evidence, null, 2)); process.stdout.write(JSON.stringify(evidence) + '\n');
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  } finally { await cleanup(dir); }
 })().catch(error => { process.stderr.write(error.stack + '\n'); process.exitCode = 1; });

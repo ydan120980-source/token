@@ -33,6 +33,7 @@
     "test:polish:ui": "node scripts/m1/polish-ui-test.js",
     "test:desktop:performance": "node scripts/m1/desktop-performance-test.js",
     "test:functional:ui": "node scripts/m1/functional-ui-test.js",
+    "test:layout:ui": "node scripts/m1/layout-ui-test.js",
     "pricing:sync": "node scripts/m1/pricing-sync.js",
     "pricing:check": "node scripts/m1/pricing-sync.js --check"
   },

@@ -5,7 +5,7 @@ const {_electron:electron}=require('playwright');
 const {Store,atomic}=require('../../src/m1/store');
 const {normalize}=require('../../src/m1/normalize');
 const {fixtures}=require('../../tests/m1/fixtures');
-const {settle,until}=require('./ui-settle');
+const {settle,until,cleanup}=require('./ui-settle');
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'usage-functional-')),output=process.env.FUNCTIONAL_EVIDENCE_DIR||'artifacts/m2-functional/source';fs.mkdirSync(output,{recursive:true});const results=[];
  const home=path.join(root,'home'),fixture=fixtures(home),usage=path.join(root,'usage'),store=new Store(usage,fixture.roots);
@@ -81,6 +81,6 @@ const {settle,until}=require('./ui-settle');
    await page.locator('[data-view="settings"]').click();await page.locator('#pricingPanel').scrollIntoViewIfNeeded();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:path.join(output,'pricing-dark-narrow-'+scale+'.png')});
    assert.deepEqual(errors,[]);results.push({scale,packaged:Boolean(process.env.QUOTA_PACKAGED_EXE),rest,allSyntheticModelsPriced:true,manualMapping:true,defaultsPersistent:true,offlineSyncFailurePreservesCache:true,trendAnimationFrames:motion.length,chartReused:true,reducedMotion:true,noHorizontalOverflow:true,errors});fs.writeFileSync(path.join(output,'animation-'+scale+'.json'),JSON.stringify(motion,null,2));
   }finally{await app.close();}
- }}finally{fs.rmSync(root,{recursive:true,force:true});}
+ }}finally{await cleanup(root);}
  fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

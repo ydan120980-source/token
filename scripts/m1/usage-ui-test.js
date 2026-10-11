@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright');
-const { settle } = require('./ui-settle');
+const { settle, cleanup } = require('./ui-settle');
 const { fixtures } = require('../../tests/m1/fixtures');
 async function state(page, predicate) {
   const until = Date.now() + 60000;
@@ -94,6 +94,6 @@ async function state(page, predicate) {
       await early.firstWindow(); await early.close();
     }
     evidence.at(-1).earlyWindowExitCycles = 3;
-  } } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  } } finally { await cleanup(dir); }
   fs.writeFileSync('artifacts/maintenance/usage-ui-results.json', JSON.stringify(evidence, null, 2)); console.log('PASS: unified desktop usage controls at 100%/150%; five sources, refresh, pause, directory guards, export and restart.');
 })().catch(error => { console.error(error.stack); process.exitCode = 1; });

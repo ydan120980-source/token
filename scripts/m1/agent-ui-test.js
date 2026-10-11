@@ -8,7 +8,7 @@ const {agentFixtures} = require('../../tests/m1/agent-fixtures');
 const {Store} = require('../../src/m1/store');
 const {verifyProjection} = require('../../src/m1/native');
 const {scanSources} = require('../../src/m1/sources');
-const {settle} = require('./ui-settle');
+const {settle,cleanup} = require('./ui-settle');
 async function collected(page) {
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) { const state = await page.evaluate(() => window.usageBridge.get()); if (state.audit && !state.collecting && state.snapshot.daily.length === 9) return state; await new Promise(resolve => setTimeout(resolve,100)); }
@@ -66,5 +66,5 @@ async function collected(page) {
       } finally {await app.close();}
     }
     fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(evidence,null,2)); console.log('PASS: nine format-backed sources, independent native totals, 100%/150% Electron scopes/logos, pricing defaults, file picker, guards and restart.');
-  } finally {fs.rmSync(root,{recursive:true,force:true});}
+  } finally {await cleanup(root);}
 })().catch(e => {console.error(e);process.exitCode=1;});

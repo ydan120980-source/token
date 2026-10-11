@@ -2,7 +2,7 @@
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {_electron:electron}=require('playwright');
 const {Store}=require('../../src/m1/store'),{roots}=require('../../src/m1/policy'),{scanSources}=require('../../src/m1/sources'),{verifyProjection}=require('../../src/m1/native');
-const {settle,showView}=require('./ui-settle');
+const {settle,showView,cleanup}=require('./ui-settle');
 (async()=>{
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'r3-conflict-ui-')),output=path.resolve(process.env.CONFLICT_EVIDENCE_DIR||'artifacts/m2-agents-r3/conflict-ui');fs.mkdirSync(output,{recursive:true});
  try{
@@ -24,5 +24,5 @@ const {settle,showView}=require('./ui-settle');
    }finally{await app.close();}
   }
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
- }finally{fs.rmSync(temp,{recursive:true,force:true});}
+ }finally{await cleanup(temp);}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

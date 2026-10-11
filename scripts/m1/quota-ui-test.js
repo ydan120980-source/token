@@ -7,7 +7,7 @@ const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright');
-const { settle, until } = require('./ui-settle');
+const { settle, until, cleanup } = require('./ui-settle');
 const { fixtures } = require('../../tests/m1/fixtures');
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-usage-quota-ui-'));
 (async () => {
@@ -107,4 +107,4 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-usage-quota-ui-')
     finally { await restored.close(); }
   }
   fs.writeFileSync('artifacts/quota/native-results.json', JSON.stringify(evidence, null, 2)); process.stdout.write(JSON.stringify(evidence) + '\n');
-})().catch(error => { process.stderr.write(error.stack + '\n'); process.exitCode = 1; }).finally(() => fs.rmSync(directory, { recursive: true, force: true }));
+})().catch(error => { process.stderr.write(error.stack + '\n'); process.exitCode = 1; }).finally(() => cleanup(directory));

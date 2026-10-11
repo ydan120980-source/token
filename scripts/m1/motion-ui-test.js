@@ -6,7 +6,7 @@ const { _electron: electron } = require('playwright');
 const { Store, atomic } = require('../../src/m1/store');
 const { normalize } = require('../../src/m1/normalize');
 const { fixtures } = require('../../tests/m1/fixtures');
-const { settle } = require('./ui-settle');
+const { settle, cleanup } = require('./ui-settle');
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-usage-motion-')), evidence = [];
   const output = process.env.MOTION_EVIDENCE_DIR || 'artifacts/motion'; fs.mkdirSync(output, { recursive: true });
@@ -117,5 +117,5 @@ const { settle } = require('./ui-settle');
       } finally { await app.close(); }
     }
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(evidence, null, 2)); console.log(JSON.stringify(evidence));
-  } finally { fs.rmSync(root, { recursive:true, force:true }); }
+  } finally { await cleanup(root); }
 })().catch(e => { console.error(e.stack); process.exitCode=1; });

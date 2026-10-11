@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {DatabaseSync}=require('node:sqlite'),{_electron:electron}=require('playwright');
-const {Store}=require('../../src/m1/store'),{roots}=require('../../src/m1/policy'),{scanSources}=require('../../src/m1/sources'),{verifyProjection}=require('../../src/m1/native'),{until,showView}=require('./ui-settle');
+const {Store}=require('../../src/m1/store'),{roots}=require('../../src/m1/policy'),{scanSources}=require('../../src/m1/sources'),{verifyProjection}=require('../../src/m1/native'),{until,showView,cleanup}=require('./ui-settle');
 const output=path.resolve(process.env.RECOVERY_EVIDENCE_DIR||'artifacts/m2-agents-r4/recovery-ui');
 async function run(first,scale) {
   const work=fs.mkdtempSync(path.join(os.tmpdir(),'agent-recovery-ui-'));
@@ -28,6 +28,6 @@ async function run(first,scale) {
       await page.locator('#totalCost').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,first+'-'+scale+'.png')});assert.deepEqual(errors,[]);
       return {first,scale,packaged:Boolean(process.env.QUOTA_PACKAGED_EXE),nativeTokens:native.tokens,actualCollector:true,knownBuckets:true,recoveredCostUsd:row.estimatedCostUsd,firstAttribution:true,sourceHashesUnchanged:true,label,errors};
     }finally{await app.close();}
-  }finally{fs.rmSync(work,{recursive:true,force:true});}
+  }finally{await cleanup(work);}
 }
 (async()=>{fs.mkdirSync(output,{recursive:true});const results=[];for(const first of ['opencode','mimo'])for(const scale of [1,1.5])results.push(await run(first,scale));fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));})().catch(e=>{console.error(e.stack);process.exitCode=1;});
