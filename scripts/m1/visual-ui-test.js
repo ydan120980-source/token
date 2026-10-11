@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright');
-const { settle, cleanup } = require('./ui-settle');
+const { settle, cleanup, isolatePointer } = require('./ui-settle');
 const { Store, atomic } = require('../../src/m1/store');
 const { normalize } = require('../../src/m1/normalize');
 const { fixtures } = require('../../tests/m1/fixtures');
@@ -32,6 +32,7 @@ const { fixtures } = require('../../tests/m1/fixtures');
       const app = await electron.launch({ executablePath: process.env.QUOTA_PACKAGED_EXE || require('electron'), args: [...(process.env.QUOTA_PACKAGED_EXE ? [] : ['src/quota/main.js']), '--quota-data-dir', quotaDir, '--usage-data-dir', data, '--m1-fixture-root', home, '--force-device-scale-factor=' + scale], timeout: 60000 });
       try {
         const page = await app.firstWindow(), errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+        await isolatePointer(app);
         await page.locator('#quotaCards .quota-card').nth(2).waitFor();
         await settle(page); const dimensions = async () => page.locator('#quotaCards .quota-card').evaluateAll(cards => cards.map(card => ({ width: card.getBoundingClientRect().width, height: card.getBoundingClientRect().height })));
         const expected = [{ width: 340, height: 300 }, { width: 340, height: 300 }, { width: 340, height: 300 }];
