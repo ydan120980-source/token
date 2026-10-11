@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { _electron: electron } = require('playwright');
-const { settle, cleanup } = require('./ui-settle');
+const { settle, cleanup, isolatePointer } = require('./ui-settle');
 const { Store, atomic } = require('../../src/m1/store');
 const { normalize } = require('../../src/m1/normalize');
 const { fixtures } = require('../../tests/m1/fixtures');
@@ -29,6 +29,7 @@ const { fixtures } = require('../../tests/m1/fixtures');
     const app = await electron.launch({ executablePath: process.env.QUOTA_PACKAGED_EXE || require('electron'), args: [...(process.env.QUOTA_PACKAGED_EXE ? [] : ['src/quota/main.js']), '--quota-data-dir', path.join(dir, 'quota-' + scale), '--usage-data-dir', data, '--m1-fixture-root', home, '--force-device-scale-factor=' + scale], timeout: 60000 });
     try {
       const page = await app.firstWindow(), errors = [];
+      await isolatePointer(app);
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
       await page.locator('#quotaCards').waitFor({ state: 'attached' });

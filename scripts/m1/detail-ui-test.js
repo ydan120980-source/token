@@ -3,7 +3,7 @@
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), assert = require('node:assert/strict');
 const {_electron:electron} = require('playwright');
 const {Store,atomic} = require('../../src/m1/store'), {normalize} = require('../../src/m1/normalize');
-const {fixtures} = require('../../tests/m1/fixtures'), {settle,cleanup} = require('./ui-settle');
+const {fixtures} = require('../../tests/m1/fixtures'), {settle,cleanup,isolatePointer} = require('./ui-settle');
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(),'agent-usage-detail-')), results = [];
   const output = process.env.DETAIL_EVIDENCE_DIR || 'artifacts/detail'; fs.mkdirSync(output,{recursive:true});
@@ -17,6 +17,7 @@ const {fixtures} = require('../../tests/m1/fixtures'), {settle,cleanup} = requir
       const app = await electron.launch({executablePath:process.env.QUOTA_PACKAGED_EXE || require('electron'),args:[...(process.env.QUOTA_PACKAGED_EXE ? [] : ['src/quota/main.js']),'--quota-data-dir',path.join(root,'quota-'+scale),'--usage-data-dir',usage,'--m1-fixture-root',home,'--force-device-scale-factor='+scale],timeout:60000});
       try {
         const page = await app.firstWindow(), errors = []; page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>{if(m.type()==='error') errors.push(m.text());});
+        await isolatePointer(app);
         // firstWindow can precede later scripts that establish the initial quota route.
         // The real window is shown after loadFile completes; test that same readiness.
         await page.waitForLoadState('load');
