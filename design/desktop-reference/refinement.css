@@ -28,9 +28,6 @@
 }
 @media (prefers-reduced-motion: reduce) { .week-track i { transition: none; } }
 body[data-motion="reduced"] .week-track i,body[data-motion="off"] .week-track i { transition: none; }
-@media (min-width: 1051px) {
-  .usage-overview:has(.cost-expanded) .recent-activity { opacity: 0; pointer-events: none; }
-}
 body[data-motion="reduced"] .recent-activity,body[data-motion="off"] .recent-activity { transition: none; }
 .cost-separator { display:inline-flex; width:18px; min-width:18px !important; height:1em; padding:0; margin:0 8px; align-items:center; justify-content:center; opacity:.8; font-size:inherit; }
 .cost-separator::before { content:''; width:16px; height:1.5px; border-radius:2px; background:currentColor; opacity:.6; }

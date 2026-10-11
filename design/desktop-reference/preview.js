@@ -321,18 +321,13 @@ function hideHeatTooltip() {
   tooltip.classList.remove('visible'); tooltip.setAttribute('aria-hidden', 'true');
   document.querySelector('[aria-describedby="heatTooltip"]')?.removeAttribute('aria-describedby');
 }
-function showHeatTooltip(button) {
+function showHeatTooltip(button, event) {
   const tooltip = $('heatTooltip');
   document.querySelector('[aria-describedby="heatTooltip"]')?.removeAttribute('aria-describedby');
   button.setAttribute('aria-describedby', 'heatTooltip');
   const date = button.dataset.date ?? button.dataset.habitDate, tokens = button.dataset.tokens ?? button.dataset.tip;
   tooltip.innerHTML = '<span>' + date + ' · ' + ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(date + 'T12:00:00Z').getUTCDay()] + '</span><strong>' + (tokens === '' ? '未观测到记录' : Number(tokens).toLocaleString('zh-CN') + ' <small>Token</small>') + '</strong>';
-  const rect = button.getBoundingClientRect();
-  tooltip.style.left = '0px'; tooltip.style.top = '0px';
-  const width = tooltip.offsetWidth, height = tooltip.offsetHeight;
-  const left = Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2));
-  const above = rect.top - height - 12;
-  tooltip.style.left = left + 'px'; tooltip.style.top = Math.max(8, Math.min(innerHeight - height - 8, above >= 8 ? above : rect.bottom + 12)) + 'px';
+  window.uiDetail.placeTooltip(tooltip, button, event);
   tooltip.classList.add('visible'); tooltip.setAttribute('aria-hidden', 'false');
 }
 function renderDay(rows) {
@@ -718,11 +713,12 @@ document.addEventListener('click', event => {
   if (button.dataset.sourceView) view('sources');
   if (button.dataset.addSource && !usageBridge) { $('sourceDialogText').textContent = agents[button.dataset.addSource].name + ' · 选择只读的用量来源目录。'; $('sourceDialog').showModal(); }
 });
-$('overviewWeek').addEventListener('pointerover', event => { const button = event.target.closest('[data-habit-date]'); if (button) showHeatTooltip(button); });
+$('overviewWeek').addEventListener('pointerover', event => { const button = event.target.closest('[data-habit-date]'); if (button) showHeatTooltip(button, event); });
+for (const [id, selector] of [['overviewWeek', '[data-habit-date]'], ['heatmap', '[data-date]']]) $(id).addEventListener('pointermove', event => { const button = event.target.closest(selector), tooltip = $('heatTooltip'); if (button && tooltip.classList.contains('visible')) window.uiDetail.placeTooltip(tooltip, button, event); });
 $('overviewWeek').addEventListener('pointerleave', hideHeatTooltip);
 $('overviewWeek').addEventListener('focusin', event => { const button = event.target.closest('[data-habit-date]'); if (button?.matches(':focus-visible')) showHeatTooltip(button); });
 $('overviewWeek').addEventListener('focusout', hideHeatTooltip);
-$('heatmap').addEventListener('pointerover', event => { const button = event.target.closest('[data-date]'); if (button) showHeatTooltip(button); });
+$('heatmap').addEventListener('pointerover', event => { const button = event.target.closest('[data-date]'); if (button) showHeatTooltip(button, event); });
 $('heatmap').addEventListener('pointerleave', hideHeatTooltip);
 $('heatmap').addEventListener('focusin', event => { const button = event.target.closest('[data-date]'); if (button) showHeatTooltip(button); });
 $('heatmap').addEventListener('focusout', hideHeatTooltip);

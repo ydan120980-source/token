@@ -13,9 +13,9 @@
 .heat-grid-scroll .heat-months { min-width: 690px; margin: 10px 0 0; padding-left: 0 !important; gap: 4px; font-size: 12px; }
 .heat-footer { margin-top: 20px; }
 .heat-footer .intensity span { border-radius: 3px; width: 11px; height: 11px; }
-.heat-tooltip { position: fixed; z-index: 100; display: grid; gap: 6px; width: max-content; max-width: calc(100vw - 16px); padding: 12px 16px; border-radius: 12px; background: #242423; color: #fafafa; box-shadow: 0 6px 24px #0003; pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(4px); font-size: 12px; }
+.heat-tooltip { position: fixed; z-index: 100; display: grid; gap: 3px; width: max-content; max-width: calc(100vw - 16px); padding: 8px 12px; border-radius: 9px; background: #242423; color: #fafafa; box-shadow: 0 6px 20px #0000003d, 0 1px 4px #0000001f; pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(4px); font-size: 12px; line-height: 1.35; }
 .heat-tooltip > span { color: #c3c3c1; }
-.heat-tooltip strong { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.heat-tooltip strong { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .heat-tooltip small { font-size: 12px; font-weight: 400; color: #c3c3c1; }
 .heat-tooltip.visible { opacity: 1; visibility: visible; transform: translateY(0); }
 body.dark .heat-tooltip { background: #f5f3f0; color: #242423; }
