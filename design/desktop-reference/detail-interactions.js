@@ -57,8 +57,12 @@
     const upper = button.querySelector('.cost-upper'); if (!upper) return;
     if (button.classList.contains('cost-expanded') === expanded) return;
     const key = button.dataset.numberKey || (button.dataset.numberKey = 'hover-cost-' + ++costId);
+    // The range is wider than the figure and scaling does not shrink its layout box, so the
+    // hero column keeps the width it had before expanding; otherwise the facts beside it wrap
+    // and everything below jumps. The range is scaled into that width instead.
+    const hero = button.closest('#totalCost'), column = hero?.closest('.hero-row > .totals');
+    if (column) { clearTimeout(column.releaseTimer); if (expanded) column.style.flex = '0 0 ' + column.getBoundingClientRect().width + 'px'; else column.releaseTimer = setTimeout(() => { if (!button.classList.contains('cost-expanded')) column.style.removeProperty('flex'); }, 450); }
     button.classList.toggle('cost-expanded', expanded);
-    const hero = button.closest('#totalCost');
     if (hero && expanded) { const width = button.querySelector('.cost-lower').scrollWidth + upper.scrollWidth + 80; button.style.setProperty('--range-fit',String(Math.min(innerWidth<850?.78:.84,hero.clientWidth/Math.max(1,width)))); }
     // The fixed-width upper slot avoids width changes on every numerical frame.
     if (expanded) { values.set(key, Number(button.dataset.costLower)); number(upper, key, Number(button.dataset.costUpper), window.displayValues.usd); }
@@ -75,8 +79,28 @@
   window.addEventListener('pointerdown', cancelScroll);
   window.addEventListener('keydown', e => { if (['ArrowDown','ArrowUp','PageDown','PageUp','Home','End','Escape',' '].includes(e.key)) cancelScroll(); if (e.key === 'Escape') document.querySelectorAll('.cost-expanded').forEach(b => expandCost(b,false)); });
   window.addEventListener('resize', cancelScroll);
+  window.addEventListener('resize', () => { for (const column of document.querySelectorAll('.hero-row > .totals')) column.style.removeProperty('flex'); });
+  // Shared chart tooltips sit beside the pointer, so a tall hit area (a short bar in a
+  // full-height column) does not put the tip far from the mark. Keyboard focus has no
+  // pointer and anchors above the element instead. Both stay inside the window.
+  function placeTooltip(tip, anchor, event) {
+    tip.style.left = '0px'; tip.style.top = '0px'; // measure unconstrained by the window edge
+    const width = tip.offsetWidth, height = tip.offsetHeight, pointer = event && 'clientX' in event;
+    let left, top;
+    if (pointer) {
+      left = event.clientX + 14; top = event.clientY - height - 10;
+      if (left + width > innerWidth - 8) left = event.clientX - width - 14;
+      if (top < 8) top = event.clientY + 18;
+    } else {
+      const rect = anchor.getBoundingClientRect();
+      left = rect.left + rect.width / 2 - width / 2; top = rect.top - height - 10;
+      if (top < 8) top = rect.bottom + 10;
+    }
+    tip.style.left = Math.max(8, Math.min(innerWidth - width - 8, left)) + 'px';
+    tip.style.top = Math.max(8, Math.min(innerHeight - height - 8, top)) + 'px';
+  }
   window.addEventListener('ui-motion-change', () => { settleNumbers(); cancelScroll(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { settleNumbers(); cancelScroll(); } });
   window.addEventListener('unload', () => { cancelAnimationFrame(frame); jobs.clear(); });
-  window.uiDetail = Object.freeze({ number, scrollTo, scrollIntoView, settleNumbers, cancelScroll, get activeCount() { return jobs.size + Number(Boolean(scrollJob)); } });
+  window.uiDetail = Object.freeze({ number, scrollTo, scrollIntoView, settleNumbers, cancelScroll, placeTooltip, get activeCount() { return jobs.size + Number(Boolean(scrollJob)); } });
 })();

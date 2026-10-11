@@ -145,10 +145,10 @@ body[data-motion='reduced'] .trend-popover, body[data-motion='off'] .trend-popov
 .chev { display: block; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; }
 .chev-left { transform: translateX(1px) rotate(135deg); }
 .chev-right { transform: translateX(-1px) rotate(-45deg); }
-.cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cal-week span { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 0 6px; }
 .cal-grid { row-gap: 2px; }
-.cal-day { position: relative; height: 38px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.range-calendar .cal-day { position: relative; height: 38px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .cal-day > span { position: relative; z-index: 1; display: grid; place-items: center; width: 34px; height: 34px; margin: auto; border-radius: 50%; transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out); }
 .cal-day:not(.range-start):not(.range-end):hover:not(:disabled) > span { background: var(--fill-strong); }
 .cal-day.is-outside { color: var(--muted); opacity: .55; }
@@ -161,7 +161,8 @@ body[data-motion='reduced'] .trend-popover, body[data-motion='off'] .trend-popov
 .cal-day.range-start.range-end { border-radius: 19px; background: transparent; }
 .cal-day.range-start > span, .cal-day.range-end > span { background: var(--accent); color: #fff; font-weight: 650; }
 body.dark .cal-day.range-start > span, body.dark .cal-day.range-end > span { color: #14161a; }
-.cal-day.range-start.has-usage::after, .cal-day.range-end.has-usage::after { background: currentColor; }
+.cal-day.range-start.has-usage::after, .cal-day.range-end.has-usage::after { background: #fff; opacity: .85; }
+body.dark .cal-day.range-start.has-usage::after, body.dark .cal-day.range-end.has-usage::after { background: #14161a; }
 .cal-day:focus-visible { outline: 0; }
 .cal-day:focus-visible > span { box-shadow: 0 0 0 2px var(--accent); }
 .range-summary { min-height: 20px; margin: 10px 4px 0 !important; font-size: 12.5px !important; color: var(--muted); transition: color 160ms; }

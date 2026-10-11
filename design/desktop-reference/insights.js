@@ -191,26 +191,20 @@
   }
 
   // Hover and focus explain a slot; click or Enter pins its breakdown below the grid.
-  function tooltip(cell) {
+  function tooltip(cell, event) {
     const tip = $('heatTooltip'), grid = state.grid; if (!tip || !grid) return;
     const d = Number(cell.dataset.d), h = Number(cell.dataset.h), data = grid.cells[d][h];
     tip.innerHTML = '<span>' + slotName(d, h) + '</span><strong>' + (data.tokens ? state.activity.short(data.tokens) + ' <small>Token</small>' : '无用量') + '</strong>' + (data.tokens ? '<span>' + data.days + ' 天有用量</span>' : '');
-    const rect = cell.getBoundingClientRect(); tip.style.left = '0px'; tip.style.top = '0px';
-    const width = tip.offsetWidth, height = tip.offsetHeight, above = rect.top - height - 10;
-    tip.style.left = Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2)) + 'px';
-    tip.style.top = (above >= 8 ? above : rect.bottom + 10) + 'px';
+    window.uiDetail.placeTooltip(tip, cell, event);
     tip.classList.add('visible'); tip.setAttribute('aria-hidden', 'false');
     const card = $('hourCard');
     for (const label of card.querySelectorAll('.hour-day, .hour-tick')) label.classList.toggle('is-active', label.dataset.day === String(d) || label.dataset.hour === String(h));
   }
-  function dayTip(bar) {
+  function dayTip(bar, event) {
     const tip = $('heatTooltip'), hour = state.dayHours?.[Number(bar.dataset.hour)], ctx = state.activity; if (!tip || !hour) return;
     const lead = hour.tokens ? math.shares(hour.items, 'agent', 1)[0] : null, agent = lead?.key ? ctx.agents[lead.key] : null;
     tip.innerHTML = '<span>' + pad(hour.h) + ':00–' + pad(hour.h + 1) + ':00</span><strong>' + (hour.future ? '尚未到达' : hour.tokens ? ctx.short(hour.tokens) + ' <small>Token</small>' : '无用量') + '</strong>' + (agent ? '<span>' + ctx.escapeHtml(agent.name) + ' ' + pct(lead.tokenShare, 0) + '</span>' : '');
-    const rect = bar.getBoundingClientRect(); tip.style.left = '0px'; tip.style.top = '0px';
-    const width = tip.offsetWidth, height = tip.offsetHeight, above = rect.top - height - 10;
-    tip.style.left = Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2)) + 'px';
-    tip.style.top = (above >= 8 ? above : rect.bottom + 10) + 'px';
+    window.uiDetail.placeTooltip(tip, bar, event);
     tip.classList.add('visible'); tip.setAttribute('aria-hidden', 'false');
   }
   function untip() {
@@ -232,7 +226,8 @@
     if (event.target.closest('[data-slot-close]')) { state.slot = null; renderSlot(); return; }
     if (event.target.closest('[data-day-clear]')) state.activity?.clearDay();
   });
-  document.addEventListener('mouseover', event => { const cell = event.target.closest('#hourCard .hour-grid button'); if (cell) tooltip(cell); const bar = event.target.closest('#hourCard .day-hours [data-hour]'); if (bar) dayTip(bar); });
+  document.addEventListener('mouseover', event => { const cell = event.target.closest('#hourCard .hour-grid button'); if (cell) tooltip(cell, event); const bar = event.target.closest('#hourCard .day-hours [data-hour]'); if (bar) dayTip(bar, event); });
+  document.addEventListener('pointermove', event => { const mark = event.target.closest?.('#hourCard .hour-grid button, #hourCard .day-hours [data-hour]'), tip = $('heatTooltip'); if (mark && tip?.classList.contains('visible')) window.uiDetail.placeTooltip(tip, mark, event); });
   document.addEventListener('focusin', event => { const bar = event.target.closest?.('#hourCard .day-hours [data-hour]'); if (bar && bar.matches(':focus-visible')) dayTip(bar); });
   document.addEventListener('focusout', event => { if (event.target.closest?.('#hourCard .day-hours [data-hour]')) untip(); });
   document.addEventListener('mouseout', event => { if (event.target.closest('#hourCard .day-hours [data-hour]') && !event.relatedTarget?.closest?.('#hourCard .day-hours [data-hour]')) untip(); });

@@ -8,7 +8,7 @@ button:focus-visible, select:focus-visible, summary:focus-visible { outline-offs
 .topbar nav .motion-indicator { background: var(--nav-selected); box-shadow: none; }
 .motion-group > button[aria-current='page'], .motion-group > button[aria-pressed='true'] { background: transparent !important; box-shadow: none !important; }
 #heatmap button { transition: transform 140ms var(--motion-ease), box-shadow 140ms var(--motion-ease), opacity 140ms var(--motion-ease); }
-.heat-tooltip { transform: none !important; transition: opacity 100ms var(--motion-ease), visibility 100ms; }
+.heat-tooltip { transform-origin: 50% 100%; transition: opacity 150ms var(--motion-ease), transform 170ms var(--motion-ease), visibility 150ms; }
 .chart-tooltip { transition: none; }
 dialog { pointer-events: none; opacity: 0; transform: translateY(8px) scale(.98); transition: opacity 180ms var(--motion-ease), transform 180ms var(--motion-ease), display 180ms allow-discrete, overlay 180ms allow-discrete; }
 dialog[open] { pointer-events: auto; opacity: 1; transform: none; transition-duration: 280ms; }
