@@ -129,6 +129,8 @@ docs/                      设计、合同与验收记录
 
 **所有 UI 与压力测试必须指定自己的 usage/quota 目录和合成 fixture home，绝不在真实数据上跑。**
 
+开发中、提 PR、出候选各跑哪一层，见 [CONTRIBUTING.md](../CONTRIBUTING.md) 的"测试分层"。原则是不重复验证同一份字节，PR 阶段不做打包验收。
+
 `.github/workflows/ci.yml` 只跑 `verify` 与 `audit:runtime`（windows-latest、Node 22.15）。UI/native/打包**故意不上 CI**——它们需要显示器和原生二进制。
 
 ---
