@@ -88,9 +88,36 @@ npm.cmd run verify
 - **分支**：每项工作开一个主题分支（`fix/…`、`feat/…`、`docs/…`），通过 PR 合入 `main`，不直接推 `main`。开工前与推送前都 `git pull --rebase origin main`。
 - **合入条件**：CI 的 `verify` 通过，且 PR 描述写明本地实际跑过哪些检查、哪些没跑（按四态：已实现 / 合成测试过 / 真实数据验证过 / 未执行）。
 - **历史不可改写**：不 force push `main`，不改写已推送的历史。在可能含未推送提交的工作树上不要用 `git reset --hard` / `git clean`——本项目曾因此永久丢失两个已提交的增量。
-- **发布验收归属**：界面套件、打包版与解压副本验收、`dist/<代次>` 候选和 `docs/m2/RESULTS-*` 验收记录由**发布验收负责人**在有桌面的 Windows 机器上完成。没有界面测试条件的维护者照常提交，但涉及渲染层的改动要等负责人跑过相应 `test:*:ui` 套件才算验收。
+- **发布验收归属**：打包版与解压副本验收、`dist/<代次>` 候选和 `docs/m2/RESULTS-*` 验收记录由**发布验收负责人**在有桌面的 Windows 机器上完成。分工与出候选的时机见下一节。
 - **范围决定**：超出九个来源或"额度仅 Codex"的工作，先在 issue 里取得项目所有者的决定再动手。
 - **提交身份**：建议使用 GitHub 提供的 noreply 邮箱提交（`git config user.email <id>+<login>@users.noreply.github.com`），仓库是公开的。
+
+## 分工：按能否占用屏幕划分
+
+界面套件（`scripts/m1/*-ui-test.js`、`ui-stress`、`desktop-performance`）会弹出 Electron 窗口并模拟鼠标，运行期间占用屏幕。不能占用屏幕的维护环境不跑它们。
+
+| 检查 | 可占用屏幕的环境（发布验收负责人所在机器） | 不可占用屏幕的环境 |
+| --- | --- | --- |
+| `verify`、`test:native`、`test:stress`、`experiment:crypto`、`audit:runtime`、`pricing:check` | 可以 | 可以 |
+| `dist:win:dir` + `audit:package`（无窗口） | 可以 | 可以 |
+| 界面套件 | 可以 | 不跑 |
+| 发布候选与 `RESULTS-*` 记录 | 负责 | 不做 |
+
+按这条线分配工作：
+
+- **不可占用屏幕的环境**负责风险能在无界面检查中暴露的改动：`src/m1/` 的采集、解析、存储、策略、原生校验、worker 与 service；`src/quota/` 中不涉及窗口的部分（`rpc.js`、`contract.js`、`service.js`、`errors.js`）；定价；非界面脚本与文档。
+- **可占用屏幕的环境**负责渲染层 `design/desktop-reference/`、窗口与 IPC（`src/quota/main.js`、`preload.js`、`window-shell.js`）以及界面套件本身。
+- 跨界的改动（例如改了快照或额度状态里界面要显示的字段、改了界面套件里的断言）：作者照常提 PR，给 PR 加 `needs-ui-run` 标签，并写明影响哪些界面套件。可占用屏幕的一方跑完这些套件、在 PR 里回复结果之后，才能合并。
+
+## 何时出发布候选
+
+候选不跟着每个 PR 出。满足下面任一条才出：
+
+1. 项目所有者要替换本机正在使用的版本，或要对外交付；
+2. 合并了只有打包版才能验证的改动：依赖、`package.json` 的 build 段、原生二进制或其校验、主进程入口；
+3. 距上一个候选已累积了较多尚未在打包版上验证过的运行时改动，项目所有者决定收一次。
+
+只改文档、测试脚本或 CI 的合并不出候选。渲染层 PR 在 PR 阶段已在源码模式下跑过受影响的套件，攒到下一个候选再做打包验收。
 
 ## Windows 工具链陷阱
 
