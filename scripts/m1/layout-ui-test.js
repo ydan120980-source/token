@@ -17,11 +17,12 @@ const NOW = Date.parse('2026-10-11T06:00:00Z');
 const near = (actual, expected, tolerance, label) => assert.ok(Math.abs(actual - expected) <= tolerance, label + ' by ' + Math.round(actual - expected) + ' px');
 const frames = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 // How far a clipping ancestor cuts into a mark's painted box: its border box after
-// transforms, grown by its outer box-shadows (offset, blur and spread).
+// transforms, grown by the outer box-shadows (offset, blur and spread) of the mark and of
+// its ::before layer, which covers the same box.
 const paintClip = ([selector, index]) => {
   const all = document.querySelectorAll(selector), el = all[index < 0 ? all.length + index : index], box = el.getBoundingClientRect();
   const paint = { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
-  for (const shadow of getComputedStyle(el).boxShadow.split(/,(?![^(]*\))/)) {
+  for (const shadow of [getComputedStyle(el), getComputedStyle(el, '::before')].flatMap(style => style.boxShadow.split(/,(?![^(]*\))/))) {
     if (shadow.includes('inset') || !shadow.includes('px')) continue;
     const [x, y, blur = 0, spread = 0] = shadow.match(/-?[\d.]+px/g).map(parseFloat);
     paint.left = Math.min(paint.left, box.left + x - blur - spread); paint.right = Math.max(paint.right, box.right + x + blur + spread);
