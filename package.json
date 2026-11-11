@@ -1,7 +1,7 @@
 {
   "name": "agent-usage",
   "productName": "Agent Usage Quota",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Windows-local usage statistics for ten AI coding agents, provider-reported quota and explicit local configuration management",
   "main": "src/quota/main.js",
   "scripts": {
