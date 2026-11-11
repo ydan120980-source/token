@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light" data-layout="A">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>阅读页方案</title>
+<style>
+:root { --ground:#e9e9ec; --page:#f5f5f7; --card:#fff; --soft:#f2f2f4; --hover:rgba(0,0,0,.05); --text:#242426; --muted:#66676b; --accent:#1f63c6; --warn:#8a5a12; --mark:#ffe58a; --mark-now:#ffc53d; --edge:0 0 0 .5px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.06); --mono:ui-monospace,"Cascadia Code",Consolas,monospace; color-scheme:light; }
+[data-theme=dark] { --ground:#0f0f10; --page:#171717; --card:#232326; --soft:#2c2c30; --hover:rgba(255,255,255,.07); --text:#f5f5f5; --muted:#a3a3a3; --accent:#95b4e5; --warn:#e0b25c; --mark:#6b5a1e; --mark-now:#a8861f; --edge:0 0 0 .5px rgba(255,255,255,.08),0 1px 3px rgba(0,0,0,.4); color-scheme:dark; }
+* { box-sizing:border-box; }
+html,body { height:100%; margin:0; }
+body { background:var(--ground); color:var(--text); font:14px/1.6 Inter,"Noto Sans SC",system-ui,"Microsoft YaHei UI",sans-serif; display:flex; flex-direction:column; overflow:hidden; }
+button { font:inherit; color:inherit; background:none; border:0; padding:0; cursor:pointer; }
+button:focus-visible,input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+svg.i { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* The board's own strip; everything under it is the product page. */
+.board { display:flex; align-items:center; gap:12px; padding:8px 16px; font-size:12px; color:var(--muted); flex:none; flex-wrap:wrap; }
+.board b { color:var(--text); font-weight:600; font-size:13px; }
+.seg { display:inline-flex; background:var(--hover); border-radius:8px; padding:2px; }
+.seg button { padding:4px 10px; border-radius:6px; color:var(--muted); white-space:nowrap; }
+.seg button[aria-pressed=true] { background:var(--card); color:var(--text); box-shadow:var(--edge); }
+.board .note { flex:1; min-width:200px; }
+
+.app { flex:1; min-height:0; display:flex; background:var(--page); }
+.nav { width:176px; flex:none; padding:16px 12px; display:flex; flex-direction:column; gap:2px; font-size:13px; color:var(--muted); }
+.nav span { padding:6px 10px; border-radius:8px; }
+.nav .on { background:var(--hover); color:var(--text); font-weight:500; }
+.main { flex:1; min-width:0; display:flex; flex-direction:column; gap:12px; padding:16px 20px 16px 4px; }
+
+header.top { display:flex; align-items:center; gap:12px; flex:none; }
+.icon { width:36px; height:36px; display:grid; place-items:center; border-radius:8px; color:var(--text); flex:none; }
+.icon.small { width:28px; height:28px; color:var(--muted); }
+.icon:hover { background:var(--hover); }
+.icon[aria-pressed=true] { background:var(--hover); color:var(--text); }
+.mark { width:36px; height:36px; display:grid; place-items:center; background:var(--soft); border-radius:8px; flex:none; }
+.mark img,.av img { width:20px; height:20px; display:block; }
+.title { flex:1; min-width:0; }
+.title h2 { margin:0; font-size:15px; font-weight:600; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.title p { margin:0; font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.btn { height:36px; padding:0 12px; border-radius:8px; background:var(--soft); display:inline-flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; flex:none; }
+.btn:hover { background:var(--hover); }
+.tools { display:flex; align-items:center; gap:4px; flex:none; }
+
+.find { display:none; align-items:center; gap:6px; flex:none; background:var(--card); box-shadow:var(--edge); border-radius:12px; padding:4px 4px 4px 12px; align-self:flex-end; }
+.find.open { display:flex; }
+.find input { width:240px; border:0; background:none; color:inherit; font:inherit; font-size:13px; outline:0; }
+.find output { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; min-width:44px; text-align:right; }
+
+.body { flex:1; min-height:0; display:flex; gap:16px; }
+.outline { width:232px; flex:none; overflow-y:auto; display:flex; flex-direction:column; gap:2px; padding-right:4px; }
+.outline button { display:flex; gap:8px; align-items:baseline; text-align:left; padding:6px 10px; border-radius:8px; color:var(--muted); font-size:13px; line-height:1.45; }
+.outline button:hover { background:var(--hover); }
+.outline button.now { background:var(--hover); color:var(--text); font-weight:500; }
+.outline time { font-size:11px; font-variant-numeric:tabular-nums; flex:none; width:32px; }
+.outline .txt { min-width:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.outline .bad { width:6px; height:6px; border-radius:50%; background:var(--warn); flex:none; align-self:center; margin-left:auto; }
+.outline .gap { font-size:11px; color:var(--muted); padding:8px 10px 2px 50px; }
+
+.paper { flex:1; min-width:0; position:relative; background:var(--card); border-radius:16px; box-shadow:var(--edge); overflow:hidden; display:flex; }
+.scroll { flex:1; min-width:0; overflow-y:auto; scrollbar-width:none; padding:32px 44px 64px; }
+.scroll::-webkit-scrollbar { display:none; }
+.doc { max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:40px; }
+
+/* The question of the turn being read stays in view, without moving anything under it. */
+.strip { position:absolute; left:0; right:20px; top:0; z-index:2; height:44px; padding:0 44px; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .16s; background:linear-gradient(var(--card) 70%,transparent); }
+.strip.show { opacity:1; pointer-events:auto; }
+.strip button { max-width:720px; width:100%; display:flex; gap:8px; text-align:left; font-size:13px; font-weight:500; }
+.strip span:last-child { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.strip span:first-child { color:var(--muted); font-weight:400; flex:none; }
+
+/* The rail: the whole session at once, turn by turn. */
+.rail { width:20px; flex:none; position:relative; padding:12px 0; }
+.rail i { position:absolute; left:6px; right:6px; background:var(--muted); opacity:.22; border-radius:2px; cursor:pointer; display:block; }
+.rail s { position:absolute; left:4px; right:4px; height:3px; background:var(--warn); border-radius:2px; pointer-events:none; }
+.rail b { position:absolute; left:2px; right:2px; height:3px; background:var(--accent); border-radius:2px; pointer-events:none; }
+.rail u { position:absolute; left:2px; right:2px; border-radius:4px; background:var(--hover); box-shadow:inset 0 0 0 1px var(--hover); pointer-events:none; }
+
+.turn { display:flex; flex-direction:column; gap:12px; scroll-margin-top:44px; }
+.who { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+.who time { font-variant-numeric:tabular-nums; }
+.q { font-size:15px; font-weight:600; line-height:1.55; white-space:pre-wrap; }
+.gapline { display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--muted); margin-bottom:-16px; }
+.av { display:none; }
+.proc { display:flex; flex-direction:column; gap:6px; }
+.proc > button { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); padding:4px 8px; margin-left:-8px; border-radius:8px; align-self:flex-start; }
+.proc > button:hover { background:var(--hover); color:var(--text); }
+.chev { transition:transform .16s; width:14px; height:14px; }
+.proc.open > button .chev { transform:rotate(90deg); }
+.steps { display:none; flex-direction:column; gap:2px; padding-left:14px; margin-left:-1px; }
+.proc.open .steps { display:flex; }
+.step { display:flex; align-items:center; gap:8px; font-size:12px; min-height:26px; min-width:0; }
+.step b { font-weight:500; flex:none; }
+.step code { font:12px var(--mono); color:var(--muted); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.step .tag { flex:none; font-size:11px; color:var(--warn); padding:0 6px; border-radius:6px; background:color-mix(in srgb,var(--warn) 14%,transparent); }
+.step svg { color:var(--muted); width:14px; height:14px; }
+.fail { display:flex; flex-direction:column; gap:6px; background:var(--soft); border-radius:12px; padding:10px 12px; font-size:12px; }
+.reply { font-size:14px; line-height:1.75; }
+.reply > *:first-child { margin-top:0; } .reply > *:last-child { margin-bottom:0; }
+.reply p { margin:0 0 12px; }
+.reply h3 { margin:20px 0 8px; font-size:14px; font-weight:600; }
+.reply ul { margin:0 0 12px; padding-left:20px; }
+.reply code { font:12.5px var(--mono); background:var(--soft); padding:1px 5px; border-radius:6px; }
+.reply table { width:100%; border-collapse:collapse; font-size:13px; margin:0 0 12px; }
+.reply th { text-align:left; font-weight:500; color:var(--muted); font-size:12px; }
+.reply th,.reply td { padding:6px 12px 6px 0; }
+.block { position:relative; margin:0 -20px 12px; background:var(--soft); border-radius:12px; }
+.block header { display:flex; justify-content:space-between; align-items:center; padding:4px 6px 0 14px; font-size:11px; color:var(--muted); }
+.block pre { margin:0; padding:6px 14px 12px; font:12.5px/1.6 var(--mono); overflow-x:auto; }
+.tail { display:flex; justify-content:flex-end; gap:2px; opacity:.0; transition:opacity .12s; }
+.turn:hover .tail,.tail:focus-within { opacity:1; }
+mark { background:var(--mark); color:inherit; border-radius:3px; }
+mark.now { background:var(--mark-now); }
+.turn.dim { display:none; }
+[data-filter=talk] .proc { display:none; }
+
+/* The right column: what this session did. */
+.side { width:296px; flex:none; display:none; flex-direction:column; gap:20px; overflow:hidden auto; padding:4px 8px 16px; font-size:13px; }
+.side.open { display:flex; }
+.side h4 { margin:0 0 6px; font-size:12px; font-weight:500; color:var(--muted); display:flex; justify-content:space-between; }
+.side dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:13px; }
+.side dt { color:var(--muted); } .side dd { margin:0; text-align:right; font-variant-numeric:tabular-nums; }
+.side .row { display:flex; gap:8px; align-items:center; width:100%; text-align:left; padding:5px 8px; margin:0 -8px; width:calc(100% + 16px); border-radius:8px; font-size:12px; min-width:0; }
+.side .row:hover { background:var(--hover); }
+.side .row code { font:12px var(--mono); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; min-width:0; flex:1; }
+.side .row small { color:var(--muted); font-size:11px; flex:none; font-variant-numeric:tabular-nums; }
+.side .row.bad code { color:var(--warn); }
+
+/* B: the conversation as bubbles, the outline stepping aside. */
+[data-layout=B] .doc { max-width:760px; gap:28px; }
+[data-layout=B] .q { font-weight:400; font-size:14px; background:var(--soft); padding:10px 14px; border-radius:16px; max-width:80%; align-self:flex-end; }
+[data-layout=B] .who { align-self:flex-end; }
+[data-layout=B] .answer { display:grid; grid-template-columns:24px 1fr; gap:4px 12px; }
+[data-layout=B] .av { display:block; grid-row:1 / span 3; padding-top:2px; }
+[data-layout=B] .av img { width:18px; height:18px; }
+[data-layout=B] .answer > * { grid-column:2; min-width:0; }
+[data-layout=B] .answer > .av { grid-column:1; }
+[data-layout=B] .strip { display:none; }
+.answer { display:flex; flex-direction:column; gap:12px; }
+
+.tab { position:absolute; inset:0; overflow:auto; background:var(--page); padding:28px 32px; display:none; z-index:5; }
+.tab.open { display:block; }
+.stage { position:relative; flex:1; min-height:0; display:flex; }
+.tab h3 { font-size:17px; margin:0 0 4px; font-weight:600; }
+.tab > div { max-width:920px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+.lane { background:var(--card); border-radius:16px; box-shadow:var(--edge); padding:18px 22px; }
+.lane h4 { margin:0; font-size:15px; font-weight:600; }
+.lane p.sub { margin:2px 0 10px; font-size:12px; color:var(--muted); }
+.lane table { width:100%; border-collapse:collapse; font-size:13px; }
+.lane td { padding:7px 12px 7px 0; vertical-align:top; }
+.lane td:first-child { width:164px; font-weight:500; }
+.lane td:last-child { color:var(--muted); width:36%; font-size:12px; }
+
+@media (max-width:1240px) { .nav { display:none; } .main { padding-left:16px; } }
+@media (max-width:1040px) { .outline,.side { display:none !important; } .scroll { padding:24px 20px 48px; } .strip { padding:0 20px; } }
+@media (prefers-reduced-motion:reduce) { *{ transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+<div class="board">
+  <b>阅读页方案</b>
+  <div class="seg" role="group" aria-label="版式">
+    <button data-set-layout="A" aria-pressed="true">A 文档</button>
+    <button data-set-layout="B" aria-pressed="false">B 对话</button>
+    <button data-set-layout="C" aria-pressed="false">C 审阅</button>
+  </div>
+  <div class="seg" role="group" aria-label="主题">
+    <button data-set-theme="light" aria-pressed="true">浅色</button>
+    <button data-set-theme="dark" aria-pressed="false">深色</button>
+  </div>
+  <div class="seg"><button id="openList" aria-pressed="false">功能清单</button></div>
+  <span class="note">合成内容。可以滚动、点目录和位置轨、展开执行过程；J / K 换一轮，/ 查找，Esc 关闭查找。</span>
+</div>
+
+<div class="stage">
+<div class="app">
+  <nav class="nav" aria-hidden="true"><span>概览</span><span>费用</span><span>用量</span><span class="on">会话</span><span>来源</span><span>设置</span></nav>
+  <main class="main">
+    <header class="top">
+      <button class="icon" aria-label="返回会话列表" title="返回会话列表"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M5 12l6 6M5 12l6-6"/></svg></button>
+      <span class="mark"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSJjdXJyZW50Q29sb3IiIGZpbGwtcnVsZT0iZXZlbm9kZCIgaGVpZ2h0PSIxZW0iIHN0eWxlPSJmbGV4Om5vbmU7bGluZS1oZWlnaHQ6MSIgdmlld0JveD0iMCAwIDI0IDI0IiB3aWR0aD0iMWVtIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0aXRsZT5PcGVuQUk8L3RpdGxlPjxwYXRoIGQ9Ik05LjIwNSA4LjY1OHYtMi4yNmMwLS4xOS4wNzItLjMzMy4yMzgtLjQyOGw0LjU0My0yLjYxNmMuNjE5LS4zNTcgMS4zNTYtLjUyMyAyLjExNy0uNTIzIDIuODU0IDAgNC42NjIgMi4yMTIgNC42NjIgNC41NjYgMCAuMTY3IDAgLjM1Ny0uMDI0LjU0N2wtNC43MS0yLjc1OWEuNzk3Ljc5NyAwIDAwLS44NTYgMGwtNS45NyAzLjQ3M3ptMTAuNjA5IDguOFYxMi4wNmMwLS4zMzMtLjE0My0uNTctLjQyOS0uNzM3bC01Ljk3LTMuNDczIDEuOTUtMS4xMThhLjQzMy40MzMgMCAwMS40NzYgMGw0LjU0MyAyLjYxN2MxLjMwOS43NiAyLjE4OSAyLjM3OCAyLjE4OSAzLjk0OCAwIDEuODA4LTEuMDcgMy40NzMtMi43NiA0LjE2M3pNNy44MDIgMTIuNzAzbC0xLjk1LTEuMTQyYy0uMTY3LS4wOTUtLjIzOS0uMjM4LS4yMzktLjQyOFY1Ljg5OWMwLTIuNTQ1IDEuOTUtNC40NzIgNC41OTEtNC40NzIgMSAwIDEuOTI3LjMzMyAyLjcxMi45MjhMOC4yMyA1LjA2N2MtLjI4NS4xNjYtLjQyOC40MDQtLjQyOC43Mzd2Ni44OTh6TTEyIDE1LjEyOGwtMi43OTUtMS41N3YtMy4zM0wxMiA4LjY1OGwyLjc5NSAxLjU3djMuMzNMMTIgMTUuMTI4em0xLjc5NiA3LjIzYy0xIDAtMS45MjctLjMzMi0yLjcxMi0uOTI3bDQuNjg2LTIuNzEyYy4yODUtLjE2Ni40MjgtLjQwNC40MjgtLjczN3YtNi44OThsMS45NzQgMS4xNDJjLjE2Ny4wOTUuMjM4LjIzOC4yMzguNDI4djUuMjMzYzAgMi41NDUtMS45NzQgNC40NzItNC42MTQgNC40NzJ6bS01LjYzNy01LjMwM2wtNC41NDQtMi42MTdjLTEuMzA4LS43NjEtMi4xODgtMi4zNzgtMi4xODgtMy45NDhBNC40ODIgNC40ODIgMCAwMTQuMjEgNi4zMjd2NS40MjNjMCAuMzMzLjE0My41NzEuNDI4LjczOGw1Ljk0NyAzLjQ0OS0xLjk1IDEuMTE4YS40MzIuNDMyIDAgMDEtLjQ3NiAwem0tLjI2MiAzLjljLTIuNjg4IDAtNC42NjItMi4wMjEtNC42NjItNC41MTkgMC0uMTkuMDI0LS4zOC4wNDctLjU3bDQuNjg2IDIuNzFjLjI4Ni4xNjcuNTcxLjE2Ny44NTYgMGw1Ljk3LTMuNDQ4djIuMjZjMCAuMTktLjA3LjMzMy0uMjM3LjQyOGwtNC41NDMgMi42MTZjLS42MTkuMzU3LTEuMzU2LjUyMy0yLjExNy41MjN6bTUuODk5IDIuODNhNS45NDcgNS45NDcgMCAwMDUuODI3LTQuNzU2QzIyLjI4NyAxOC4zMzkgMjQgMTUuODQgMjQgMTMuMjk2YzAtMS42NjUtLjcxMy0zLjI4Mi0xLjk5OC00LjQ0OC4xMTktLjUuMTktLjk5OS4xOS0xLjQ5OCAwLTMuNDAxLTIuNzU5LTUuOTQ3LTUuOTQ2LTUuOTQ3LS42NDIgMC0xLjI2LjA5NS0xLjg4LjMxQTUuOTYyIDUuOTYyIDAgMDAxMC4yMDUgMGE1Ljk0NyA1Ljk0NyAwIDAwLTUuODI3IDQuNzU3QzEuNzEzIDUuNDQ3IDAgNy45NDUgMCAxMC40OWMwIDEuNjY2LjcxMyAzLjI4MyAxLjk5OCA0LjQ0OC0uMTE5LjUtLjE5IDEtLjE5IDEuNDk5IDAgMy40MDEgMi43NTkgNS45NDYgNS45NDYgNS45NDYuNjQyIDAgMS4yNi0uMDk1IDEuODgtLjMwOWE1Ljk2IDUuOTYgMCAwMDQuMTYyIDEuNzEzeiI+PC9wYXRoPjwvc3ZnPg==" alt="Codex"></span>
+      <div class="title"><h2>修复趋势图切换图例时没有过渡</h2><p id="facts"></p></div>
+      <div class="tools">
+        <button class="icon small" aria-label="上一个会话" title="上一个会话  ["><svg class="i" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+        <button class="icon small" aria-label="下一个会话" title="下一个会话  ]"><svg class="i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+      </div>
+      <div class="seg" role="group" aria-label="显示内容" id="filters">
+        <button data-filter="all" aria-pressed="true">全部</button>
+        <button data-filter="talk" aria-pressed="false">只看对话</button>
+        <button data-filter="fail" aria-pressed="false">只看失败</button>
+      </div>
+      <div class="tools">
+        <button class="icon small" id="toggleFind" aria-label="查找" title="查找  /"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></svg></button>
+        <button class="icon small" id="toggleOutline" aria-label="目录" title="目录" aria-pressed="true"><svg class="i" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></button>
+        <button class="icon small" id="toggleSide" aria-label="这次会话" title="这次会话" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M15 5v14"/></svg></button>
+        <button class="icon small" aria-label="导出 Markdown" title="导出 Markdown"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M12 15l-4-4M12 15l4-4M5 20h14"/></svg></button>
+      </div>
+      <button class="btn" title="复制恢复命令，由你自己在终端里执行"><svg class="i" viewBox="0 0 24 24"><path d="M5 7l5 5-5 5M12 18h7"/></svg>接着做</button>
+    </header>
+    <div class="find" id="find"><svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></svg>
+      <input id="needle" placeholder="在对话中查找" aria-label="在对话中查找"><output id="hits"></output>
+      <button class="icon small" id="prevHit" aria-label="上一处"><svg class="i" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button class="icon small" id="nextHit" aria-label="下一处"><svg class="i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
+    <div class="body">
+      <aside class="outline" id="outline" aria-label="对话目录"></aside>
+      <div class="paper">
+        <div class="strip" id="strip"><button id="stripBtn"><span id="stripN"></span><span id="stripQ"></span></button></div>
+        <div class="scroll" id="scroll" tabindex="-1"><div class="doc" id="doc"></div></div>
+        <div class="rail" id="rail" aria-hidden="true"></div>
+      </div>
+      <aside class="side" id="side" aria-label="这次会话"></aside>
+    </div>
+  </main>
+</div>
+
+<section class="tab" id="list"><div>
+  <div><h3>可用功能</h3></div>
+  <div class="lane"><h4>现有数据就够</h4><p class="sub">记录已经读进窗口，只改界面；不改读取范围。</p><table>
+    <tr><td>每轮时间和间隔</td><td>每轮标时间，隔得久的两轮之间写“隔了 2 小时”。</td><td>记录里已有时间，现在没显示；没有时间的不写</td></tr>
+    <tr><td>问题留在视野里</td><td>读长回复时，顶部一行写着这一轮问的是什么，点一下回到开头。</td><td>不挤动正文</td></tr>
+    <tr><td>阅读宽度</td><td>正文 720px，代码块略宽一点。</td><td>现在最宽 1024px，一行太长</td></tr>
+    <tr><td>全部 / 只看对话 / 只看失败</td><td>回看时先略过工具过程，或直接看哪里出了错。</td><td></td></tr>
+    <tr><td>位置轨</td><td>一条竖轨画出全部轮次的长短、失败和查找结果，点哪跳哪。</td><td>替代滚动条</td></tr>
+    <tr><td>上一个 / 下一个会话</td><td>按列表顺序换会话，不用退回列表。</td><td></td></tr>
+    <tr><td>接着做</td><td>标题栏直接复制恢复命令。</td><td>已有功能，换位置</td></tr>
+    <tr><td>代码块复制、复制单条、导出选定的几轮</td><td>现在只能复制一整轮或导出全部。</td><td>后台已支持按范围</td></tr>
+    <tr><td>键盘</td><td>J / K 换一轮，[ / ] 换会话，/ 查找。</td><td></td></tr>
+    <tr><td>右栏：跑过的命令、失败</td><td>从工具调用汇总，点一条跳到那一轮。</td><td>文件列表要等下一组</td></tr>
+  </table></div>
+  <div class="lane"><h4>要改解析</h4><p class="sub">还在已批准的记录内，但 7 个 Agent 要分别核对格式、补合成样例。下面的格式支持情况还没逐个核对。</p><table>
+    <tr><td>改动视图</td><td>把 Agent 的改文件操作画成增删对比。</td><td>价值最高。现在工具参数只留一行摘要</td></tr>
+    <tr><td>改过的文件</td><td>右栏按文件列出，点文件看到相关的几轮。</td><td>要区分读和改，每个 Agent 的工具名不同</td></tr>
+    <tr><td>每轮用量</td><td>每轮标 Token；记录里没有的写未知，不写 0。</td><td>只显示，不进统计</td></tr>
+    <tr><td>子 Agent 折叠</td><td>子任务收成一行，展开看内部。</td><td>需要先确认哪些 Agent 有</td></tr>
+    <tr><td>跟随进行中的会话</td><td>打开开关后，记录一变就重新读取并滚到最新。</td><td>只在页面打开时读</td></tr>
+    <tr><td>代码高亮</td><td>只带常用语言，用到时才加载。</td><td>要先量内存，M12 还在压峰值</td></tr>
+  </table></div>
+  <div class="lane"><h4>要你决定</h4><p class="sub">这些会动到“阅读什么都不留”或读取范围，每项单独记录。</p><table>
+    <tr><td>记住读到哪</td><td>再打开时回到上次位置。</td><td>只存第几轮，不存内容</td></tr>
+    <tr><td>书签和备注</td><td>给某一轮加标记和自己写的话。</td><td>存在应用自己的文件里</td></tr>
+    <tr><td>记录外的本地图片</td><td>显示记录里引用的本地图片。</td><td>要读来源白名单之外的文件</td></tr>
+    <tr><td>独立窗口</td><td>阅读时单开一个窗口。</td><td>可以和列表并排，但多占内存</td></tr>
+  </table></div>
+  <div class="lane"><h4>不建议做</h4><p class="sub">与“不上传”冲突。</p><table>
+    <tr><td>AI 总结、语义搜索</td><td>要把对话内容发给模型。</td><td>可以用本地模型，但这是另一个范围</td></tr>
+  </table></div>
+</div></section>
+</div>
+
+<script>
+const T = [
+  { t:'09:12', q:'费用走势取消 Codex 的时候线是直接跳的，没有过渡。先查一下原因。',
+    steps:[['Read','ui/src/kit/charts/line-chart.tsx'],['Grep','hidden · ui/src/pages/cost'],['Read','design/cost-model.js']],
+    r:`<p>原因在数据这一层：<code>trendView</code> 把隐藏的序列直接从数组里删掉了，所以路径的点数和结构都变了。动画库只能在<b>结构相同</b>的路径之间补间，结构一变就只能跳。</p>
+<h3>改法</h3><ul><li>隐藏的序列继续画，已知值压到 0，并把透明度降到 0。</li><li>合计和坐标轴只算可见序列，避免把隐藏的值算进去。</li><li>未知值仍然是未知，不跟着变成 0。</li></ul><p>要我直接改吗？</p>` },
+  { t:'09:15', q:'改吧。用量趋势那边是同一个问题，一起改。',
+    steps:[['Edit','ui/src/kit/charts/line-chart.tsx'],['Edit','design/cost-model.js'],['Edit','ui/src/pages/cost/charts.tsx'],['Edit','ui/src/pages/usage/trend.tsx'],['Shell','npm run build:ui'],['Shell','node scripts/cost-ui-test.js','fail'],['Read','scripts/cost-ui-test.js'],['Edit','scripts/cost-ui-test.js'],['Shell','node scripts/cost-ui-test.js']],
+    fail:'cost-ui-test.js:77  expected 3 visible series, saw 4',
+    r:`<p>两张图都改好了。测试先失败了一次：它按 DOM 里的线条数量判断可见序列，而隐藏的线现在还留在页面里。我给可见的线加了标记，测试改成数标记。</p>
+<div class="block"><header><span>tsx</span><button class="icon small" aria-label="复制代码" style="width:24px;height:24px"><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></button></header><pre>&lt;motion.g
+  animate={{ opacity: hidden ? 0 : 1 }}
+  data-line-series={hidden ? undefined : key}
+&gt;
+  &lt;motion.path animate={{ d: path(values) }} /&gt;
+&lt;/motion.g&gt;</pre></div>
+<table><tr><th>切换</th><th>改动前</th><th>改动后</th></tr><tr><td>费用 · 隐藏</td><td>71 帧</td><td>98 帧</td></tr><tr><td>费用 · 显示</td><td>2 帧</td><td>101 帧</td></tr></table>
+<p>这是 700 毫秒内路径发生变化的帧数。</p>` },
+  { t:'09:31', q:'坐标轴还是跳的。',
+    steps:[['Read','ui/src/kit/charts/line-chart.tsx'],['Edit','ui/src/kit/charts/line-chart.tsx']],
+    r:`<p>刻度是直接换的文字。我把每个刻度改成了独立元素，新旧刻度各自移动并淡入淡出，和线走同一条曲线。</p>` },
+  { gap:'隔了 2 小时', t:'11:34', q:'我又试了一下，首屏那条细的横条很难指到，指到了也经常没反应。这个能不能改？另外下面的 Agent 图例也要能点。',
+    steps:[['Read','ui/src/kit/charts/stack-bar.tsx'],['Read','ui/src/pages/cost/hero.tsx'],['Edit','ui/src/kit/charts/stack-bar.tsx'],['Edit','ui/src/pages/cost/hero.tsx'],['Edit','ui/src/pages/cost/index.tsx'],['Shell','node scripts/cost-layout-ui-test.js']],
+    r:`<p>横条只有 12 像素高，细的段宽度接近 0，所以很难指到。</p>
+<h3>现在</h3><ul><li>上下各多 10 像素响应范围。</li><li>每段响应宽度至少 8 像素。</li><li>指向一段时，其他段变暗。</li><li>点图例或横条只看这个 Agent，再点一次回到全部。</li></ul>
+<p>这几项都是响应范围的变化，横条画出来的样子没有变。</p>` },
+  { t:'11:40', q:'好，提交吧。',
+    steps:[['Shell','npm run verify'],['Shell','git add -A'],['Shell','git commit -m "cost and usage: toggles move"']],
+    r:`<p>已提交 <code>e258481</code>。<code>npm run verify</code> 通过。</p>` },
+];
+const logo = document.querySelector('.mark img').src, $ = id => document.getElementById(id), root = document.documentElement;
+const ico = { tool:'<svg class="i" viewBox="0 0 24 24"><path d="M14 7l3-3 3 3-3 3M14 7L5 16v3h3l9-9"/></svg>', term:'<svg class="i" viewBox="0 0 24 24"><path d="M5 7l5 5-5 5M12 18h7"/></svg>', chev:'<svg class="i chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>' };
+const totalTools = T.reduce((n, x) => n + x.steps.length, 0), failed = T.reduce((n, x) => n + x.steps.filter(s => s[2]).length, 0);
+$('facts').textContent = 'Codex · demo-app · ' + T.length + ' 轮 · ' + totalTools + ' 次工具调用（' + failed + ' 次失败） · 今天 09:12–11:40';
+
+const step = s => '<div class="step">' + (s[0] === 'Shell' ? ico.term : ico.tool) + '<b>' + s[0] + '</b><code>' + s[1] + '</code>' + (s[2] ? '<span class="tag">失败</span>' : '') + '</div>';
+$('doc').innerHTML = T.map((x, i) => {
+  const bad = x.steps.filter(s => s[2]);
+  return (x.gap ? '<div class="gapline">' + x.gap + '</div>' : '') +
+  '<section class="turn" data-i="' + i + '" id="turn' + i + '">' +
+    '<div class="who"><span>你</span><time>' + x.t + '</time></div><div class="q">' + x.q + '</div>' +
+    '<div class="answer"><div class="av"><img src="' + logo + '" alt=""></div>' +
+      '<div class="proc" data-proc>' +
+        '<button>' + ico.chev + '<span>执行过程 · ' + x.steps.length + ' 步' + (bad.length ? ' · ' + bad.length + ' 次失败' : '') + '</span></button>' +
+        '<div class="steps">' + x.steps.map(step).join('') + '</div>' +
+        (bad.length ? '<div class="fail">' + bad.map(step).join('') + '<code style="font:12px var(--mono);color:var(--muted)">' + x.fail + '</code></div>' : '') +
+      '</div>' +
+      '<div class="reply">' + x.r + '</div>' +
+      '<div class="tail"><button class="icon small" aria-label="复制这一轮" title="复制这一轮"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></button></div>' +
+    '</div></section>';
+}).join('');
+document.querySelectorAll('[data-proc] > button').forEach(b => b.onclick = () => { b.parentElement.classList.toggle('open'); measure(); });
+
+$('outline').innerHTML = T.map((x, i) => (x.gap ? '<div class="gap">' + x.gap + '</div>' : '') + '<button data-go="' + i + '"><time>' + x.t + '</time><span class="txt">' + x.q + '</span>' + (x.steps.some(s => s[2]) ? '<span class="bad" title="有失败"></span>' : '') + '</button>').join('');
+const edits = [...new Set(T.flatMap(x => x.steps.filter(s => s[0] === 'Edit').map(s => s[1])))];
+const firstTurn = (kind, value) => T.findIndex(x => x.steps.some(s => s[0] === kind && s[1] === value));
+const shells = T.flatMap((x, i) => x.steps.filter(s => s[0] === 'Shell').map(s => ({ s, i })));
+$('side').innerHTML = '<section><h4>这次会话</h4><dl><dt>时长</dt><dd>2 小时 28 分</dd><dt>模型</dt><dd>gpt-6.1-sol</dd><dt>Token</dt><dd>1.2M</dd><dt>估算</dt><dd>$0.76</dd></dl></section>' +
+  '<section><h4><span>改过的文件</span><span>' + edits.length + '</span></h4>' + edits.map(f => '<button class="row" data-go="' + firstTurn('Edit', f) + '" title="' + f + '"><code>' + f.split('/').pop() + '</code><small>第 ' + (firstTurn('Edit', f) + 1) + ' 轮</small></button>').join('') + '</section>' +
+  '<section><h4><span>跑过的命令</span><span>' + shells.length + '</span></h4>' + shells.map(({ s, i }) => '<button class="row' + (s[2] ? ' bad' : '') + '" data-go="' + i + '" title="' + s[1] + '"><code>' + s[1] + '</code><small>' + (s[2] ? '失败' : '第 ' + (i + 1) + ' 轮') + '</small></button>').join('') + '</section>';
+
+const scroll = $('scroll'), rail = $('rail'), turns = [...document.querySelectorAll('.turn')];
+function go(i) { const t = turns[i]; if (!t || t.classList.contains('dim')) return; scroll.scrollTo({ top: t.offsetTop - scroll.offsetTop - 44, behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth' }); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(+b.dataset.go); });
+$('stripBtn').onclick = () => go(current);
+
+let current = 0, hits = [], at = -1;
+function measure() {
+  const total = scroll.scrollHeight, H = rail.clientHeight - 24, shown = turns.filter(t => !t.classList.contains('dim'));
+  rail.innerHTML = shown.map(t => { const i = +t.dataset.i, top = 12 + t.offsetTop / total * H, h = Math.max(4, t.offsetHeight / total * H - 3); const failure = t.querySelector('.fail'); return '<i data-go="' + i + '" style="top:' + top + 'px;height:' + h + 'px"></i>' + (failure ? '<s style="top:' + (12 + (t.offsetTop + failure.offsetTop - t.offsetTop) / total * H) + 'px"></s>' : ''); }).join('') +
+    '<u id="win"></u>' + hits.map(m => { const r = m.getBoundingClientRect(), c = scroll.getBoundingClientRect(), y = r.top - c.top + scroll.scrollTop; return '<b style="top:' + (12 + y / total * H) + 'px"></b>'; }).join('');
+  track();
+}
+function track() {
+  const total = scroll.scrollHeight, H = rail.clientHeight - 24, win = $('win');
+  if (win) { win.style.top = 12 + scroll.scrollTop / total * H + 'px'; win.style.height = scroll.clientHeight / total * H + 'px'; }
+  const y = scroll.scrollTop + 60; let now = current;
+  for (const t of turns) if (!t.classList.contains('dim') && t.offsetTop - scroll.offsetTop <= y) now = +t.dataset.i;
+  current = now;
+  document.querySelectorAll('.outline button').forEach(b => b.classList.toggle('now', +b.dataset.go === now));
+  const t = turns[now], q = t.querySelector('.q'), gone = q.offsetTop + q.offsetHeight - scroll.offsetTop < scroll.scrollTop + 8 && t.offsetTop + t.offsetHeight - scroll.offsetTop > scroll.scrollTop + 60;
+  $('strip').classList.toggle('show', gone); $('stripN').textContent = '第 ' + (now + 1) + ' 轮'; $('stripQ').textContent = T[now].q;
+}
+scroll.addEventListener('scroll', track, { passive: true }); addEventListener('resize', measure);
+
+function setFilter(value) {
+  document.querySelectorAll('[data-filter]').forEach(b => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', b.dataset.filter === value); });
+  $('doc').dataset.filter = value;
+  turns.forEach((t, i) => t.classList.toggle('dim', value === 'fail' && !T[i].steps.some(s => s[2])));
+  document.querySelectorAll('.gapline').forEach(g => g.style.display = value === 'fail' ? 'none' : '');
+  if (value === 'fail') turns.forEach((t, i) => { if (T[i].steps.some(s => s[2])) t.querySelector('[data-proc]').classList.add('open'); });
+  scroll.scrollTop = 0; measure();
+}
+document.querySelectorAll('#filters button').forEach(b => b.onclick = () => setFilter(b.dataset.filter));
+
+// Marks in the text the page is showing.
+function clearMarks() { document.querySelectorAll('#doc mark').forEach(m => { m.replaceWith(m.textContent); }); $('doc').normalize(); hits = []; at = -1; }
+function search(text) {
+  clearMarks(); text = text.trim().toLowerCase();
+  if (text) { const walk = document.createTreeWalker($('doc'), NodeFilter.SHOW_TEXT), nodes = []; while (walk.nextNode()) nodes.push(walk.currentNode);
+    for (const node of nodes) { let v = node.nodeValue, low = v.toLowerCase(), p = low.indexOf(text); if (p < 0) continue; const frag = document.createDocumentFragment(); let last = 0; while (p >= 0) { frag.append(v.slice(last, p)); const m = document.createElement('mark'); m.textContent = v.slice(p, p + text.length); frag.append(m); hits.push(m); last = p + text.length; p = low.indexOf(text, last); } frag.append(v.slice(last)); node.replaceWith(frag); } }
+  $('hits').textContent = text ? (hits.length ? '' : '无结果') : ''; measure(); if (hits.length) jump(0);
+}
+function jump(i) { if (!hits.length) return; hits[at]?.classList.remove('now'); at = (i + hits.length) % hits.length; const m = hits[at]; m.classList.add('now'); const proc = m.closest('[data-proc]'); if (proc) proc.classList.add('open'); m.scrollIntoView({ block: 'center' }); $('hits').textContent = (at + 1) + ' / ' + hits.length; measure(); }
+function openFind(on) { $('find').classList.toggle('open', on); if (on) $('needle').focus(); else { $('needle').value = ''; search(''); } requestAnimationFrame(measure); }
+$('toggleFind').onclick = () => openFind(!$('find').classList.contains('open'));
+$('needle').oninput = e => search(e.target.value);
+$('needle').onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); jump(at + (e.shiftKey ? -1 : 1)); } if (e.key === 'Escape') openFind(false); };
+$('prevHit').onclick = () => jump(at - 1); $('nextHit').onclick = () => jump(at + 1);
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'j') go(Math.min(T.length - 1, current + 1)); if (e.key === 'k') go(Math.max(0, current - 1)); if (e.key === '/') { e.preventDefault(); openFind(true); } });
+
+const pane = (el, button, on) => { el.style.display = on ? '' : 'none'; if (el.id === 'side') el.classList.toggle('open', on); button.setAttribute('aria-pressed', on); };
+function setLayout(v) {
+  root.dataset.layout = v; document.querySelectorAll('[data-set-layout]').forEach(b => b.setAttribute('aria-pressed', b.dataset.setLayout === v));
+  pane($('outline'), $('toggleOutline'), v !== 'B'); pane($('side'), $('toggleSide'), v === 'C'); $('rail').style.display = v === 'B' ? 'none' : '';
+  requestAnimationFrame(measure);
+}
+document.querySelectorAll('[data-set-layout]').forEach(b => b.onclick = () => { closeList(); setLayout(b.dataset.setLayout); });
+$('toggleOutline').onclick = e => { pane($('outline'), e.currentTarget, $('outline').style.display === 'none'); requestAnimationFrame(measure); };
+$('toggleSide').onclick = e => { pane($('side'), e.currentTarget, !$('side').classList.contains('open')); requestAnimationFrame(measure); };
+document.querySelectorAll('[data-set-theme]').forEach(b => b.onclick = () => { root.dataset.theme = b.dataset.setTheme; document.querySelectorAll('[data-set-theme]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+const closeList = () => { $('list').classList.remove('open'); $('openList').setAttribute('aria-pressed', 'false'); };
+$('openList').onclick = () => { const on = !$('list').classList.contains('open'); $('list').classList.toggle('open', on); $('openList').setAttribute('aria-pressed', on); };
+const params = new URLSearchParams(location.search);
+if (params.get('layout')) setLayout(params.get('layout')); else setLayout('A');
+if (params.get('theme')) document.querySelector('[data-set-theme="' + params.get('theme') + '"]').click();
+if (params.get('list')) $('openList').click();
+document.fonts?.ready.then(measure); measure();
+</script>
+</body>
+</html>

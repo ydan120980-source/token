@@ -3,12 +3,18 @@ import json
 from pathlib import Path
 root = Path(__file__).resolve().parents[2]
 package = json.loads((root / 'package.json').read_text(encoding='utf-8'))
+lock = json.loads((root / 'package-lock.json').read_text(encoding='utf-8'))
 assert package['main'] == 'src/quota/main.js'
-assert package['version'] == '0.1.0' and package['private']
+assert package['private'] is True
+assert package['version'] == lock['version'] == lock['packages']['']['version']
 assert package['dependencies']['tokscale'] == '4.17.0'
 assert package['build']['appId'] == 'local.agentusage.quota'
-assert package['build']['publish'] is None
-assert set(package['dependencies']) == {'sql.js', 'tokscale'}
+# Application updates travel over electron-updater from the project's own GitHub Releases (docs/m2/AUTO-UPDATE-20261108.md);
+# the owner and repository are fixed here so a build cannot be pointed at somebody else's release feed.
+publish = package['build']['publish']
+assert isinstance(publish, list) and len(publish) == 1, publish
+assert publish[0]['provider'] == 'github' and publish[0]['owner'] == 'ydan120980-source' and publish[0]['repo'] == 'token', publish
+assert set(package['dependencies']) == {'@modelcontextprotocol/sdk', 'electron-updater', 'sql.js', 'tokscale'}
 for relative in ['src/m1/service.js', 'src/m1/worker.js']:
     text = (root / relative).read_text(encoding='utf-8-sig')
     for forbidden in ['dotenv', 'autoUpdater', "require('../shared/collector')", 'codexAccounts', 'auth.json', 'discord.com', 'icloud']:

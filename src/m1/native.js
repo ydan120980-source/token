@@ -10,9 +10,18 @@ const { spawn } = require('node:child_process');
 const TOKSCALE = { version: '4.17.0', sha256: 'bea88fa095e89aea988067729c4c05c8c72fa6760c975ad7a1dd4fbeac60d085' };
 function binary() { return path.join(path.dirname(require.resolve('@tokscale/cli-win32-x64-msvc/package.json')), 'bin', 'tokscale.exe').replace(/app\.asar([/\\])/, 'app.asar.unpacked$1'); }
 function trustedBinary(file = binary(), expected = TOKSCALE.sha256) {
-  let bytes;
-  try { bytes = fs.readFileSync(file); } catch { throw new Error('NATIVE_UNAVAILABLE'); }
-  if (crypto.createHash('sha256').update(bytes).digest('hex') !== expected) throw new Error('NATIVE_BINARY_MISMATCH');
+  let actual;
+  try {
+    const fd=fs.openSync(file,'r');
+    try {
+      const before=fs.fstatSync(fd),hash=crypto.createHash('sha256'),buffer=Buffer.allocUnsafe(1024*1024);let offset=0;
+      if(!before.isFile())throw Error('NATIVE_UNAVAILABLE');
+      while(offset<before.size){const count=fs.readSync(fd,buffer,0,Math.min(buffer.length,before.size-offset),offset);if(!count)throw Error('NATIVE_BINARY_MISMATCH');hash.update(buffer.subarray(0,count));offset+=count;}
+      const after=fs.fstatSync(fd);if(before.size!==after.size||before.mtimeMs!==after.mtimeMs)throw Error('NATIVE_BINARY_MISMATCH');
+      actual=hash.digest('hex');
+    }finally{fs.closeSync(fd);}
+  }catch(error){throw new Error(error.message==='NATIVE_BINARY_MISMATCH'?'NATIVE_BINARY_MISMATCH':'NATIVE_UNAVAILABLE',{cause:error});}
+  if (actual !== expected) throw new Error('NATIVE_BINARY_MISMATCH');
   return file;
 }
 async function verifyProjection(records, directory, onSpawn = () => {}) {
@@ -31,10 +40,14 @@ async function verifyIn(records, directory, onSpawn) {
   const eligible = records.filter(r => r.totalTokens >= 0);
   // Canonical statistics-only transcript. No original paths, titles, bodies,
   // accounts or tokens. Native process cannot inherit provider environments.
-  fs.writeFileSync(file, eligible.map(r => JSON.stringify({
-    type: 'assistant', uuid: r.id, sessionId: 'm1-projection', timestamp: r.timestamp,
-    message: { id: r.id, role: 'assistant', model: 'm1-statistical-projection', usage: { input_tokens: r.totalTokens, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } }
-  })).join('\n') + '\n', { mode: 0o600 });
+  // Preserve the exact projection bytes while bounding temporary serialization
+  // to a chunk, instead of retaining every row string plus the joined file.
+  const fd=fs.openSync(file,'w',0o600);let lines=[],length=0;
+  const flush=()=>{if(lines.length){fs.writeFileSync(fd,lines.join(''));lines=[];length=0;}};
+  try{
+    for(const r of eligible){const line=JSON.stringify({type:'assistant',uuid:r.id,sessionId:'m1-projection',timestamp:r.timestamp,message:{id:r.id,role:'assistant',model:'m1-statistical-projection',usage:{input_tokens:r.totalTokens,output_tokens:0,cache_read_input_tokens:0,cache_creation_input_tokens:0}}})+'\n';lines.push(line);length+=line.length;if(length>=65536)flush();}
+    if(!eligible.length)lines.push('\n');flush();
+  }finally{fs.closeSync(fd);}
   const env = {
     SystemRoot: process.env.SystemRoot || 'C:\\Windows', WINDIR: process.env.WINDIR || 'C:\\Windows',
     TEMP: path.join(directory, 'tmp'), TMP: path.join(directory, 'tmp'),

@@ -1,8 +1,8 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { selectSnapshot } = require('../../design/desktop-reference/local-snapshot');
-const { startFor, series, disjointMix } = require('../../design/desktop-reference/usage-math');
+const { selectSnapshot } = require('../../src/m1/local-snapshot');
+const { startFor, series, disjointMix } = require('../../src/m1/usage-math');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -42,7 +42,7 @@ test('saved statistics projection reads current model fields without constructin
   const file = path.join(directory, 'statistics.json');
   try {
     for (const model of ['logged-model-a', 'logged-model-b']) {
-      const bytes = JSON.stringify({ sequence: 9, deviceId: 'fixture-device', updatedAt: '2026-10-03T00:00:00Z', records: { fixture: { ...row('2026-10-03', model, 120, null), timestamp: '2026-10-03T00:00:00Z', quality: 'measured' } }, statuses: {} });
+      const bytes = JSON.stringify({ version: 1, sequence: 9, deviceId: 'fixture-device', updatedAt: '2026-10-03T00:00:00Z', records: { fixture: { ...row('2026-10-03', model, 120, null), timestamp: '2026-10-03T00:00:00Z', quality: 'measured' } }, statuses: {} });
       fs.writeFileSync(file, bytes);
       const snapshot = readSavedSnapshot(file);
       assert.equal(snapshot.daily[0].model, model);

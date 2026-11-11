@@ -1,0 +1,12 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const { spawn } = require('node:child_process');
+const { fingerprint } = require('../../../src/quota/executable-pin');
+const [directory, mode] = process.argv.slice(2);
+const executable = process.execPath, helper = path.resolve(__dirname, '../../../src/quota/windows-job-host.ps1');
+const env = Object.fromEntries(['SystemRoot', 'SystemDrive', 'TEMP', 'TMP'].filter(key => process.env[key]).map(key => [key, process.env[key]]));
+const child = spawn(path.join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe'), ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', helper], { env, cwd: directory, windowsHide: true, shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
+child.on('error', () => { process.exitCode = 1; }); child.stdin.on('error', () => {}); child.stdout.resume(); child.stderr.resume();
+fs.writeFileSync(path.join(directory, 'owner.json.tmp'), JSON.stringify({ owner: process.pid, helper: child.pid }));fs.renameSync(path.join(directory,'owner.json.tmp'),path.join(directory,'owner.json'));
+child.stdin.write(JSON.stringify({ executable, sha256: mode === 'bad-hash' ? '0'.repeat(64) : fingerprint(executable).sha256, arguments: [path.join(__dirname, 'job-process-child.js'), 'tree', path.join(directory, 'tree.json')], cwd: directory, environment: Object.entries(env).map(([key, value]) => key + '=' + value), parentPid: process.pid, timeoutMs: 30000, maxOutputBytes: 4096 }) + '\n');

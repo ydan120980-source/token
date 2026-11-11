@@ -1,0 +1,7 @@
+{
+  "scenes": [
+    {"name":"usage-strip-hover","view":"usage","before":[{"scroll":"[data-usage-strip]","block":"center"},{"hover":"[data-usage-strip] [data-chart-key]"}],"after":[{"scroll":"[data-usage-strip]","block":"center"},{"hover":"[data-usage-strip] [data-chart-key]"}]},
+    {"name":"usage-calendar-hover","view":"usage","before":[{"scroll":"[data-usage-calendar]","block":"center"},{"hover":"[data-usage-calendar] [data-heat-key]:not([aria-disabled=true])"}],"after":[{"scroll":"[data-usage-calendar]","block":"center"},{"hover":"[data-usage-calendar] [data-heat-key]:not([aria-disabled=true])"}]},
+    {"name":"usage-week-hour-hover","view":"usage","before":[{"scroll":"[data-usage-week-hour]","block":"center"},{"hover":"[data-usage-week-hour] [data-heat-key]:not([aria-disabled=true])"}],"after":[{"scroll":"[data-usage-week-hour]","block":"center"},{"hover":"[data-usage-week-hour] [data-heat-key]:not([aria-disabled=true])"}]}
+  ]
+}

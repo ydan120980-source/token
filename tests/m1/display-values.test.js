@@ -1,7 +1,15 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { cost, reset } = require('../../design/desktop-reference/display-values');
+const { cost, reset, usd } = require('../../design/desktop-reference/display-values');
+
+test('the shared money formatter preserves locale rounding, bounds and invalid-input behaviour', () => {
+  const values = [0, -0, .004999, .005, 1.005, 2.675, -3.005, 1e-12, 123456789.12345, Number.MAX_SAFE_INTEGER, Number.MAX_VALUE, NaN, Infinity, -Infinity];
+  for (let i = 0; i < 100; i++) values.push(i / 7);
+  for (const value of values) assert.equal(usd(value), '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  for (const value of [null, undefined]) assert.throws(() => usd(value), TypeError, 'missing amounts must not become $0.00');
+  for (const value of [1n, 'unknown', true, new Number(2)]) assert.equal(usd(value), '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+});
 test('compact estimates retain the priced lower bound and distinguish ranges, partial prices and unknowns', () => {
   assert.deepEqual(cost(631.21, 722.84, .79), { text: '$631.21+', lower: 631.21, upper: 722.84, partial: true });
   assert.equal(cost(3, 3, .5).text, '$3.00+');

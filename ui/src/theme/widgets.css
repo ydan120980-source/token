@@ -1,0 +1,42 @@
+/* The widget sidebar's surfaces (owner decision 2026-10-27, UI-PALETTE-QUOTA-SUMMARY-PROPOSAL-20261027.md
+   section 4): default card, light grey, a tint of the widget's Agent colour, or inverted. A change of
+   background or colour fades in 0.2s. Hatching marks stale readings and Token that could not be priced. */
+[data-widget-bg] { background: var(--card); transition: background-color .2s, color .2s, box-shadow .24s var(--motion-ease); }
+/* On the home board a widget that opens its page deepens its shadow under the pointer (no lift). */
+[data-widget-open]:hover { box-shadow: var(--pop-shadow); }
+[data-widget-bg="soft"] { background: var(--surface-2); }
+[data-widget-bg="tint"] { background: color-mix(in srgb, var(--widget-accent) 14%, var(--card)); }
+[data-widget-bg="inv"] {
+  --foreground: var(--ff-card); --muted-foreground: color-mix(in srgb, var(--ff-card) 62%, transparent);
+  --border: color-mix(in srgb, var(--ff-card) 16%, transparent); --surface-2: color-mix(in srgb, var(--ff-card) 12%, transparent);
+  --ink-1: var(--ff-card); --ink-2: color-mix(in srgb, var(--ff-card) 62%, transparent);
+  --ink-3: color-mix(in srgb, var(--ff-card) 38%, transparent); --ink-4: color-mix(in srgb, var(--ff-card) 20%, transparent);
+  background: var(--ff-foreground); color: var(--foreground);
+}
+[data-widget-accent] { --widget-accent: var(--ramp-3); }
+[data-widget-accent="codex"] { --widget-accent: var(--agent-codex); }
+[data-widget-accent="claude"] { --widget-accent: var(--agent-claude); }
+[data-widget-accent="cursor"] { --widget-accent: var(--agent-cursor); }
+[data-widget-accent="workbuddy"] { --widget-accent: var(--agent-workbuddy); }
+[data-widget-accent="antigravity"] { --widget-accent: var(--agent-antigravity); }
+[data-widget-accent="deepseek"] { --widget-accent: var(--agent-deepseek); }
+[data-widget-accent="gemini"] { --widget-accent: var(--agent-gemini); }
+[data-widget-accent="opencode"] { --widget-accent: var(--agent-opencode); }
+[data-widget-accent="zcode"] { --widget-accent: var(--agent-zcode); }
+[data-widget-accent="mimo"] { --widget-accent: var(--agent-mimo); }
+[data-widget-accent="copilot"] { --widget-accent: var(--agent-copilot); }
+[data-widget-accent="cline"] { --widget-accent: var(--agent-cline); }
+[data-widget-accent="pi"] { --widget-accent: var(--agent-pi); }
+[data-widget-accent="continue"] { --widget-accent: var(--agent-continue); }
+[data-widget-accent="kilo"] { --widget-accent: var(--agent-kilo); }
+[data-widget-accent="qwen"] { --widget-accent: var(--agent-qwen); }
+[data-widget-accent="kimi"] { --widget-accent: var(--agent-kimi); }
+.ff-widget-hatch { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--muted-foreground) 45%, transparent) 0 1.5px, transparent 1.5px 4px); }
+/* Reading in progress: the dashes on an edge drift slowly (motion "full" only; the component adds the class). */
+.ff-widget-flow { animation: ff-widget-flow 1.2s linear infinite; }
+@keyframes ff-widget-flow { to { stroke-dashoffset: -8; } }
+/* Data cells and swatches are smaller than any control; they take the chart mark radius. */
+.ff-widget-cell { border-radius: 2.5px; }
+
+/* The home widget board flows down columns; a widget being reordered never splits across two. */
+[data-widget-board] [data-sort-key] { break-inside: avoid; }

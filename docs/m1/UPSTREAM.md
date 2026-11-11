@@ -8,6 +8,7 @@
 - 固定公共价格来源：[LiteLLM 公开 JSON](https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json)，属于 Tokscale 同类的公共定价输入；快照取得时间、原文件 SHA-256 和精确 provider/model 条目保存在 `src/m1/prices.json`。只提取明确 USD token 价格，不推测缺失缓存价格、不做模糊模型别名映射。
 - sql.js 1.14.2（MIT）：源 SQLite 字节及已提交 WAL 页读入内存；数据库引擎只在内存运行。
 - Playwright 1.63.0（Apache-2.0）仅用于开发验收；Electron 43.4.0 保留上游锁定版本。
+- CodexBar：MIT，Copyright (c) 2026 Peter Steinberger，固定提交 [9c16d285ff8f6a4078bbaef35de50585a2b6e92f](https://github.com/steipete/CodexBar/tree/9c16d285ff8f6a4078bbaef35de50585a2b6e92f)。2026-10-20 登录增量参考提供商协议、数据字段与生命周期，以 JS/Electron/Windows 独立实现；没有加载或执行其插件，也不把 macOS Keychain/Terminal 实现视为 Windows 验收。其授权与免责声明原文见 [MIT LICENSE](https://github.com/steipete/CodexBar/blob/9c16d285ff8f6a4078bbaef35de50585a2b6e92f/LICENSE)。
 
 ## 与原计划的实现调整
 

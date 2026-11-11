@@ -1,9 +1,9 @@
 'use strict';
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
-const math = require('../../design/desktop-reference/insights-math');
+const math = require('../../src/m1/insights-math');
 const { Store } = require('../../src/m1/store');
-const { selectSnapshot } = require('../../design/desktop-reference/local-snapshot');
+const { selectSnapshot } = require('../../src/m1/local-snapshot');
 const close = (a, b) => assert(Math.abs(a - b) < 1e-9, a + ' != ' + b);
 // Row shaped like a snapshot daily row; null marks a field the records did not report.
 function row(agent, values, extra = {}) {

@@ -8,21 +8,21 @@
 
 ## 1. 这个项目是什么
 
-Windows 本地桌面应用（Electron），**只读**解析本机九个 AI 编码 Agent 留下的会话记录与本地数据库，汇总 token 用量、模型分布、时间趋势，并单独展示 Codex 账号的套餐额度与刷新窗口。
+Windows 本地桌面应用（Electron），**只读**解析本机十个 AI 编码 Agent 留下的会话记录与本地数据库，汇总 token 用量、模型分布、时间趋势，并展示明确连接的服务账号额度。当前实施和真实验收边界以 [账号额度扩展决定](m2/ACCOUNT-QUOTA-EXPANSION-20261019.md)、README 与最新 RESULTS 为准。
 
 - 语言/栈：**纯 JavaScript + CSS**。无 TypeScript、无打包器、无框架、无 ES module。渲染层用 `classic <script src>` 逐个加载。
 - 运行时：Node.js `>=22.15.0`，只支持 Windows 10/11 x64。
-- 生产依赖只有两个：`sql.js@1.14.2`、`tokscale@4.17.0`。
-- 完全离线。唯一的出网点是获取公开模型价格快照（`https://models.dev/api.json`，独立子进程、URL 固定）。
+- 生产依赖：`sql.js@1.14.2`、`tokscale@4.17.0`、`@modelcontextprotocol/sdk@1.32.1`，版本以 lockfile 为准。
+- 本地统计离线运行。出网限于独立价格子进程、官方 Codex 客户端、明确选择的固定额度接口和安装管理来源；不能把新适配器导入采集器或本地聚合查询。
 
 **四条硬边界**（也是评分点，改动时不要越界）：
 
 1. **不读认证文件。** 文件名以 `auth` / `credentials` / `config` / `settings` / `storage` / `token` 开头的文件一律拒绝。
 2. **不改来源数据库或配置。** 源 SQLite 的字节（含已提交的 WAL 页）读进内存后用 sql.js 只读查询——不建连接、不加写锁、不迁移、不 checkpoint。
-3. **不上传任何数据。**
+3. **不上传本机统计。** 明确提供的额度凭据仅发送到所选服务固定接口，详见 [隐私合同](PRIVACY.md)。
 4. **不发送推理或工具调用。** 额度只读窗口与用量数字。
 
-九个已批准来源：Codex、Claude Code、OpenCode、WorkBuddy、MiMo Code、Gemini CLI、Cursor、ZCode、DeepSeek Harness。**账号额度目前仅 Codex。**
+十个已批准来源：Codex、Claude Code、OpenCode、WorkBuddy、MiMo Code、Gemini CLI、Cursor、ZCode、DeepSeek Harness、Antigravity。个人来源按单独合同接入用量。额度协议与本地用量是两个维度：Codex 真实单次读取已通过；新 API/网站会话/被动观测路线有不同授权与覆盖限制，不得写“十个全真实可读”。Antigravity 产品查询仍未启用。新凭据和 Google 项目上下文只在内存；MiMo/Cursor 可选手动 Cookie 不授权浏览器/认证文件读取；WorkBuddy 公共 OAuth 的审核与服务端仍待外部条件。
 
 ---
 

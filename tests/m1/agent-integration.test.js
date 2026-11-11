@@ -7,10 +7,10 @@ const {scanSources, parseObjects, parseDatabase} = require('../../src/m1/sources
 const {Store, atomic} = require('../../src/m1/store');
 const {roots, allowedFile, SOURCES} = require('../../src/m1/policy');
 const extended = require('../../src/m1/extended-sources');
-const {selectSnapshot} = require('../../design/desktop-reference/local-snapshot');
+const {selectSnapshot} = require('../../src/m1/local-snapshot');
 function temporary(t) { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'usage-agents-')); t.after(() => fs.rmSync(root, {recursive:true,force:true})); return root; }
 function hashes(root) { const files = {}; for (const e of fs.readdirSync(root,{withFileTypes:true})) { const f = path.join(root,e.name); if(e.isDirectory()) Object.assign(files,hashes(f)); else files[f] = crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex'); } return files; }
-test('nine real-format fixture sources: independent token totals, duplicate archives, retries, inherited fork, privacy and restart', async t => {
+test('every real-format fixture source: independent token totals, duplicate archives, retries, inherited fork, privacy and restart', async t => {
   const root = temporary(t), home = path.join(root,'home'), fixture = agentFixtures(home), before = hashes(home), audit = {reads:0};
   const scan = await scanSources(fixture.roots,'salt',audit);
   assert.deepEqual(SOURCES, Object.keys(fixture.expected));
@@ -25,7 +25,7 @@ test('nine real-format fixture sources: independent token totals, duplicate arch
   const store = new Store(path.join(root,'app'),fixture.roots); store.ingest(scan,{status:'passed'}); store.ingest(scan,{status:'passed'});
   assert.equal(store.snapshot().daily.reduce((s,r) => s+r.totalTokens,0),fixture.total);
   const reopened = new Store(store.dir,fixture.roots), snapshot = selectSnapshot(reopened.snapshot());
-  assert.equal(snapshot.sources.length,9); assert.equal(snapshot.daily.reduce((s,r) => s+r.totalTokens,0),fixture.total);
+  assert.equal(snapshot.sources.length,SOURCES.length); assert.equal(snapshot.daily.reduce((s,r) => s+r.totalTokens,0),fixture.total);
   assert(!JSON.stringify(snapshot).includes(fixture.sentinel));
   // Failed re-read preserves the last valid ledger rather than zeroing history.
   fs.writeFileSync(fixture.roots.cursor[0],'{torn');
@@ -35,9 +35,9 @@ test('nine real-format fixture sources: independent token totals, duplicate arch
 test('old preferences gain new default roots without overwriting custom roots, pause, bills, or statistics', t => {
   const root = temporary(t), selected = roots(path.join(root,'fixture'));
   atomic(path.join(root,'app','preferences.json'),{enabled:false,roots:{codex:[],claude:[path.join(root,'custom')]}});
-  const store = new Store(path.join(root,'app'),selected);
-  assert.equal(store.settings.enabled,false); assert.deepEqual(store.settings.roots.codex,[]); assert.equal(store.settings.roots.claude[0],path.join(root,'custom'));
-  assert.deepEqual(store.settings.roots.gemini,selected.gemini); assert.deepEqual(store.settings.roots.cursor,selected.cursor);
+  const store = new Store(path.join(root,'app'),selected), read = store.sourceRoots();
+  assert.equal(store.settings.enabled,false); assert.deepEqual(read.codex,[]); assert.deepEqual(read.claude,[...selected.claude,path.join(root,'custom')]);
+  assert.deepEqual(read.gemini,selected.gemini); assert.deepEqual(read.cursor,selected.cursor);
 });
 test('allowlist rejects unsupported agents, auth/global state/checkpoints, noncanonical generations and arbitrary Gemini JSON', () => {
   for (const [agent,file] of [['unknown','opencode.db'],['cursor','state.vscdb'],['cursor','agents.ndjson'],['cursor','run_events.ndjson'],['cursor','checkpoints.ndjson'],['gemini','chats/config.json'],['deepseek','session.v0.jsonl'],['deepseek','session.v04.jsonl'],['zcode','auth.json']]) assert.equal(allowedFile(agent,file),false,agent+file);

@@ -1,0 +1,6 @@
+{
+  "scenes": [
+    {"name":"cost-half-ring","view":"cost","before":[{"click":"[role=tablist][aria-label=圆环形状] [role=tab]:has-text('半环')"},{"scroll":"[data-cost-composition]","block":"center"}],"after":[{"click":"[role=tablist][aria-label=圆环形状] [role=tab]:has-text('半环')"},{"scroll":"[data-cost-composition]","block":"center"}]},
+    {"name":"cost-ring-focus","view":"cost","before":[{"scroll":"[data-cost-composition]","block":"center"},{"focus":"[data-cost-composition] [data-arc-key]"}],"after":[{"scroll":"[data-cost-composition]","block":"center"},{"focus":"[data-cost-composition] [data-arc-key]"}]}
+  ]
+}

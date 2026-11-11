@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "CustomSourceV1",
+  "template": "mapped",
+  "mode": "per-request",
+  "timeUnit": "iso",
+  "inputSemantics": "exclusive",
+  "outputIncludesReasoning": true,
+  "name": "公开格式 Triss",
+  "mapping": {
+    "id": "call_id",
+    "time": "ts",
+    "model": "model",
+    "provider": "provider",
+    "input": "tokens.input_uncached",
+    "output": "tokens.output_total",
+    "cacheRead": "tokens.cache_read",
+    "cacheWrite": "tokens.cache_write",
+    "reasoning": "tokens.reasoning",
+    "total": "tokens.total"
+  },
+  "filters": [
+    {
+      "path": "schema_version",
+      "values": [
+        2
+      ]
+    },
+    {
+      "path": "usage_status",
+      "values": [
+        "reported"
+      ]
+    }
+  ]
+}

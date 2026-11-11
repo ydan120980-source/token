@@ -4,7 +4,10 @@
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.displayValues = factory();
 })(typeof window === 'undefined' ? globalThis : window, () => {
-  const usd = value => '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const usdFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // The locale/options are fixed. Reuse ICU's formatter across model rows,
+  // preserving the old non-number behaviour (including null/undefined errors).
+  const usd = value => '$' + (typeof value === 'number' ? usdFormat.format(value) : value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   function cost(lower, upper = lower, coverage = 1) {
     if (!Number.isFinite(lower)) return { text: '未定价', lower: null, upper: null, partial: true };
     const bound = Number.isFinite(upper) ? Math.max(lower, upper) : lower;

@@ -1,0 +1,6 @@
+{
+  "schemaVersion": "CustomSourceV1",
+  "name": "个人 Agent",
+  "template": "standard",
+  "mode": "per-request"
+}

@@ -62,3 +62,61 @@ test('an unreported cache write is exact only when the billing vendor prices wri
   assert.equal(evaluate(base, {}, { ...rates, cacheWrite:null }).reason, 'usage-incomplete');
   assert.equal(evaluate({ ...base, cacheRead:null }, {}, rates).reason, 'usage-incomplete');
 });
+test('incomplete usage names its cause, and the snapshot keeps unpriced tokens by reason and cause', t => {
+  const rates = { inputUncached:2e-6, output:8e-6, cacheRead:2e-7, cacheWrite:2.5e-6, provenance:'official-current-standard' };
+  const base = { ...record('priced'), provider:'vendor' };
+  assert.equal(evaluate({ ...base, cacheWrite:null }, {}, rates).cause, 'missing-cacheWrite');
+  assert.equal(evaluate({ ...base, cacheRead:null }, {}, rates).cause, 'missing-cacheRead');
+  assert.equal(evaluate({ ...base, usageConflict:true }, {}, rates).cause, 'conflict');
+  assert.equal(evaluate({ ...base, quality:'invalid-cache' }, {}, rates).cause, 'invalid-cache');
+  assert.equal(evaluate({ ...base, quality:'partial', output:null }, {}, rates).cause, 'missing-output');
+  assert.equal(evaluate(base, {}, rates).cause, undefined, 'a priced record carries no cause');
+  const dir=temp(t),store=new Store(dir,{});store.installCatalog(parse(raw));
+  store.state.records.a={...base};store.state.records.b={...base,cacheWrite:null,totalTokens:700};store.state.records.c={...base,model:'unknown-model',totalTokens:300};store.state.sequence=1;
+  const rows=store.snapshot().daily, priced=rows.find(r=>r.model==='priced'), unknown=rows.find(r=>r.model==='unknown-model');
+  assert.deepEqual(priced.unpricedTokens,{'usage-incomplete':700});assert.deepEqual(priced.incompleteTokens,{'missing-cacheWrite':700});
+  assert.deepEqual(unknown.unpricedTokens,{'model-unpriced':300});assert.deepEqual(unknown.incompleteTokens,{});
+  const { selectSnapshot } = require('../../src/m1/local-snapshot');
+  const selected=selectSnapshot({...store.snapshot(),daily:[{...priced,incompleteTokens:{...priced.incompleteTokens,'made-up':5},unpricedTokens:{...priced.unpricedTokens,bogus:1}}]}).daily[0];
+  assert.deepEqual(selected.unpricedTokens,{'usage-incomplete':700});assert.deepEqual(selected.incompleteTokens,{'missing-cacheWrite':700},'only known reasons and causes pass the window whitelist');
+});
+
+test('antigravity and manual zero writes price correctly; an unreported Anthropic write is a range or unknown, never free', () => {
+  const agBase = { agent: 'antigravity', provider: 'google', model: 'gemini-3.8-flash-n', quality: 'measured', inputUncached: 1000, output: 200, cacheRead: 500, cacheWrite: null, reasoning: null, totalTokens: 1700 };
+  const agRates = { inputUncached: 7.5e-7, output: 3.75e-6, cacheRead: 7.5e-8, cacheWrite: null, provenance: 'models-dev' };
+  const resNullWrite = evaluate(agBase, {}, agRates);
+  assert.equal(resNullWrite.reason, 'exact');
+  assert.equal(resNullWrite.lower, 1000 * 7.5e-7 + 200 * 3.75e-6 + 500 * 7.5e-8);
+
+  const resBoundedWrite = evaluate(agBase, {}, { ...agRates, cacheWrite: 4.1667e-8 });
+  assert.equal(resBoundedWrite.reason, 'cache-write-unreported');
+  assert.equal(resBoundedWrite.upper, 1000 * 7.5e-7 + 200 * 3.75e-6 + 500 * 7.5e-8);
+  assert.ok(resBoundedWrite.lower < resBoundedWrite.upper);
+
+  const manualRates = { inputUncached: 1e-6, output: 2e-6, cacheRead: 1e-7, cacheWrite: 0, provenance: 'manual' };
+  const resManualZero = evaluate({ ...agBase, agent: 'custom' }, {}, manualRates);
+  assert.equal(resManualZero.reason, 'exact');
+
+  const claude = { ...agBase, provider: 'anthropic', model: 'claude-sonnet-4-5' };
+  const claudeRates = { inputUncached: 3e-6, output: 1.5e-5, cacheRead: 3e-7, provenance: 'models-dev' };
+  assert.deepEqual(evaluate(claude, {}, { ...claudeRates, cacheWrite: null }), { reason: 'usage-incomplete', cause: 'missing-cacheWrite', lower: null, upper: null }, 'Anthropic charges writes; a missing write rate is not zero');
+  const claudeRange = evaluate(claude, {}, { ...claudeRates, cacheWrite: 3.75e-6 });
+  assert.equal(claudeRange.reason, 'cache-write-unreported');
+  assert.equal(claudeRange.lower, 1000 * 3e-6 + 200 * 1.5e-5 + 500 * 3e-7);
+  assert.ok(Math.abs(claudeRange.upper - (claudeRange.lower + 1000 * 0.75e-6)) < 1e-12, 'upper bound: every uncached input token was a write');
+
+  // The normalized total of a record without a cache-read field is computed
+  // from the reported buckets, so it says nothing about the missing field.
+  const noRead = { agent: 'deepseek', provider: 'workbuddy-xdpool', model: 'glm-5.3', quality: 'measured', inputUncached: 1000, output: 200, cacheRead: null, cacheWrite: 0, reasoning: null, totalTokens: 1200 };
+  assert.deepEqual(evaluate(noRead, {}, { inputUncached: 1e-6, output: 2e-6, cacheRead: 1e-7, cacheWrite: 0, provenance: 'models-dev' }),
+    { reason: 'usage-incomplete', cause: 'missing-cacheRead', lower: null, upper: null }, 'an unreported cache read stays unknown');
+});
+test('future scenario: zero cache write rate takes precedence over bounded checks on codex/antigravity', () => {
+  const codexRec = { agent: 'codex', provider: 'openai', model: 'gpt-5-future', quality: 'measured', inputUncached: 1000, output: 200, cacheRead: 0, cacheWrite: null, totalTokens: 1200 };
+  const manualRates = { inputUncached: 2.5e-6, output: 10e-6, cacheRead: 1.25e-6, cacheWrite: 0, provenance: 'manual' };
+  const res = evaluate(codexRec, { 'openai/gpt-5-future': manualRates });
+  assert.equal(res.reason, 'exact', 'zero cache write must evaluate to exact price rather than bounded range');
+  assert.equal(res.lower, 1000 * 2.5e-6 + 200 * 10e-6);
+  assert.equal(res.upper, res.lower);
+});
+

@@ -1,0 +1,23 @@
+'use strict';
+// Shared synthetic quota resources; no credentials or provider calls.
+function fixture(now) {
+  const at = mins => new Date(now + mins * 60000).toISOString(), day = 1440;
+  const win = (id, role, durationMins, remaining, resetsIn) => ({ id, label: null, role, durationMins, unit: 'percent', remainingPercent: remaining, usedPercent: 100 - remaining, resetsAt: at(resetsIn), state: remaining === 0 ? 'exhausted' : 'available', freshness: { state: resetsIn < 0 ? 'stale' : 'fresh' } });
+  const pkg = (i, name, total, remaining, expiresIn, state = 'available') => ({ id: 'package-' + i, label: name, modelIds: [], windows: [], balances: [{ id: 'credits', label: null, kind: 'subscription', unit: 'credits', currency: null, remaining: String(remaining), total: String(total), state, availability: state === 'expired' ? 'unavailable' : 'available', expiresAt: expiresIn === null ? null : at(expiresIn), resetsAt: null, freshness: { state: 'fresh' } }] });
+  const packages = [pkg(0, '已过期活动包', 100, 0, -3 * day, 'expired'), pkg(1, '另一个过期包', 100, 0, -2 * day, 'expired'), pkg(2, '新人活动奖励', 100, 80, 3 * day), pkg(3, '新手任务奖励', 50, 40, 4 * day), pkg(4, '月度订阅积分', 2000, 1394, 30 * day), pkg(5, '邀请奖励', 1000, 1000, null)];
+  for (let i = 6; i < 30; i++) packages.push(pkg(i, '活动积分包 ' + (i - 5), 50, 25, (10 + i) * day));
+  const quota = (pools, fetchedMins, more = {}) => ({ fetchedAt: at(-fetchedMins), partial: false, incomplete: false, entitlement: { plan: null, validUntil: null, verificationRequired: false }, pools, ...more });
+  const row = (id, adapter, provider, alias, q, more = {}) => ({ id, adapter, provider, alias, quota: q, status: 'ready', lastAttempt: q.fetchedAt, errorCode: null, errorMessage: null, nextRefreshAt: null, busy: false, credentialReady: true, remembered: true, passive: false, duplicateKnown: false, duplicateAccountIds: [], identityStatus: 'unknown', ...more });
+  const ids = { desktop: '00000000-0000-4000-8000-0000000000a1', web: '00000000-0000-4000-8000-0000000000a2', opencode: '00000000-0000-4000-8000-0000000000b1', zcode: '00000000-0000-4000-8000-0000000000c1', antigravity: '00000000-0000-4000-8000-0000000000d1', codex: '00000000-0000-4000-8000-0000000000e1' };
+  const providers = [
+    row(ids.desktop, 'workbuddy-desktop', 'workbuddy', 'WorkBuddy', quota(packages, 10), { duplicateKnown: true, duplicateAccountIds: [ids.web], identityStatus: 'account-match' }),
+    row(ids.web, 'workbuddy-web', 'workbuddy', 'WorkBuddy 网站', quota(packages, day + 30), { status: 'login-required', errorCode: 'PROVIDER_AUTH_REQUIRED', errorMessage: '登录已过期，请重新连接。', credentialReady: false, duplicateKnown: true, duplicateAccountIds: [ids.desktop], identityStatus: 'account-match' }),
+    row(ids.opencode, 'opencode-zen', 'opencode', 'OpenCode', quota([{ id: 'zen', label: 'OpenCode Zen', modelIds: [], windows: [], balances: [{ id: 'balance', label: '预付按量余额', kind: 'purchased', unit: 'currency', currency: 'USD', remaining: '0', total: null, state: 'exhausted', availability: 'available', expiresAt: null, resetsAt: null, freshness: { state: 'fresh' } }] }], day + 20), { status: 'error', errorCode: 'PROVIDER_AUTH_REQUIRED', errorMessage: '授权已过期，请重新登录。', credentialReady: false }),
+    row(ids.zcode, 'zcode-device', 'zcode', 'ZCode', quota([], day + 10)),
+    row(ids.antigravity, 'antigravity-statusline', 'antigravity', 'Antigravity', quota([{ id: 'antigravity', label: 'Antigravity', modelIds: [], windows: [win('weekly', 'primary', 10080, 100, -30), win('five', 'secondary', 300, 100, -5)], balances: [] }], 11), { passive: true })
+  ];
+  const codexQuota = quota([{ id: 'codex', label: 'Codex', modelIds: [], windows: [win('primary', 'primary', 300, 0, 109), win('secondary', 'secondary', 10080, 84, 5 * day + 218)], balances: [{ id: 'purchased-credits', label: null, kind: 'purchased', unit: 'credits', currency: null, remaining: '3392.9586135', total: null, state: 'available', availability: 'available', expiresAt: null, resetsAt: null, freshness: { state: 'fresh' } }] }], 0, { entitlement: { plan: 'plus', validUntil: null, verificationRequired: false } });
+  const v1 = { id: ids.codex, provider: 'codex', alias: 'Codex 账号', plan: 'plus', status: 'ready', lastAttempt: codexQuota.fetchedAt, errorCode: null, nextRefreshAt: null, busy: false, quota: { fetchedAt: codexQuota.fetchedAt, resetCredits: null, windows: [{ name: 'codex', durationMins: 300, usedPercent: 100, remainingPercent: 0, resetsAt: at(109) }, { name: 'codex', durationMins: 10080, usedPercent: 16, remainingPercent: 84, resetsAt: at(5 * day + 218) }] } };
+  return { ids, providers, v1, v2: { ...v1, resources: codexQuota, quota: codexQuota } };
+}
+module.exports={fixture};

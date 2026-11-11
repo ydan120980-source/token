@@ -1,0 +1,13 @@
+'use strict';
+const NOW = Date.parse('2026-10-19T04:00:00Z');
+function response() {
+  return { status: 'SUCCESS', conversation_id: '', num_turns: 0, usage: { input_tokens: 0, output_tokens: 0, thinking_tokens: 0, cache_read_tokens: 0, total_tokens: 0 },
+    command: { name: 'usage', data: { groups: [
+      { name: 'Gemini Models', buckets: [{ id: 'gemini-weekly', name: 'Weekly', window: 'weekly', remaining_fraction: 0.25, reset_time: '2026-10-20T04:00:00Z' }] },
+      { name: 'Claude and GPT models', description: 'A prose description is not model IDs', buckets: [
+        { id: '3p-5h', name: '5h', window: '5h', remaining_fraction: 1, disabled: true },
+        { id: '3p-weekly', name: 'Weekly', window: 'weekly', remaining_fraction: 0, reset_time: '2026-10-20T04:00:00Z' }
+      ] }
+    ] } } };
+}
+module.exports = { NOW, response };

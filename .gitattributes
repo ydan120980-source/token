@@ -3,3 +3,6 @@
 # against source-file content — regexes with hardcoded \n — fail. text=auto
 # lets git keep detected binaries (icons, tokscale binaries) untouched.
 * text=auto eol=lf
+
+# React layer build output (npm run build:ui); checked against ui/ by tests/m1/ui-bundle.test.js.
+design/desktop-reference/ui/** linguist-generated=true -diff

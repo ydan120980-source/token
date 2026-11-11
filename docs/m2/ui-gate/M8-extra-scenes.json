@@ -1,0 +1,16 @@
+{
+  "scenes": [
+    {
+      "name": "cost-hero-month",
+      "view": "cost",
+      "before": [
+        { "click": "#costOverview button[data-hero-step='1']" },
+        { "wait": 1000 }
+      ],
+      "after": [
+        { "click": "[data-cost-hero] button[aria-label='下一页']" },
+        { "wait": 1000 }
+      ]
+    }
+  ]
+}

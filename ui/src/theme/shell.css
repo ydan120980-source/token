@@ -1,0 +1,82 @@
+/* M9 shell (owner 2026-10-29, docs/m2/UI-SHELL-M9-20261029.md): the sidebar redrawn after the owner's
+   references - a quiet ground column with a dot-matrix mark, sectioned navigation whose current page
+   is a lifted white pill, count badges on the right and a profile
+   row at the bottom. Unlayered, so it replaces the legacy layer's shell rules; colours, radii and
+   motion come from tokens.css. The page panel and its cards are unchanged. */
+
+#app { display: contents; }
+
+.topbar .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px; margin-bottom: 22px; font-size: 14px; font-weight: 650; letter-spacing: -0.01em; color: var(--text); text-decoration: none; border-radius: var(--radius-m); }
+.topbar .brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.brand-mark { flex: none; width: 28px; height: 28px; }
+.brand-tile { fill: var(--text); }
+.brand-dots circle { fill: var(--bg); }
+.brand-dots .brand-dim { opacity: .32; }
+body[data-motion='full'] .topbar .brand:hover .brand-dots circle:not(.brand-dim) { animation: brand-rise var(--motion-feedback) var(--ease-out) both; }
+body[data-motion='full'] .topbar .brand:hover .brand-dots circle:nth-child(4) { animation-delay: 40ms; }
+body[data-motion='full'] .topbar .brand:hover .brand-dots circle:nth-child(5) { animation-delay: 80ms; }
+body[data-motion='full'] .topbar .brand:hover .brand-dots circle:nth-child(6) { animation-delay: 120ms; }
+@keyframes brand-rise { from { transform: translateY(2px); opacity: .4; } to { transform: none; opacity: 1; } }
+
+.sidebar-resizer { position: absolute; inset-block: 0; right: -5px; z-index: 6; width: 10px; cursor: col-resize; touch-action: none; outline: none; }
+.sidebar-resizer::after { content: ""; position: absolute; inset-block: 12px; left: 4px; width: 2px; border-radius: 1px; background: transparent; transition: background .12s; }
+.sidebar-resizer:hover::after, .sidebar-resizer:focus-visible::after, .sidebar-resizer[data-dragging]::after { background: var(--muted); }
+.sidebar-collapsed .sidebar-resizer { display: none; }
+.sidebar-resizing .topbar, .sidebar-resizing main, .sidebar-resizing .panel-frame { transition: none !important; }
+.topbar nav { display: flex; flex-direction: column; gap: 2px; }
+.topbar nav .nav-caption { margin: 16px 10px 6px; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--muted); }
+.topbar nav .nav-caption:first-child { margin-top: 0; }
+.topbar nav button { position: relative; display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 6px 10px; border: 0; border-radius: var(--radius-m); background: transparent; color: var(--muted); font-size: 14px; text-align: left; cursor: pointer; transition: background-color var(--motion-feedback) var(--ease-out), color var(--motion-feedback) var(--ease-out), box-shadow var(--motion-feedback) var(--ease-out); }
+.topbar nav button img { width: 16px; height: 16px; opacity: .7; }
+.topbar nav button:hover:not([aria-current='page']) { background: color-mix(in srgb, var(--text) 5%, transparent); color: var(--text); }
+.topbar nav button:active:not([aria-current='page']) { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.topbar nav button[aria-current='page'] { background: var(--card); color: var(--text); font-weight: 600; box-shadow: var(--card-edge); }
+.topbar nav button[aria-current='page'] img { opacity: 1; }
+.topbar nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.topbar nav .nav-badge { margin-left: auto; min-width: 20px; height: 18px; padding: 0 6px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); font-size: 12px; font-weight: 600; line-height: 18px; text-align: center; }
+.sidebar-collapsed .topbar nav .nav-badge { position: absolute; top: 3px; right: 3px; min-width: 0; width: 8px; height: 8px; margin: 0; padding: 0; background: var(--warn); font-size: 0; }
+
+
+/* No wrap: a wrapping column grows to its widest child (a long profile name) past the sidebar. The collection card was removed (owner 2026-10-29: nobody turns collection off). */
+.topbar .top-actions { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; padding: 12px 0 0; }
+.topbar .top-actions > * { min-width: 0; }
+.topbar .sidebar-profile { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--radius-m); transition: background-color var(--motion-feedback) var(--ease-out); }
+.topbar .sidebar-profile:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+
+/* Collapsed: the column narrows to a rail of icons; captions become space. */
+.sidebar-collapsed .topbar nav .nav-caption { height: 0; margin: 8px 0; overflow: hidden; color: transparent; background: none; }
+.sidebar-collapsed .topbar .brand { justify-content: center; padding: 4px 0; }
+.sidebar-collapsed .topbar nav button { justify-content: center; padding: 6px 0; }
+
+/* React Navigation slides one shared spring indicator under the current page. */
+.topbar nav .motion-indicator { background: var(--card); box-shadow: var(--card-edge); border-radius: var(--radius-m); }
+
+/* The title bar names where you are, as a breadcrumb after the history arrows. */
+.shell-crumb { display: flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 12px; color: var(--muted); white-space: nowrap; -webkit-app-region: drag; }
+.shell-crumb #windowPage { color: var(--text); font-weight: 600; }
+.shell-crumb-sep { opacity: .5; }
+
+/* Preserve the existing narrow-window strip. Unlayered M9 column rules must
+   yield to the same <=800px layout the shell already offered before M9. */
+@media (max-width: 800px) {
+  .topbar .brand { margin-bottom: 0; }
+  .topbar nav { flex-direction: row; gap: 5px; }
+  .topbar nav .nav-caption { display: none; }
+  .topbar nav button { justify-content: center; padding: 7px 8px; }
+  .topbar .top-actions { flex-direction: row; align-items: center; padding: 0; }
+}
+
+/* Horizontal scroll bars never show (owner 2026-10-29): wide content shrinks or truncates instead, and
+   a region that still overflows scrolls by wheel or trackpad without a bar appearing on approach. */
+::-webkit-scrollbar:horizontal { height: 0; }
+
+/* Hook for filling the docked summary column later (owner 2026-10-29: kept, not used; the card keeps its own
+   height). A summary that sets data-fill on its root gets a full-height column to grow into. */
+.summary-docked .summary-panel:has([data-page-summary][data-fill]) { height: calc(100dvh - 44px - var(--panel-inset)); }
+.summary-docked .summary-panel > [data-ui-root]:has([data-page-summary][data-fill]) { display: flex; flex-direction: column; min-height: 100%; }
+
+/* 概览's Agent cards answer the pointer the Apple way (owner 2026-10-29): the shadow deepens under it,
+   a press gives a little and springs back on release; nothing lifts. A drag's own transform wins. */
+#quotaCards .quota-card { transition: box-shadow 240ms var(--motion-ease), scale 420ms var(--motion-expand); }
+#quotaCards .quota-card:hover:not(.is-dragging) { box-shadow: var(--pop-shadow); }
+body[data-motion='full'] #quotaCards .quota-card:active:not(.is-dragging) { scale: .98; transition-duration: 240ms, 120ms; }

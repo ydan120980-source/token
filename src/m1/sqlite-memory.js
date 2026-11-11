@@ -21,7 +21,10 @@ function overlayWal(main, wal) {
   if (size < 512 || size > 65536 || (size & (size - 1))) throw new Error('WAL_PAGE_INVALID');
   let sum = checksum(wal.subarray(0, 24), [0, 0], little);
   if (sum[0] !== wal.readUInt32BE(24) || sum[1] !== wal.readUInt32BE(28)) throw new Error('WAL_CHECKSUM_INVALID');
-  const staged = new Map(); let committed = new Map(), pages = 0;
+  // Validate once and remember the final commit boundary. Copying the entire
+  // page map at every commit is quadratic for a growing WAL and retains many
+  // short-lived maps. A second linear pass applies only verified committed bytes.
+  let committedEnd = 0, pages = 0;
   for (let at = 32; at + 24 + size <= wal.length; at += 24 + size) {
     const header = wal.subarray(at, at + 24), payload = wal.subarray(at + 24, at + 24 + size);
     if (!header.subarray(8, 16).equals(wal.subarray(16, 24))) break;
@@ -29,13 +32,15 @@ function overlayWal(main, wal) {
     if (sum[0] !== header.readUInt32BE(16) || sum[1] !== header.readUInt32BE(20)) break;
     const page = header.readUInt32BE(0);
     if (!page || page * size > 512 * 1024 * 1024) throw new Error('WAL_SIZE_LIMIT');
-    staged.set(page, payload);
-    if (header.readUInt32BE(4)) { pages = header.readUInt32BE(4); committed = new Map(staged); }
+    if (header.readUInt32BE(4)) { pages = header.readUInt32BE(4); committedEnd = at + 24 + size; }
   }
   if (!pages) return main;
   if (pages * size > 512 * 1024 * 1024) throw new Error('WAL_SIZE_LIMIT');
   const image = Buffer.alloc(pages * size); main.copy(image, 0, 0, image.length);
-  for (const [page, payload] of committed) if (page <= pages) payload.copy(image, (page - 1) * size);
+  for (let at = 32; at < committedEnd; at += 24 + size) {
+    const page = wal.readUInt32BE(at);
+    if (page <= pages) wal.copy(image, (page - 1) * size, at + 24, at + 24 + size);
+  }
   return image;
 }
 async function readDatabase(file, audit, visit) {

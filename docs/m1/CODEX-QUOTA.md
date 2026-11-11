@@ -6,7 +6,7 @@
 
 源代码运行：`npm.cmd start`（`start:quota` 为兼容别名）。唯一 Electron 入口是 `src/quota/main.js`，额度数据仍在 `%APPDATA%\AgentUsage-M1-Quota`，各连接的独立 CODEX_HOME/keyring 保持原样。旧 M1 窗口和旧 ZIP 已按用户指令删除。
 
-当前窗口保留 Nowdex Mac 风格，默认打开“额度监控”。用户已批准将九来源离线采集接入“用量”页：刷新、每 15 秒采集、暂停/恢复、选择目录、原生保存对话框导出、确认清空并暂停。统计沿用 `%APPDATA%\AgentUsage-M1`，不迁移或清除已有历史；账号额度存储独立。统计导出不包含账号或凭据。关闭窗口会退出并停止两个服务；旧版托盘界面已移除。2026-10-04 已接入全局动效，设置支持“跟随系统／减少动态／关闭”，默认跟随系统。动效不延迟请求、取消或焦点恢复。
+当前窗口保留 Nowdex Mac 风格，启动显示“用量”（2026-10-15 起，原为“额度监控”，见 `docs/m2/UI-P6-20261015.md`）。用户已批准将九来源离线采集接入“用量”页：刷新、每 15 秒采集、暂停/恢复、选择目录、原生保存对话框导出、确认清空并暂停。统计沿用 `%APPDATA%\AgentUsage-M1`，不迁移或清除已有历史；账号额度存储独立。统计导出不包含账号或凭据。关闭窗口会退出并停止两个服务；旧版托盘界面已移除。2026-10-04 已接入全局动效，设置支持“跟随系统／减少动态／关闭”，默认跟随系统。动效不延迟请求、取消或焦点恢复。
 
 1. 应用只查找 Codex Desktop 的 `bin/*/codex.exe`，不读取现有账号和配置；也可用“选择 Codex CLI”选取官方 `codex.exe`。
 2. 点击“连接 Codex 账号”，填写个人/工作等备注，再点击“打开官方登录”。系统浏览器打开官方授权 URL，由用户本人完成授权。
@@ -25,6 +25,8 @@
 缓存 `quota-cache.json` 白名单：随机连接 ID、provider、用户备注、套餐、各额度窗口已用/剩余百分比、窗口分钟数、重置时间、最近成功读取时间、重置额度数，以及最近尝试、受控错误枚举、可重试时间。无邮箱、服务账号 ID、access/refresh token、登录 URL、对话内容。服务端账号 ID 仅在主进程内存用于当前运行的重复/变化判断，未知不推断。renderer 不接收授权 URL/凭据。日志不输出原始 CLI stdout/stderr/服务错误。
 
 `AccountQuotaV1` 与 `UsageSnapshotV1` 分开。优先 `rateLimitsByLimitId`，否则兼容 `rateLimits`；同一 bucket 的 primary/secondary 分别展示，剩余=100-已用（最低0），不是 token 推算。null/缺失显示未知。重置时间经过不会自动置满，必须重新读取。超过10分钟或重启缓存标记需要刷新。各窗口不能相加；本地 token 历史无法确定账号时不做归属。
+
+2026-10-19 后端增加AccountQuotaV2：保留多池、实际窗口、购买credits及独立资格/有效期合同，旧get接口继续返回V1。新只读接口为quotaBridge.getV2()和usageBridge.connectionsV2()。缓存同一文件原子保存resourceQuota V2与quota V1影子，旧缓存启动仅在内存转换；没有新增认证文件读取或服务商请求。界面由后续UI增量接入，当前Codex协议未提供的会员到期日保持null。完整字段、兼容性及Claude交接见 [额度资源后端V2](../m2/QUOTA-RESOURCE-BACKEND-20261019.md)。
 
 ## 依据
 

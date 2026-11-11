@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {DatabaseSync}=require('node:sqlite'),{_electron:electron}=require('playwright');
-const {Store}=require('../../src/m1/store'),{roots}=require('../../src/m1/policy'),{scanSources}=require('../../src/m1/sources'),{verifyProjection}=require('../../src/m1/native'),{until,showView,cleanup}=require('./ui-settle');
+const {Store}=require('../../src/m1/store'),{roots}=require('../../src/m1/policy'),{scanSources}=require('../../src/m1/sources'),{verifyProjection}=require('../../src/m1/native'),{until,showView,cleanup,keepVisible}=require('./ui-settle');
 const output=path.resolve(process.env.RECOVERY_EVIDENCE_DIR||'artifacts/m2-agents-r4/recovery-ui');
 async function run(first,scale) {
   const work=fs.mkdtempSync(path.join(os.tmpdir(),'agent-recovery-ui-'));
@@ -20,12 +20,12 @@ async function run(first,scale) {
     const native=await verifyProjection((await scanSources(selected,store.state.salt,{reads:0})).opencode.records,path.join(work,'native'));assert.equal(native.status,'passed');assert.equal(native.tokens,140);
     const app=await electron.launch({executablePath:process.env.QUOTA_PACKAGED_EXE||require('electron'),args:[...(process.env.QUOTA_PACKAGED_EXE?[]:['src/quota/main.js']),'--usage-data-dir',usage,'--quota-data-dir',path.join(work,'quota'),'--m1-fixture-root',home,'--force-device-scale-factor='+scale],timeout:60000});
     try {
-      const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+      const page=await app.firstWindow(),errors=[];await keepVisible(app);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
       await until(page,async()=>{const s=await window.usageBridge.get();return !s.collecting&&s.snapshot.daily.some(r=>r.totalTokens===140);},60000);
       await showView(page,'usage');
-      const state=await page.evaluate(()=>window.usageBridge.get()),row=state.snapshot.daily[0];assert.equal(row.agent,first);assert.equal(row.totalTokens,140);assert.equal(row.inputUncached,100);assert.equal(row.output,40);assert(Math.abs(row.estimatedCostUsd-1.8)<1e-12);assert.equal(Number(await page.locator('#totalCost .cost-value').getAttribute('data-cost-lower')),1.8);
-      const label=await page.locator('#totalCost .cost-value').getAttribute('aria-label');assert(!label.includes('未定价'));assert(label.includes('1.80'));assert.deepEqual(hashes(),before);
-      await page.locator('#totalCost').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,first+'-'+scale+'.png')});assert.deepEqual(errors,[]);
+      const state=await page.evaluate(()=>window.usageBridge.get()),row=state.snapshot.daily[0];assert.equal(row.agent,first);assert.equal(row.totalTokens,140);assert.equal(row.inputUncached,100);assert.equal(row.output,40);assert(Math.abs(row.estimatedCostUsd-1.8)<1e-12);assert.equal(Number(await page.locator('[data-usage-total-cost] [data-usage-price-lower]').getAttribute('data-usage-price-lower')),1.8);
+      const label=await page.locator('[data-usage-total-cost] button').getAttribute('aria-label');assert(!label.includes('未定价'));assert(label.includes('1.80'));assert.deepEqual(hashes(),before);
+      await page.locator('[data-usage-total-cost]').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,first+'-'+scale+'.png')});assert.deepEqual(errors,[]);
       return {first,scale,packaged:Boolean(process.env.QUOTA_PACKAGED_EXE),nativeTokens:native.tokens,actualCollector:true,knownBuckets:true,recoveredCostUsd:row.estimatedCostUsd,firstAttribution:true,sourceHashesUnchanged:true,label,errors};
     }finally{await app.close();}
   }finally{await cleanup(work);}

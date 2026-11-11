@@ -16,12 +16,21 @@ function validate(entry) {
   if (rates.inputUncached === null || rates.output === null) throw new Error('PRICE_RATE_INVALID');
   return { provider, model, rates };
 }
+// Why a record's usage cannot be priced: the record's own quality, a conflict between
+// sources, or the first field the price needs that the source did not report.
+function incomplete(cause) { return { reason: 'usage-incomplete', cause, lower: null, upper: null }; }
+function qualityCause(record) {
+  if (record.usageConflict) return 'conflict';
+  if (record.quality !== 'partial') return record.quality || 'partial';
+  const missing = ['inputUncached', 'output', 'reasoning'].find(field => record[field] === null || record[field] === undefined);
+  return missing ? 'missing-' + missing : 'partial';
+}
 function evaluate(record, overrides = {}, resolved = null) {
   const key = record.provider + '/' + record.model, manual = overrides[key], rates = resolved || manual || catalog.models[key];
   if (!rates) return { reason: 'model-unpriced', lower: null, upper: null };
   const isManual = Boolean(manual) || rates.provenance === 'manual';
   if (!manual && ['reference-unverified','official-thirdparty-unverified'].includes(rates.provenance)) return { reason: 'price-unverified', lower: null, upper: null };
-  if (record.quality !== 'measured' || record.usageConflict) return { reason: 'usage-incomplete', lower: null, upper: null };
+  if (record.quality !== 'measured' || record.usageConflict) return incomplete(qualityCause(record));
   const tiers = !isManual && rates.contextTiers;
   if(tiers?.length && Number.isFinite(record.requestInputTokens)){
     const tier=[...tiers].reverse().find(t=>record.requestInputTokens>t.threshold);
@@ -31,22 +40,28 @@ function evaluate(record, overrides = {}, resolved = null) {
   for (const field of FIELDS) {
     let count = record[field], rate = rates[field];
     if (count == null) {
-      // Older OpenAI models have no separately charged writes. Do not apply
-      // this exception to Claude/unknown routing or to GPT-5.6+.
-      if (field === 'cacheWrite' && record.agent === 'codex' && (rates.billingProvider || record.provider) === 'openai') {
-        if (rate == null && !isManual) { count = 0; rate = 0; }
-        else if (Number.isFinite(rate) && Number.isFinite(rates.inputUncached)) {
-          bounded = true; continue;
-        } else return { reason: 'usage-incomplete', lower: null, upper: null };
+      const vendor = [rates.billingProvider, record.provider], model = typeof record.model === 'string' ? record.model : '';
+      const writeFree = vendor.includes('openai') || vendor.includes('deepseek') || model.includes('deepseek') || vendor.includes('google') || model.includes('gemini');
+      // Codex and Antigravity report every input token in the uncached, cache-read
+      // or output buckets, so an unreported write lies inside the uncached input.
+      const writeInInput = (record.agent === 'codex' && writeFree) || (record.agent === 'antigravity' && (writeFree || vendor.includes('anthropic')));
       // A write the billing vendor prices at exactly zero costs nothing whatever
       // its unreported count, including routes such as workbuddy-xdpool -> deepseek.
-      } else if (field === 'cacheWrite' && rates.cacheWrite === 0 && !isManual) { count = 0; }
-      else return { reason: 'usage-incomplete', lower: null, upper: null };
+      if (field === 'cacheWrite' && rates.cacheWrite === 0) { count = 0; }
+      else if (field === 'cacheWrite' && writeInInput) {
+        // OpenAI, DeepSeek and Google do not charge writes separately; Anthropic
+        // does, so a missing Anthropic write rate stays unknown.
+        if (rate == null && !isManual && writeFree) { count = 0; rate = 0; }
+        else if (Number.isFinite(rate) && rate > 0 && Number.isFinite(rates.inputUncached)) {
+          bounded = true; continue;
+        } else return incomplete('missing-cacheWrite');
+      }
+      else return incomplete('missing-' + field);
     }
     if (count > 0 && !Number.isFinite(rate)) return { reason: 'rate-missing', lower: null, upper: null };
     if(field==='output' && Number.isFinite(rates.reasoning) && rates.reasoning!==rate){
       if(record.reasoning==null){lower+=count*Math.min(rate,rates.reasoning);upper+=count*Math.max(rate,rates.reasoning);reasoningBounded=true;}
-      else{if(record.reasoning>count)return {reason:'usage-incomplete',lower:null,upper:null};lower+=(count-record.reasoning)*rate+record.reasoning*rates.reasoning;upper=lower;}
+      else{if(record.reasoning>count)return incomplete('invalid-reasoning');lower+=(count-record.reasoning)*rate+record.reasoning*rates.reasoning;upper=lower;}
       continue;
     }
     lower += count * (rate || 0); upper += count * (rate || 0);
@@ -75,5 +90,12 @@ function evaluate(record, overrides = {}, resolved = null) {
   if (!isManual && rates.offPeakMultiplier) return { lower: lower * rates.offPeakMultiplier, upper, reason: 'time-tariff-unreported' };
   return { lower, upper, reason: reasoningBounded ? 'reasoning-unreported' : bounded ? 'cache-write-unreported' : 'exact' };
 }
+// What the fields a record did report would cost at these rates: a floor, not the price. Only used when the person
+// has turned on lower-bound estimates; a field the source never wrote adds nothing and stays unknown in the ledger.
+function lowerBound(record, rates) {
+  let total = 0, any = false;
+  for (const field of FIELDS) { const count = record[field], rate = rates[field]; if (Number.isFinite(count) && count > 0 && Number.isFinite(rate)) { total += count * rate; any = true; } }
+  return any ? total : null;
+}
 function price(record, overrides) { const value = evaluate(record, overrides); return value.lower === value.upper ? value.lower : null; }
-module.exports = { FIELDS, validate, evaluate, price, identifier, isIdentifier, catalog };
+module.exports = { FIELDS, validate, evaluate, lowerBound, price, identifier, isIdentifier, catalog };

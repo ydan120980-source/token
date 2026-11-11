@@ -10,9 +10,20 @@ module.exports = [
   includeIgnoreFile(path.resolve(__dirname, '.gitignore')),
   // Third-party chart distribution stays unchanged and outside application lint.
   { ignores: ['design/desktop-reference/assets/**'] },
+  // The React layer is TypeScript checked by tsc (npm run typecheck:ui); its build output is generated.
+  { ignores: ['ui/**', 'design/desktop-reference/ui/**'] },
 
   js.configs.recommended,
 
+  {
+    files: ['src/quota/main.js'],
+    rules: {
+      'no-restricted-syntax': ['error', {
+        selector: "MemberExpression[object.name='usage'][property.name='store']",
+        message: 'Use the StatisticsService application API or a detached facts() read model; Store belongs to the statistics owner.'
+      }]
+    }
+  },
   {
     // Node CommonJS modules and UMD helpers.
     languageOptions: {

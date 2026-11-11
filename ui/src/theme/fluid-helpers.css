@@ -1,0 +1,320 @@
+/* fluid-functionalism helper CSS (upstream app/globals.css at 7387f36, MIT, see ui/src/vendor/fluid/LICENSE).
+   Agent Usage changes: classes renamed scroll-fade -> ff-scroll-fade and scroll-divider -> ff-scroll-divider
+   (the renderer already owns .scroll-fade); focus fallback scoped to the React layer; ff-scroll-focus and the ff-mark-* tones added at the end. */
+
+@layer base {
+  :where([data-ui-root], [data-ui-portal]) :focus-visible {
+    outline: 1px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--shape-input-radius, 8px);
+  }
+}
+
+@keyframes spinner-move { to { stroke-dashoffset: -100; } }
+@keyframes spinner-dash { 0%, 100% { stroke-dasharray: 15 85; } 50% { stroke-dasharray: 40 60; } }
+
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+@property --sf-start {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+@property --sf-end {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
+@keyframes sf-reveal-start {
+  from {
+    --sf-start: 1;
+  }
+  to {
+    --sf-start: 0;
+  }
+}
+@keyframes sf-reveal-end {
+  from {
+    --sf-end: 0;
+  }
+  to {
+    --sf-end: 1;
+  }
+}
+
+.ff-scroll-fade,
+.ff-scroll-fade-x {
+  --scroll-fade-size: 48px;
+}
+
+/* ── scroll-divider — a hairline marking a scroll edge ──────────────────────
+   Pairs with .ff-scroll-fade on a descendant viewport: where the fade dissolves
+   content, this draws the line that says "the region continues". The line
+   can't live inside the scroller — the fade's own mask would erase it at
+   exactly the edge it belongs on — so it rides the parent's pseudo-elements
+   and borrows the scroller's timeline by name. Browsers without scroll-driven
+   timelines get neither the line nor the fade. */
+@keyframes sf-divider-start {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sf-divider-end {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@supports (timeline-scope: --sf) {
+  .ff-scroll-divider {
+    position: relative;
+    timeline-scope: --sf-scroller;
+    --scroll-divider-size: 48px;
+  }
+  .ff-scroll-divider .ff-scroll-fade {
+    scroll-timeline-name: --sf-scroller;
+  }
+  .ff-scroll-divider::before,
+  .ff-scroll-divider::after {
+    content: "";
+    position: absolute;
+    /* Inset so the line can hug the content's own gutter rather than the
+       panel edge — the sidebar's inset variant sets this to 8px. */
+    left: var(--scroll-divider-inset, 0px);
+    right: var(--scroll-divider-inset, 0px);
+    height: 1px;
+    background-color: var(--border);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+  }
+  /* Top edge: absent at rest, fading in as content passes above. */
+  .ff-scroll-divider::before {
+    top: 0;
+    animation: sf-divider-start both linear;
+    animation-timeline: --sf-scroller;
+    animation-range: 0 var(--scroll-divider-size);
+  }
+  /* A region flush with the panel's own top edge has nothing above for
+     content to pass under, so the start line would read as a stray border. */
+  .ff-scroll-divider:first-child::before {
+    content: none;
+  }
+  /* Bottom edge: present while content continues below, gone at the end. */
+  .ff-scroll-divider::after {
+    bottom: 0;
+    animation: sf-divider-end both linear;
+    animation-timeline: --sf-scroller;
+    animation-range: calc(100% - var(--scroll-divider-size)) 100%;
+  }
+}
+
+/* Scroll-aware: the start/end edge stays solid until there's content past it. */
+@supports (animation-timeline: scroll()) {
+  .ff-scroll-fade {
+    mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    animation: sf-reveal-start both linear, sf-reveal-end both linear;
+    animation-timeline: scroll(self), scroll(self);
+    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
+    animation-range-end: var(--scroll-fade-size), 100%;
+  }
+  .ff-scroll-fade-x {
+    mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    animation: sf-reveal-start both linear, sf-reveal-end both linear;
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
+    animation-range-end: var(--scroll-fade-size), 100%;
+  }
+}
+
+/* Agent Usage: a kit ScrollArea drops its edge fades while focus is inside, so the focused row
+   is never half dissolved at an edge (the legacy scroll-fade.js rule), and none shows without overflow. */
+.ff-scroll-fade.ff-scroll-focus:focus-within,
+.ff-scroll-fade.ff-scroll-focus:not([data-overflow]) {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* Agent Usage: the official Agent marks are single-colour SVGs drawn black. Claude's takes its brand
+   orange and the black marks turn light grey in the dark theme, the rule every legacy page applies. */
+.ff-mark-claude {
+  filter: invert(54%) sepia(18%) saturate(1444%) hue-rotate(337deg) brightness(93%) contrast(86%);
+}
+:where(.dark) .ff-mark-mono {
+  filter: brightness(0) invert(0.85);
+}
+
+/* Owner ruling UI-MIG-SHEET-RULING-20261025: bounded Sheet, original Dialog edge clearance. */
+.ff-sheet-scrollable {
+  max-height: calc(100dvh - 2rem);
+}
+
+/* UI-MIG-M4-M8-RULINGS §4.1: the three authorised quota layout helpers. */
+.ff-grid-cards { grid-template-columns: repeat(auto-fill, minmax(var(--card-column), 1fr)); }
+.ff-open-grid { display: grid; grid-template-columns: minmax(0, 1fr) 5rem 3.5rem; column-gap: 1rem; }
+.ff-fact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: var(--space-2) var(--space-6); }
+/* Column flow takes the same count and width as that grid: floor((width + gap) / (column + gap)). */
+.ff-home-columns { columns: var(--home-column); column-gap: 1rem; }
+.ff-quota-who { width: var(--quota-hero-who); }
+.ff-quota-val { width: var(--quota-hero-val); }
+
+/* Switch with a label for assistive technology only (kit Switch labelHidden). */
+.ff-switch-quiet > span[id] {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* Column bars (the 30-day strip, the hour bars) move as the old usage page's did (owner 2026-10-29): a
+   CSS height transition on the bar itself, no stagger and no per-frame script, and a short fill change
+   under the pointer. Chromium transitions SVG geometry properties set in style. */
+.kit-column-bar { transition: y 420ms var(--motion-ease), height 420ms var(--motion-ease), d 420ms var(--motion-ease), fill-opacity 140ms var(--motion-ease); }
+body:not([data-motion='full']) .kit-column-bar { transition: fill-opacity 140ms var(--motion-ease); }
+@media (prefers-reduced-motion: reduce) { .kit-column-bar { transition: none; } }
+
+/* Heatmap cells (the old Token 活动 calendar, owner 2026-10-29): a palette change cross-fades; a first view or a
+   new range sweeps in column by column (5ms a column so a year lands within the plot's settle time). */
+.kit-heat-cell { transition: fill 280ms var(--motion-ease); transform-box: fill-box; transform-origin: center; }
+[data-heat-sweep] .kit-heat-cell { animation: kit-heat-sweep 340ms var(--motion-ease) both; animation-delay: calc(var(--c, 0) * 5ms); }
+@keyframes kit-heat-sweep { from { opacity: 0; transform: scale(.55); } }
+@media (prefers-reduced-motion: reduce) { [data-heat-sweep] .kit-heat-cell { animation: none; } }
+
+/* The rest of the old Token 活动 (owner 2026-10-29): cells draw their focus ring only when focused; labels change
+   colour quickly; month labels fade in with the sweep; the hovered bar's column fades in and the bar deepens. */
+.kit-heat-cell { stroke-width: 0; }
+.kit-heat-cell:focus-visible { stroke-width: 2px; }
+.kit-heat-label { transition: fill 120ms var(--motion-ease); }
+[data-heat-sweep] .kit-heat-label { animation: kit-heat-fade 320ms var(--motion-ease) both; }
+@keyframes kit-heat-fade { from { opacity: 0; } }
+.kit-bar-rule { transition: opacity 140ms var(--motion-ease); }
+.kit-window-tooltip { --foreground: var(--chart-tip-ink); --muted-foreground: var(--chart-tip-muted); background: var(--chart-tip-surface); color: var(--chart-tip-ink); }
+.kit-bar-active { filter: saturate(1.25) brightness(1.06); transition: filter 140ms var(--motion-ease); }
+@media (prefers-reduced-motion: reduce) { [data-heat-sweep] .kit-heat-label { animation: none; } }
+
+/* Agent Usage: the reading view (SESSIONS-READER-20261101.md, UI-READER-PAGE-POLISH-20261102.md). */
+.ff-reader-turn { content-visibility: auto; contain-intrinsic-size: auto 560px; }
+.ff-reader-outline { height: 100%; overflow-y: auto; }
+.ff-reader-page { height: 100%; }
+.ff-reader-column { width: 100%; max-width: 720px; }
+/* The side columns' lists (UI-READER-NAV-20261104.md): a row lights up when pointed at, and its actions take the place of its
+   figures. Actions are only narrowed, never removed, so the keyboard still reaches them. */
+.ff-side-row { transition: background-color .12s; }
+.ff-side-row:hover { background: var(--hover); }
+.ff-side-row[data-selected] { background: var(--ff-side-selected); }
+/* On the selected ground the quiet grey falls under 4.5:1, so what it holds reads in the text colour. */
+.ff-side-row[data-selected] :is(.text-muted-foreground, .ff-side-tail) { color: var(--foreground); }
+.ff-side-actions { width: 0; overflow: hidden; opacity: 0; transition: opacity .12s; }
+.ff-side-row:hover > .ff-side-actions, .ff-side-row:focus-within > .ff-side-actions { width: auto; overflow: visible; opacity: 1; padding-right: 4px; }
+.ff-side-row[data-has-actions]:hover .ff-side-tail, .ff-side-row[data-has-actions]:focus-within .ff-side-tail { display: none; }
+.ff-tree-guide { flex: none; align-self: stretch; width: 8px; margin-block: -6px; margin-left: 2px; margin-right: -8px; border-left: 1px solid var(--border); }
+.ff-tree-chevron { transition: transform .16s; }
+.ff-tree-chevron[data-open] { transform: rotate(90deg); }
+body:not([data-motion="full"]) .ff-tree-chevron { transition: none; }
+@media (prefers-reduced-motion: reduce) { .ff-tree-chevron, .ff-side-row, .ff-side-actions { transition: none; } }
+.ff-count-add { color: var(--ff-count-add); }
+.ff-count-del { color: var(--ff-count-del); }
+.ff-count-edit { color: var(--ff-count-edit); }
+.ff-file-blue { color: var(--ff-file-blue); }
+.ff-file-amber { color: var(--ff-file-amber); }
+.ff-file-green { color: var(--ff-file-green); }
+.ff-file-purple { color: var(--ff-file-purple); }
+.ff-file-orange { color: var(--ff-file-orange); }
+.ff-diff-add { background: color-mix(in srgb, var(--ff-diff-add) 18%, transparent); }
+.ff-diff-del { background: color-mix(in srgb, var(--ff-diff-del) 18%, transparent); }
+.ff-code-keyword { color: var(--ff-code-keyword); }
+.ff-code-string { color: var(--ff-code-string); }
+.ff-code-comment { color: var(--muted-foreground); }
+.ff-code-number { color: var(--ff-code-number); }
+.ff-reader-scroll { scrollbar-width: none; }
+.ff-reader-scroll::-webkit-scrollbar { display: none; }
+.ff-reader-tail { opacity: 0; transition: opacity .12s; }
+.ff-reader-turn:hover .ff-reader-tail, .ff-reader-tail:focus-within { opacity: 1; }
+.ff-reader-strip { opacity: 0; pointer-events: none; transition: opacity .16s; background: var(--card); }
+.ff-reader-strip::after { content: ""; position: absolute; inset: 100% 0 auto; height: 12px; background: linear-gradient(var(--card), transparent); pointer-events: none; }
+/* Where a jump landed, for a moment. */
+[data-landed] { animation: ff-landed .9s ease-out; border-radius: 12px; }
+@keyframes ff-landed { from { background: var(--selected); box-shadow: 0 0 0 8px var(--selected); } to { background: transparent; box-shadow: 0 0 0 8px transparent; } }
+body:not([data-motion="full"]) [data-landed] { animation: none; }
+@media (prefers-reduced-motion: reduce) { [data-landed] { animation: none; } }
+[data-reader][data-split="true"] { position: relative; }
+/* The grip on a column the person sizes: quiet until it is pointed at. */
+.ff-resize-handle { position: absolute; inset-block: 0; z-index: 5; width: 10px; cursor: col-resize; touch-action: none; outline: none; }
+.ff-resize-handle::after { content: ""; position: absolute; inset-block: 8px; left: 4px; width: 2px; border-radius: 1px; background: transparent; transition: background .12s; }
+.ff-resize-handle:hover::after, .ff-resize-handle:focus-visible::after, .ff-resize-handle[data-dragging]::after { background: var(--muted-foreground); }
+.sidebar-resizing, .sidebar-resizing * { cursor: col-resize !important; user-select: none; }
+.ff-action-bar { background: color-mix(in srgb, var(--popover) 82%, transparent); backdrop-filter: blur(20px) saturate(180%); box-shadow: var(--pop-shadow); }
+@media (prefers-reduced-transparency: reduce) { .ff-action-bar { background: var(--popover); backdrop-filter: none; } }
+.ff-reader-strip[data-show="true"] { opacity: 1; pointer-events: auto; }
+/* Continuous corners on everything with a real corner; pills and circles stay round. Radii are unchanged. */
+@supports (corner-shape: superellipse(1.25)) {
+  :is(.rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl, [class*="rounded-[10px]"], .card, .panel-frame, .quota-card, .summary-panel, .topbar nav button, .range-tabs, .range-tabs button) { corner-shape: var(--corner); }
+}
+/* A filled search bar's ring follows the bar's own corner. */
+.ff-search-filled .ring-1 { border-radius: 12px; }
+/* A disclosure that is a card's own row starts where the rest of the card starts. */
+.ff-disclosure-flush button[aria-expanded] { padding-inline: 0; }
+/* Panes the person arranges (UI-READER-PANES-20261104.md). A head that can be held gives under the finger; what is held is frosted;
+   the place it would land is glass over whatever lies there, and where it came from stays a quiet hole. */
+.ff-pane-head { user-select: none; }
+.ff-reader-page[data-focused] .ff-pane-head { cursor: grab; }
+.ff-reader-page[data-focused] .ff-pane-head button { cursor: pointer; }
+[data-pane-pressing] { transform: scale(.985); transition: transform .16s; }
+[data-pane-cell][data-lifted] { z-index: 40; pointer-events: none; }
+.ff-pane-drop { background: var(--ff-pane-drop); backdrop-filter: blur(14px) saturate(160%); box-shadow: inset 0 0 0 1.5px var(--ff-pane-drop-edge); }
+@media (prefers-reduced-transparency: reduce) { .ff-pane-drop { background: var(--ff-side-selected); backdrop-filter: none; } }
+@media (prefers-reduced-motion: reduce) { [data-pane-pressing] { transform: none; } }
+body.ff-pane-dragging, body.ff-pane-dragging * { cursor: grabbing; user-select: none; }
+body.ff-pane-dragging [data-pane-inner] { pointer-events: none; }
+/* Side by side a pane may be narrow: its text keeps the room rather than the margins, and the one not in use reads quieter. */
+.ff-reader-page[data-focused] .ff-reader-scroll { padding-inline: var(--space-5); }
+.ff-reader-page[data-focused="false"] [data-reader-title] { color: var(--muted-foreground); }
+/* Text too long for its place: it fades out at the end, and at both sides while it slides. */
+@property --ff-marquee-start { syntax: "<length>"; inherits: false; initial-value: 0px; }
+.ff-marquee { display: block; min-width: 0; overflow: hidden; white-space: nowrap; }
+.ff-marquee[data-overflow] { mask-image: linear-gradient(to right, transparent, black var(--ff-marquee-start), black calc(100% - 24px), transparent); transition: --ff-marquee-start 160ms; }
+.ff-marquee[data-sliding] { --ff-marquee-start: 24px; }
+.ff-marquee-track { display: inline-flex; max-width: none; }
+
+/* The Agent picker's row: one line that scrolls sideways, fading at whichever end has more. */
+.ff-agent-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  --fade-start: 0px;
+  --fade-end: 0px;
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+}
+.ff-agent-row::-webkit-scrollbar { display: none; }
+.ff-agent-row[data-more-start] { --fade-start: 20px; }
+.ff-agent-row[data-more-end] { --fade-end: 20px; }

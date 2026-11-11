@@ -4,6 +4,12 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 const {DatabaseSync} = require('node:sqlite');
 const {fixtures, SENTINEL} = require('./fixtures');
+// Protocol buffer encoding for fixtures: [[field, number | Buffer], ...].
+function protobuf(fields) {
+  const varint = value => { const out = []; do { let byte = value % 128; value = Math.floor(value / 128); if (value) byte |= 128; out.push(byte); } while (value); return Buffer.from(out); };
+  return Buffer.concat(fields.flatMap(([field, value]) => typeof value === 'number' ? [varint(field * 8), varint(value)] : [varint(field * 8 + 2), varint(value.length), value]));
+}
+const agyModels = ['gemini-2.5-pro', 'claude-sonnet-4-20250514'];
 function agentFixtures(home) {
   const fixture = fixtures(home), selected = fixture.roots, time = new Date().toISOString();
   const write = (file, text) => { fs.mkdirSync(path.dirname(file), {recursive:true}); fs.writeFileSync(file, text); return file; };
@@ -29,6 +35,19 @@ function agentFixtures(home) {
   write(path.join(dsh,'session.v3.jsonl.zstd'), zlib.zstdCompressSync(Buffer.from(jsonl([{...rows[0],version:3},...rows.slice(1)]))));
   // The default backend writes concatenated checksummed frames, not one JSON array.
   write(path.join(dsh,'session.v4.jsonl.zstd'), Buffer.concat(rows.map(row => zlib.zstdCompressSync(Buffer.from(jsonl([row]))))));
-  return {...fixture, time, deepseekRows:rows, expected:{...fixture.expected,gemini:125,cursor:130,zcode:120,deepseek:135}, total:1204};
+  // Antigravity: two model calls in the transcript (and its identical short copy),
+  // their models in the conversation database's gen_metadata (field 1.19).
+  const agyId = 'a6f0c1d2-0000-4000-8000-000000000001', agyLogs = path.join(selected.antigravity[0], agyId, '.system_generated', 'logs');
+  const agyRows = [{type:'USER_INPUT', source:'USER_EXPLICIT', status:'DONE', step_index:0, created_at:time, content:SENTINEL},
+    {type:'PLANNER_RESPONSE', source:'MODEL', status:'DONE', step_index:1, created_at:time, content:SENTINEL, thinking:SENTINEL, input_tokens:50, output_tokens:10, cache_read_tokens:30},
+    {type:'GENERIC', source:'MODEL', status:'DONE', step_index:2, created_at:time, content:SENTINEL},
+    {type:'PLANNER_RESPONSE', source:'MODEL', status:'DONE', step_index:3, created_at:time, content:SENTINEL, input_tokens:20, output_tokens:5, cache_read_tokens:15}];
+  write(path.join(agyLogs, 'transcript_full.jsonl'), jsonl(agyRows)); write(path.join(agyLogs, 'transcript.jsonl'), jsonl(agyRows));
+  write(path.join(agyLogs, 'chunks', 'transcript_full', '0.jsonl'), jsonl(agyRows));
+  const agyDb = path.join(path.dirname(selected.antigravity[0]), 'conversations', agyId + '.db'); fs.mkdirSync(path.dirname(agyDb), {recursive:true});
+  const conversation = new DatabaseSync(agyDb); conversation.exec('CREATE TABLE gen_metadata(idx INTEGER, data BLOB, size INTEGER)');
+  agyModels.forEach((model, idx) => { const blob = protobuf([[1, protobuf([[4, protobuf([[2, 1], [3, 2]])], [19, Buffer.from(model)]])], [4, Buffer.from(SENTINEL)]]); conversation.prepare('INSERT INTO gen_metadata VALUES(?,?,?)').run(idx, blob, blob.length); });
+  conversation.close();
+  return {...fixture, time, deepseekRows:rows, agyId, agyRows, expected:{...fixture.expected,gemini:125,cursor:130,zcode:120,deepseek:135,antigravity:130,copilot:0,cline:0,pi:0,continue:0,kilo:0,qwen:0,kimi:0}, total:1334};
 }
-module.exports = {agentFixtures};
+module.exports = {agentFixtures, protobuf, agyModels};

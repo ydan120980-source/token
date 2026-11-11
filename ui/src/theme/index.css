@@ -1,0 +1,252 @@
+/* Current app theme. Document/active account-card leaf rules use components;
+   base and utilities are scoped to React surfaces and portals. */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "./preflight.scoped.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "./fluid-helpers.css";
+@import "./app-layout.css" layer(components);
+@import "./shell.css";
+@import "./widgets.css" layer(utilities);
+
+@source "../";
+
+/* body.dark is the renderer's theme switch (preview.js applyTheme). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Values live in design/desktop-reference/tokens.css (--ff-* semantic tokens, light = the app's
+   approved neutral greys, dark = fluid-functionalism dark). Inside React roots they take the names
+   the vendored components read; the legacy renderer keeps its own meaning of --muted, --accent,
+   --input, --ring and --card outside them. */
+:where([data-ui-root], [data-ui-portal]) {
+  --surface-1: var(--ff-surface-1);
+  --surface-2: var(--ff-surface-2);
+  --bubble: var(--ff-bubble);
+  --surface-3: var(--ff-surface-3);
+  --surface-4: var(--ff-surface-4);
+  --surface-5: var(--ff-surface-5);
+  --surface-6: var(--ff-surface-6);
+  --surface-7: var(--ff-surface-7);
+  --surface-8: var(--ff-surface-8);
+  --background: var(--ff-background);
+  --foreground: var(--ff-foreground);
+  --card: var(--ff-card);
+  --card-foreground: var(--ff-foreground);
+  --muted: var(--ff-muted);
+  --muted-foreground: var(--ff-muted-foreground);
+  --accent: var(--ff-accent);
+  --accent-foreground: var(--ff-foreground);
+  --selected: var(--ff-selected);
+  --border: var(--ff-border);
+  --ring: var(--ff-ring);
+  --input: var(--ff-input);
+  --destructive: var(--ff-destructive);
+  --destructive-light: var(--ff-destructive-light);
+  --info: var(--ff-info);
+  --success: var(--ff-success);
+  --warning: var(--ff-warning);
+  --focus-ring: var(--ff-focus-ring);
+  --overlay: var(--ff-overlay);
+  --hover: var(--ff-hover);
+  --active: var(--ff-active);
+  --tint: var(--ff-tint);
+  --tint-hover: var(--ff-tint-hover);
+  --shadow-1: var(--ff-shadow-1);
+  --shadow-2: var(--ff-shadow-2);
+  --shadow-3: var(--ff-shadow-3);
+  --shadow-4: var(--ff-shadow-4);
+  --shadow-5: var(--ff-shadow-5);
+  --shadow-6: var(--ff-shadow-6);
+  --shadow-7: var(--ff-shadow-7);
+  --shadow-8: var(--ff-shadow-8);
+  --shadow-2-inset: var(--ff-shadow-2-inset);
+  --shadow-3-inset: var(--ff-shadow-3-inset);
+  color: var(--foreground);
+  font-family: var(--ui-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+@theme inline {
+  --font-sans: var(--ui-font);
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-selected: var(--selected);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-destructive: var(--destructive);
+  --color-destructive-light: var(--destructive-light);
+  --color-info: var(--info);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-hover: var(--hover);
+  --color-active: var(--active);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-bubble: var(--bubble);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+  --color-surface-7: var(--surface-7);
+  --color-surface-8: var(--surface-8);
+  --shadow-card: var(--card-edge);
+  --shadow-surface-1: var(--shadow-1);
+  --shadow-surface-2: var(--shadow-2);
+  --shadow-surface-3: var(--shadow-3);
+  --shadow-surface-4: var(--shadow-4);
+  --shadow-surface-5: var(--shadow-5);
+  --shadow-surface-6: var(--shadow-6);
+  --shadow-surface-7: var(--shadow-7);
+  --shadow-surface-8: var(--shadow-8);
+  --text-display: var(--fs-display);
+  --text-display--line-height: var(--lh-display);
+  --text-title: var(--fs-title);
+  --text-title--line-height: var(--lh-title);
+  --text-subtitle: var(--fs-subtitle);
+  --text-subtitle--line-height: var(--lh-subtitle);
+  --text-body: var(--fs-body);
+  --text-body--line-height: var(--lh-body);
+  --text-caption: var(--fs-caption);
+  --text-caption--line-height: var(--lh-caption);
+  --text-micro: var(--fs-micro);
+  --text-micro--line-height: var(--lh-micro);
+
+  /* Data figures (owner 2026-10-25: fluid's six roles for interface text, the app's figure sizes
+     for numbers): text-figure-xl / lg / md / sm. */
+  --text-figure-xl: var(--text-hero);
+  --text-figure-xl--line-height: 1.05;
+  --text-figure-xl--letter-spacing: var(--tracking-hero);
+  --text-figure-lg: var(--text-quota);
+  --text-figure-lg--line-height: 1.1;
+  --text-figure-lg--letter-spacing: var(--tracking-figure);
+  --text-figure-md: var(--text-large);
+  --text-figure-md--line-height: 1.15;
+  --text-figure-md--letter-spacing: var(--tracking-figure);
+  --text-figure-sm: var(--text-figure);
+  --text-figure-sm--line-height: 1.2;
+
+  /* Identity colours: which Agent, never good or bad (AGENTS.md "UI direction"). agent-* for quota
+     views, series-* for cost charts; warn for an exhausted window only. */
+  --color-measure-input: var(--measure-input);
+  --color-palette-orange: var(--palette-orange);
+  --color-palette-blue: var(--palette-blue);
+  --color-palette-green: var(--palette-green);
+  --color-palette-mono: var(--palette-mono);
+  --color-measure-output: var(--measure-output);
+  --color-measure-cache-read: var(--measure-cache-read);
+  --color-measure-cache-write: var(--measure-cache-write);
+  --color-measure-estimate: var(--measure-estimate);
+  --color-model-0: var(--model-0);
+  --color-model-1: var(--model-1);
+  --color-model-2: var(--model-2);
+  --color-model-3: var(--model-3);
+  --color-model-4: var(--model-4);
+  --color-model-5: var(--model-5);
+  --color-model-6: var(--model-6);
+  --color-model-7: var(--model-7);
+  --color-model-8: var(--model-8);
+  --color-model-9: var(--model-9);
+  --color-category-input: var(--category-input);
+  --color-category-output: var(--category-output);
+  --color-category-cache-read: var(--category-cache-read);
+  --color-category-cache-write: var(--category-cache-write);
+  --color-category-reasoning: var(--category-reasoning);
+  --color-heat-0: var(--heat0);
+  --color-heat-1: var(--heat1);
+  --color-heat-2: var(--heat2);
+  --color-heat-3: var(--heat3);
+  --color-heat-4: var(--heat4);
+  --color-agent-codex: var(--agent-codex);
+  --color-agent-claude: var(--agent-claude);
+  --color-agent-cursor: var(--agent-cursor);
+  --color-agent-workbuddy: var(--agent-workbuddy);
+  --color-agent-antigravity: var(--agent-antigravity);
+  --color-agent-deepseek: var(--agent-deepseek);
+  --color-agent-gemini: var(--agent-gemini);
+  --color-agent-opencode: var(--agent-opencode);
+  --color-agent-zcode: var(--agent-zcode);
+  --color-agent-mimo: var(--agent-mimo);
+  --color-agent-copilot: var(--agent-copilot);
+  --color-agent-cline: var(--agent-cline);
+  --color-agent-pi: var(--agent-pi);
+  --color-agent-continue: var(--agent-continue);
+  --color-agent-kilo: var(--agent-kilo);
+  --color-agent-qwen: var(--agent-qwen);
+  --color-agent-kimi: var(--agent-kimi);
+  --color-series-codex: var(--series-codex);
+  --color-series-claude: var(--series-claude);
+  --color-series-gemini: var(--series-gemini);
+  --color-series-opencode: var(--series-opencode);
+  --color-series-workbuddy: var(--series-workbuddy);
+  --color-series-cursor: var(--series-cursor);
+  --color-series-antigravity: var(--series-antigravity);
+  --color-series-deepseek: var(--series-deepseek);
+  --color-series-zcode: var(--series-zcode);
+  --color-series-mimo: var(--series-mimo);
+  --color-series-copilot: var(--series-copilot);
+  --color-series-cline: var(--series-cline);
+  --color-series-pi: var(--series-pi);
+  --color-series-continue: var(--series-continue);
+  --color-series-kilo: var(--series-kilo);
+  --color-series-qwen: var(--series-qwen);
+  --color-series-kimi: var(--series-kimi);
+  --color-series-other: var(--series-other);
+  --color-ramp-1: var(--ramp-1);
+  --color-ramp-2: var(--ramp-2);
+  --color-ramp-3: var(--ramp-3);
+  --color-ramp-4: var(--ramp-4);
+  --color-ramp-5: var(--ramp-5);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-avatar-indigo-from: var(--avatar-indigo-from);
+  --color-avatar-indigo-to: var(--avatar-indigo-to);
+  --color-avatar-indigo-text: var(--avatar-indigo-text);
+  --color-avatar-teal-from: var(--avatar-teal-from);
+  --color-avatar-teal-to: var(--avatar-teal-to);
+  --color-avatar-teal-text: var(--avatar-teal-text);
+  --color-avatar-coral-from: var(--avatar-coral-from);
+  --color-avatar-coral-to: var(--avatar-coral-to);
+  --color-avatar-coral-text: var(--avatar-coral-text);
+  --color-warn: var(--warn);
+  --color-warn-text: var(--warn-text);
+  --color-warn-soft: var(--warn-soft);
+  --color-panel: var(--panel);
+  --color-accent-text: var(--accent-text);
+  --color-cost-grid: var(--cost-chart-grid);
+  --color-cost-warn: var(--warn);
+  --color-cost-text: var(--text);
+  --color-cost-caption: var(--cost-chart-caption);
+  --color-cost-hairline: var(--hairline);
+  --color-cost-hit: var(--good-text);
+  --color-cost-track-strong: var(--fill-strong);
+  --color-cost-output: var(--output);
+  --color-cost-read: var(--read);
+  --color-cost-write: var(--write);
+  --color-vivid-input: var(--vivid-input);
+  --color-vivid-output: var(--vivid-output);
+  --color-vivid-read: var(--vivid-read);
+  --color-vivid-write: var(--vivid-write);
+  --color-cost-line: var(--cost-chart-color);
+  --color-cost-track: var(--fill);
+  --text-figure-cost-hero: var(--text-cost-hero);
+  --text-figure-cost-hero--line-height: var(--ff-cost-figure-leading);
+  --text-figure-cost-hero--letter-spacing: var(--ff-cost-figure-tracking);
+}
+
+/* Resolve the legacy fee colour at the document root: React surfaces also use
+   --input for fluid's form background. Keep the two existing meanings separate. */
+@theme {
+  --color-cost-input: var(--input);
+  --color-cost-muted: var(--muted);
+}

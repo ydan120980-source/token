@@ -18,6 +18,8 @@ function provider(model, explicit) {
   return 'unknown';
 }
 function digest(salt, value) { return crypto.createHmac('sha256', salt).update(value).digest('hex'); }
+// The ledger's session identity; session metadata uses the same key so it joins records without storing raw IDs on them.
+function sessionKey(agent, session, salt) { return session ? digest(salt, agent + ':session:' + session) : null; }
 function normalize(agent, usage, info, salt, semantics = 'inclusive') {
   const input = number(usage.input_tokens ?? usage.prompt_tokens ?? usage.inputTokens ?? usage.input);
   const rawOutput = number(usage.output_tokens ?? usage.completion_tokens ?? usage.outputTokens ?? usage.output);
@@ -38,7 +40,7 @@ function normalize(agent, usage, info, salt, semantics = 'inclusive') {
   const model = typeof info.model === 'string' && /^[a-zA-Z0-9._:/-]{1,179}$/.test(info.model) && !/^(?:[/\\]|[a-zA-Z]:[/\\])/.test(info.model) ? info.model : 'unknown';
   const key = info.id || JSON.stringify([info.time, info.session, model, usage]);
   return {
-    id: digest(salt, agent + ':' + key), sessionKey: info.session ? digest(salt, agent + ':session:' + info.session) : null, agent, entry: info.entry || 'unknown', model,
+    id: digest(salt, agent + ':' + key), sessionKey: sessionKey(agent, info.session, salt), agent, entry: info.entry || 'unknown', model,
     provider: provider(model, info.provider), timestamp: time,
     inputUncached: uncached, output, cacheRead: read, cacheWrite: write, reasoning,
     totalTokens: total, semantics: { input: semantics, sourceOutput: disjointReasoning ? 'excludes-reasoning' : 'includes-reasoning', reasoning: 'subset-of-normalized-output' },
@@ -49,4 +51,4 @@ function normalize(agent, usage, info, salt, semantics = 'inclusive') {
     quality: semantics === 'inclusive' && input !== null && (read ?? 0) + (write ?? 0) > input ? 'invalid-cache' : !disjointReasoning && output !== null && reasoning !== null && reasoning > output ? 'invalid-reasoning' : computed !== null && reported !== null && computed !== reported ? 'total-mismatch' : (input === null || output === null || (disjointReasoning && reasoning === null) ? 'partial' : 'measured')
   };
 }
-module.exports = { number, timestamp, provider, digest, normalize };
+module.exports = { number, timestamp, provider, digest, sessionKey, normalize };

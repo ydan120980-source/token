@@ -3,7 +3,7 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { selectSnapshot } = require('./local-snapshot');
+const { selectSnapshot } = require('../../src/m1/local-snapshot');
 const root = __dirname;
 const option = process.argv.indexOf('--snapshot-file');
 const selectedFile = option >= 0 ? path.resolve(process.argv[option + 1]) : null;
@@ -30,8 +30,11 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cross-Origin-Resource-Policy': 'same-origin' });
       return res.end(req.method === 'HEAD' ? undefined : body);
     }
+    // The agent catalogue, pricing labels and cost table live with the statistics library; the page loads them from there.
+    const library = { '/src/m1/snapshot-codec.js':'snapshot-codec.js', '/src/quota/connection-state.js': '../quota/connection-state.js', '/src/m1/insights-math.js': 'insights-math.js', '/src/m1/usage-math.js': 'usage-math.js', '/src/m1/agent-catalog.js': 'agent-catalog.js', '/src/m1/pricing-labels.js': 'pricing-labels.js', '/src/m1/cost-table.js': 'cost-table.js', '/src/m1/cost-insights.js': 'cost-insights.js' }[requestPath];
+    if (library) { res.writeHead(200, { 'Content-Type': types['.js'], 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' }); return req.method === 'HEAD' ? res.end() : fs.createReadStream(path.resolve(root, '../../src/m1', library)).pipe(res); }
     const relative = requestPath === '/' ? 'index.html' : requestPath.slice(1);
-    if (!['index.html', 'style.css', 'nowdex.css', 'refined.css', 'quota-widgets.css', 'activity.css', 'motion.css', 'motion.js', 'detail-ui.css', 'functional-ui.css', 'refinement.css', 'detail-interactions.js', 'select-ui.js', 'window-shell.js', 'window-shell.css', 'display-values.js', 'preview.js', 'usage-math.js', 'chart-ui.js', 'quota-ui.js', 'quota-progress.js', 'agent-picker.js', 'agent-catalog.js', 'quota.css', 'maintenance.css', 'maintenance-ui.js', 'pricing-data.js', 'pricing-view.js', 'pricing-controller.js', 'codex-maintenance.js', 'segmented.js', 'date-range.js', 'polish.css', 'insights.css', 'insights-math.js', 'insights.js', 'rhythm.css', 'focus.js'].includes(relative) && !relative.startsWith('assets/')) { res.writeHead(404); return res.end(); }
+    if (!["index.html","fonts.css","tokens.css","ui/agent-ui.js","ui/agent-ui.css","chart-ui.js","codex-maintenance-model.js","cost-chart.js","cost-model.js","cost-page.js","display-values.js","insights-ui.js","preview.js","pricing-data.js","pricing-editor-model.js","pricing-view.js","profile-model.js","quota-card-dom.js","quota-card-grid.js","quota-host.js","quota-model.js","quota-progress.js","sessions-host.js","sessions-model.js","sources-host.js","sources-model.js","usage-model.js","widget-layout-model.js"].includes(relative) && !relative.startsWith('assets/')) { res.writeHead(404); return res.end(); }
     const resolved = path.resolve(root, relative);
     if (!resolved.startsWith(root + path.sep) || !fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'Content-Type': types[path.extname(resolved)] || 'application/octet-stream', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });

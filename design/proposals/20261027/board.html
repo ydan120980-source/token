@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>配色、额度页与摘要栏方案</title>
+<link rel="stylesheet" href="../../desktop-reference/tokens.css">
+<style>
+@font-face { font-family: "Geist"; src: url("../../desktop-reference/assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
+:root { --font: "Geist", "PingFang SC", "Microsoft YaHei UI", system-ui, sans-serif; --ease-data: cubic-bezier(.23, 1, .32, 1); }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+
+/* ---------- palettes (light) ---------- */
+body { --p-claude:#da673d; --p-mimo:#d98800; --p-antigravity:#61b44f; --p-workbuddy:#19ad84; --p-zcode:#00a5be; --p-codex:#3391e7; --p-deepseek:#7b74dd; --p-cursor:#a571d7; --p-gemini:#c665b1; --p-opencode:#82868e; --p-other:#b5b7bb;
+  --r1:#1e579f; --r2:#487bc0; --r3:#75a1dc; --r4:#a5c7f5; --r5:#cbe0fc;
+  --v1:#a167f1; --v2:#37b880; --v3:#f19024; --v4:#127eee; }
+body.dark { --p-claude:#f29676; --p-mimo:#f2b366; --p-antigravity:#93d585; --p-workbuddy:#6ecdab; --p-zcode:#33c6d9; --p-codex:#73b6fa; --p-deepseek:#9e9cf3; --p-cursor:#c59cef; --p-gemini:#e292cf; --p-opencode:#a6abb3; --p-other:#727578;
+  --r1:#afd4ff; --r2:#81ade9; --r3:#5d88c2; --r4:#3f6496; --r5:#2d496d;
+  --v1:#bc8fff; --v2:#71d6a3; --v3:#f9aa60; --v4:#5fa7ff; }
+/* current (main) */
+body[data-palette="now"] { --a-claude:var(--series-claude); --a-antigravity:var(--series-antigravity); --a-codex:var(--series-codex); --a-deepseek:var(--series-deepseek); --a-workbuddy:var(--series-workbuddy); --a-gemini:var(--series-gemini); --a-cursor:var(--series-cursor); --a-zcode:var(--series-zcode); --a-mimo:var(--series-mimo); --a-opencode:var(--series-opencode);
+  --k1:var(--input); --k2:var(--output); --k3:var(--read); --k4:var(--write); --line-c:var(--cost-chart-color); }
+/* A vivid: agents and kinds both vivid, equal lightness */
+body[data-palette="A"] { --a-claude:var(--p-claude); --a-antigravity:var(--p-antigravity); --a-codex:var(--p-codex); --a-deepseek:var(--p-deepseek); --a-workbuddy:var(--p-workbuddy); --a-gemini:var(--p-gemini); --a-cursor:var(--p-cursor); --a-zcode:var(--p-zcode); --a-mimo:var(--p-mimo); --a-opencode:var(--p-opencode);
+  --k1:var(--v4); --k2:var(--v2); --k3:var(--v3); --k4:var(--v1); --line-c:var(--v2); }
+/* B one hue: every series is a step of one blue, by rank; identity by icon */
+body[data-palette="B"] { --a-antigravity:var(--r1); --a-claude:var(--r2); --a-codex:var(--r3); --a-deepseek:var(--r4); --a-workbuddy:var(--r2); --a-gemini:var(--r3); --a-cursor:var(--r4); --a-zcode:var(--r5); --a-mimo:var(--r5); --a-opencode:var(--r5);
+  --k1:var(--r1); --k2:var(--r2); --k3:var(--r3); --k4:var(--r4); --line-c:var(--r2); }
+/* C mixed (recommended): agents vivid equal lightness, kinds one blue ramp, trend in ink */
+body[data-palette="C"] { --a-claude:var(--p-claude); --a-antigravity:var(--p-antigravity); --a-codex:var(--p-codex); --a-deepseek:var(--p-deepseek); --a-workbuddy:var(--p-workbuddy); --a-gemini:var(--p-gemini); --a-cursor:var(--p-cursor); --a-zcode:var(--p-zcode); --a-mimo:var(--p-mimo); --a-opencode:var(--p-opencode);
+  --k1:var(--r1); --k2:var(--r2); --k3:var(--r3); --k4:var(--r4); --line-c:var(--text); }
+
+/* ---------- board ---------- */
+.board { width: 1520px; margin: 0 auto; padding: 40px 40px 80px; }
+.board-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 32px; }
+.board-head h1 { font-size: 28px; font-weight: 600; margin: 0; letter-spacing: -.3px; }
+.board-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.switches { display: flex; gap: 12px; align-items: center; }
+.seg-ctl { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--fill); }
+.seg-ctl button { border: 0; background: transparent; color: var(--muted); font: 500 12px/1 var(--font); height: 28px; padding: 0 12px; border-radius: 8px; cursor: pointer; }
+.seg-ctl button[aria-pressed="true"] { background: var(--card); color: var(--text); box-shadow: var(--card-edge); }
+.chapter { margin-top: 56px; }
+.chapter > h2 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+.chapter > .lede { color: var(--muted); font-size: 13px; margin: 0 0 20px; max-width: 880px; }
+.note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+
+/* palette comparison */
+.pals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.pal { background: var(--card); border-radius: var(--radius-l); box-shadow: var(--card-edge); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.pal h3 { margin: 0; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.pal .why { color: var(--muted); font-size: 12px; margin: -10px 0 0; min-height: 36px; }
+.sw { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.sw i { height: 22px; border-radius: 5px; display: block; }
+.sw-label { font-size: 11px; color: var(--muted); margin-bottom: -10px; }
+.mini-stack { display: flex; align-items: flex-end; gap: 14px; height: 96px; padding: 0 6px; border-bottom: 1px solid var(--line); }
+.mini-stack .col { flex: 1; display: flex; flex-direction: column-reverse; gap: 2px; }
+.mini-stack .col i { display: block; border-radius: 3px; }
+.ring { width: 92px; height: 92px; flex: none; }
+.pal-row { display: flex; gap: 16px; align-items: center; }
+.pal-row .leg { flex: 1; }
+.trend { width: 100%; height: 48px; display: block; }
+
+/* ---------- summary popover (the system) ---------- */
+.sum { width: 304px; background: var(--panel); border-radius: var(--radius-l); box-shadow: var(--card-edge), 0 8px 24px rgba(17,19,24,.06); overflow: hidden; flex: none; }
+body.dark .sum { box-shadow: var(--card-edge), 0 8px 24px rgba(0,0,0,.35); }
+.sum-sec { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.sum-sec + .sum-sec { border-top: 1px solid var(--hairline); }
+.sum-foot { padding: 12px 20px; border-top: 1px solid var(--hairline); display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; }
+.sum-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+.sum-label b { color: var(--text); font-weight: 600; font-size: 13px; }
+.fig-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.fig { font-size: 28px; font-weight: 600; letter-spacing: -.4px; line-height: 1.1; }
+.fig-sub { color: var(--muted); font-size: 13px; }
+.cap { color: var(--muted); font-size: 12px; }
+.pill { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--fill); color: var(--muted); font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.pill.warn { background: var(--warn-soft); color: var(--warn-text); }
+.pill.info { background: color-mix(in srgb, var(--blue) 14%, transparent); color: var(--accent-text); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.segbar { display: flex; gap: 3px; height: 8px; }
+.segbar i { display: block; height: 100%; border-radius: 4px; transform-origin: left center; }
+.segbar i.track { background: var(--fill-strong); }
+.legend { display: flex; flex-direction: column; }
+.legend.two { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+.lrow { display: flex; align-items: center; gap: 8px; min-height: 28px; font-size: 13px; border: 0; background: none; color: inherit; font-family: inherit; padding: 0; width: 100%; text-align: left; border-radius: 6px; }
+button.lrow { cursor: pointer; }
+button.lrow:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.lrow .sq { width: 8px; height: 8px; border-radius: 2.5px; flex: none; }
+.lrow .nm { flex: 1; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lrow .vl { color: var(--text); font-weight: 500; }
+.lrow .pc { color: var(--muted); width: 34px; text-align: right; font-size: 12px; }
+.lrow .chev { width: 12px; color: var(--muted); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.lrow[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.expand { overflow: hidden; height: 0; }
+.expand-in { padding: 4px 0 8px 16px; display: flex; flex-direction: column; gap: 6px; }
+.subrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 12px; color: var(--muted); }
+.subrow b { color: var(--text); font-weight: 500; }
+.subrow .bar { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: var(--fill-strong); overflow: hidden; }
+.subrow .bar i { display: block; height: 100%; border-radius: 2px; transform-origin: left center; }
+.days { display: flex; align-items: flex-end; gap: 3px; height: 36px; }
+.days i { flex: 1; border-radius: 2px; background: var(--fill-strong); transform-origin: bottom center; }
+.days i.today { background: var(--text); opacity: .75; }
+.days i.none { height: 2px !important; background: var(--hairline); }
+.days-head { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .4px; color: var(--muted); }
+.days-head b { color: var(--text); font-weight: 600; letter-spacing: 0; }
+.meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.meter { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.meter .k { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meter .v { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.meter .v span { color: var(--muted); font-weight: 400; }
+.meter .t { height: 4px; border-radius: 2px; background: var(--fill-strong); overflow: hidden; }
+.meter .t i { display: block; height: 100%; border-radius: 2px; transform-origin: left center; }
+.meter .t.hatch { background: repeating-linear-gradient(-45deg, var(--fill-strong) 0 3px, transparent 3px 6px); }
+.steps { display: flex; gap: 2px; height: 10px; }
+.steps i { flex: 1; border-radius: 2px; background: var(--fill-strong); }
+.steps i.on { background: var(--a-codex); }
+.erow { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 13px; }
+.erow img { width: 18px; height: 18px; flex: none; }
+.erow .nm { font-weight: 500; white-space: nowrap; }
+.erow .sp { flex: 1; }
+.erow .meta { color: var(--muted); white-space: nowrap; font-size: 12.5px; }
+.erow .meta b { color: var(--text); font-weight: 500; }
+.ecards { display: flex; flex-direction: column; gap: 8px; }
+.ecard { border-radius: 10px; background: var(--fill); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.ecard .top { display: flex; align-items: center; gap: 8px; }
+.ecard .top img { width: 16px; height: 16px; }
+.ecard .top .nm { font-weight: 600; font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ecard .sub { font-size: 12px; color: var(--muted); }
+.ecard .bot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.ecard .bot b { color: var(--text); font-weight: 600; }
+.waffle { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; }
+.waffle i { aspect-ratio: 1; border-radius: 2.5px; background: var(--fill-strong); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; border: 0; background: var(--fill); color: var(--text); font: 500 12.5px/1 var(--font); white-space: nowrap; cursor: pointer; }
+.btn.line { background: var(--card); box-shadow: var(--card-edge); }
+.btn.dark { background: var(--text); color: var(--panel); }
+.link { color: var(--muted); font-size: 12.5px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.foot-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; }
+.foot-status.warn { color: var(--warn-text); }
+.avatars { display: inline-flex; }
+.avatars img { width: 16px; height: 16px; }
+.avatars { gap: 4px; }
+
+.sums { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.sum-col { display: flex; flex-direction: column; gap: 10px; }
+.sum-col > .cap b { color: var(--text); font-weight: 600; font-size: 13px; }
+
+/* ---------- app frame mock ---------- */
+.win { width: 1440px; height: 900px; position: relative; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
+.win .side { position: absolute; left: 0; top: 0; bottom: 0; width: 216px; padding: 60px 14px 16px; display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; }
+.win .brand { position: absolute; top: 70px; left: 26px; font-weight: 600; font-size: 14px; display: flex; gap: 10px; align-items: center; }
+.win .nav { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 12px; border-radius: 10px; color: var(--text); }
+.win .nav.on { background: var(--fill-strong); font-weight: 600; }
+.win .nav .n { margin-left: auto; font-size: 11px; background: var(--warn-soft); color: var(--warn-text); border-radius: 999px; min-width: 18px; height: 18px; display: inline-grid; place-items: center; padding: 0 5px; }
+.win .navgap { height: 22px; font-size: 11px; color: var(--muted); padding: 10px 12px 0; }
+.win .ico { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid currentColor; opacity: .7; flex: none; }
+.win .title { position: absolute; top: 0; left: 0; right: 0; height: 44px; display: flex; align-items: center; justify-content: flex-end; gap: 18px; padding: 0 20px; color: var(--muted); font-size: 12px; }
+.win .title .sumbtn { width: 28px; height: 28px; border-radius: 8px; background: var(--fill-strong); display: grid; place-items: center; color: var(--text); }
+.win .panel { position: absolute; left: 216px; top: 44px; right: 8px; bottom: 8px; background: var(--panel); border-radius: 16px; box-shadow: 0 0 0 1px var(--panel-edge); overflow: hidden; }
+.win .page { position: absolute; left: 32px; top: 0; width: 824px; }
+.win .phead { display: flex; justify-content: space-between; align-items: flex-start; padding-top: 36px; height: 120px; }
+.win .phead h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.3px; }
+.win .phead .cap { margin-top: 6px; display: flex; gap: 10px; }
+.win .ctl { display: flex; gap: 10px; align-items: center; }
+.win .select { height: 32px; min-width: 112px; border-radius: 8px; box-shadow: var(--card-edge); background: var(--card); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 12.5px; }
+.win .cards { position: absolute; left: -8px; top: 112px; width: 840px; }
+.win .dock { position: absolute; right: 8px; top: 8px; }
+.strip { display: flex; align-items: center; gap: 0; border-radius: 12px; background: var(--fill); padding: 0 6px; height: 44px; font-size: 13px; width: 824px; }
+.strip > div { display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 100%; }
+.strip > div + div { border-left: 1px solid var(--hairline); }
+.strip img { width: 16px; height: 16px; }
+.strip .sp { flex: 1; }
+.cards-img { display: block; width: 840px; }
+body:not(.dark) .cards-img.d, body.dark .cards-img.l { display: none; }
+
+.anat { display: grid; grid-template-columns: 304px 1fr; gap: 32px; align-items: start; }
+.spec { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.spec th, .spec td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+.spec th { color: var(--muted); font-weight: 500; white-space: nowrap; }
+.spec td:first-child { font-weight: 600; white-space: nowrap; }
+.spec code { font-size: 11.5px; background: var(--fill); border-radius: 4px; padding: 1px 4px; }
+body.dark img:is([src$="codex.svg"],[src$="opencode.svg"],[src$="cursor.svg"],[src$="mimo.svg"]) { filter: brightness(0) invert(.85); }
+img[src$="claude.svg"] { filter: invert(54%) sepia(18%) saturate(1444%) hue-rotate(337deg) brightness(93%) contrast(86%); }
+@media (prefers-reduced-motion: reduce) { .lrow .chev { transition: none; } }
+</style>
+</head>
+<body data-palette="C">
+<div class="board">
+  <header class="board-head">
+    <div>
+      <h1>配色 · 额度页 · 摘要栏</h1>
+      <p>设计方案 2026-10-27 · 合成数据 · 用于所有者审核，未接入产品</p>
+    </div>
+    <div class="switches">
+      <div class="seg-ctl" id="palCtl" role="group" aria-label="配色">
+        <button data-pal="now">现在</button><button data-pal="A">A 鲜明</button><button data-pal="B">B 单色</button><button data-pal="C" aria-pressed="true">C 混合</button>
+      </div>
+      <div class="seg-ctl" id="themeCtl" role="group" aria-label="主题">
+        <button data-theme="light" aria-pressed="true">浅色</button><button data-theme="dark">深色</button>
+      </div>
+      <div class="seg-ctl"><button id="replay">回放动效</button><button id="update">数据更新</button></div>
+    </div>
+  </header>
+
+  <section class="chapter" id="palettes">
+    <h2>1 · 配色</h2>
+    <p class="lede">现在同一屏有三套互不相关的颜色：Agent 色（橄榄绿、赭红、蓝、靛蓝）、费用类型色（钢蓝、青、土黄、紫）、走势绿。三个方案用同一份数据比较；右上角切换后，下面的额度页和摘要栏也会跟着换。</p>
+    <div class="pals" id="pals"></div>
+  </section>
+
+  <section class="chapter" id="quota">
+    <h2>2 · 额度页（新设计）</h2>
+    <p class="lede">页面只放 Agent 卡片，卡片保持原样（下图直接从当前应用截取）。原来的两张概览卡、“接下来”时间线和下方列表都移进摘要栏。窗口宽度 ≥ 1120 时摘要栏固定在右侧；更窄时，页头下面显示一行摘要条，点击后弹出摘要。</p>
+    <div class="win" id="win"></div>
+    <p class="note">卡片截图里有两处原样保留下来的旧问题：WorkBuddy 卡底部的文字和进度条重叠，Codex 卡第三行“购买的积分”被截断。卡片既然保持原样，这两处要另外决定修不修。</p>
+    <div style="margin-top:24px" class="sum-col">
+      <span class="cap"><b>窄窗口（&lt; 1120）摘要条</b> · 只读，点击打开摘要栏</span>
+      <div class="strip" id="strip"></div>
+    </div>
+  </section>
+
+  <section class="chapter" id="summary">
+    <h2>3 · 摘要栏</h2>
+    <p class="lede">五个页面的摘要栏用同一套部件（设置页没有摘要栏）。参考图里能直接用的：参考图 1 的间隔分段条和两栏图例，参考图 2 的大数字、状态胶囊、每天小柱、三联小表、页脚状态加按钮，参考图 5 的格子图，参考图 4 的卡片（标题、状态胶囊、“金额 · 时长”）。点击带箭头的行会在原位展开明细，这是视频里旁边弹出的明细卡改过来的。</p>
+    <div class="sums" id="sums"></div>
+  </section>
+
+  <section class="chapter" id="spec">
+    <h2>4 · 部件和动效</h2>
+    <p class="lede">都由现有 token 和动效档组成，只新增配色 token；摘要栏的位置和尺寸沿用 LAYOUT-SPEC 第 1 节（宽 304，圆角 14）。</p>
+    <table class="spec" id="specTable"></table>
+  </section>
+</div>
+
+<script>
+const AG = { claude: 'Claude Code', antigravity: 'Antigravity', codex: 'Codex', deepseek: 'DeepSeek Harness', workbuddy: 'WorkBuddy', opencode: 'OpenCode', zcode: 'ZCode', gemini: 'Gemini CLI', cursor: 'Cursor', mimo: 'MiMo Code' };
+const logo = a => `../../desktop-reference/assets/agents/${a}.svg`;
+const ALL = ['claude', 'mimo', 'antigravity', 'workbuddy', 'zcode', 'codex', 'deepseek', 'cursor', 'gemini', 'opencode'];
+const $ = s => document.querySelector(s);
+const pct = (v, t) => Math.round(v / t * 1000) / 10;
+const money = v => '$' + v.toFixed(2);
+
+/* ----- data (synthetic, from the UI fixture's shape) ----- */
+const cost = { lo: 8.95, hi: 9.28, proj: [10.67, 11.07], agents: [['antigravity', 2.82, 'gemini-3.1-pro', '缓存写入未报告'], ['claude', 2.27, 'claude-opus-4-6-thinking', null], ['codex', 1.99, 'gpt-6.1-sol', null], ['deepseek', 1.86, 'deepseek-v4.1-flash', '已计入 93.1%']],
+  days: [0.31, 0.36, 0.28, 0.41, 0.33, 0.37, 0.29, 0.44, 0.35, 0.39, 0.30, 0.42, null, 0.38], unpriced: '426.4K' };
+const usage = { total: 1.24, kinds: [['输入', 0.31], ['输出', 0.09], ['缓存读取', 0.79], ['缓存写入', 0.05]], days: [0.9, 1.1, 0.8, 1.3, 1.0, 1.2, 0.7, 1.4, 1.1, 1.0, 0.6, 1.3, 1.2, 1.24],
+  byKind: { '缓存读取': [['claude', 0.34], ['antigravity', 0.21], ['codex', 0.14], ['deepseek', 0.10]] } };
+
+/* ----- palettes chapter ----- */
+const PALS = [
+  ['now', '现在', '三套互不相关：Agent 色 + 费用类型色 + 走势绿。橄榄绿和赭红并排时发脏。'],
+  ['A', 'A · 鲜明', 'Agent 和类型都用同明度的鲜色（参考图 1）。好认，但两套鲜色同屏时会显得花。'],
+  ['B', 'B · 单色', '所有数据都用同一种蓝的深浅（参考图 2、5），Agent 靠图标区分。最安静，但跨图找同一个 Agent 要看图标。'],
+  ['C', 'C · 混合（推荐）', 'Agent 用同明度的鲜色，跨页面都是同一个颜色；类型用一种蓝的深浅；走势线用墨色。同一屏只出现一套彩色。'],
+];
+function palCard([key, name, why]) {
+  const ags = ['antigravity', 'claude', 'codex', 'deepseek'], months = [[.9, .8, .7, .6], [3.4, 2.7, 2.3, 2.1], [2.8, 2.3, 2.0, 1.9]];
+  const scope = `data-palette="${key}"`;
+  const ring = (() => { let a = 0; const vals = [6.97, 5.63, 4.94, 4.74], sum = vals.reduce((x, y) => x + y), r = 38, c = 2 * Math.PI * r; return `<svg class="ring" viewBox="0 0 92 92">${vals.map((v, i) => { const len = v / sum * c - 4, s = `<circle cx="46" cy="46" r="${r}" fill="none" stroke="var(--a-${ags[i]})" stroke-width="9" stroke-linecap="round" stroke-dasharray="${len} ${c}" stroke-dashoffset="${-a}" transform="rotate(-90 46 46)"/>`; a += v / sum * c; return s; }).join('')}</svg>`; })();
+  const trendPts = [12, 18, 14, 22, 20, 28, 24, 31, 27, 35, 30, 38].map((y, i) => `${i * 26},${46 - y}`).join(' ');
+  return `<div class="pal" ${scope} data-pal-card="${key}">
+    <h3>${name}</h3><p class="why">${why}</p>
+    <div class="sw-label">Agent（10 个，按色相排序）</div>
+    <div class="sw">${ALL.map(a => `<i title="${AG[a]}" style="background:var(--a-${a})"></i>`).join('')}</div>
+    <div class="sw-label">费用类型：输入 / 输出 / 缓存读 / 缓存写 · 走势线</div>
+    <div class="sw" style="grid-template-columns:repeat(5,1fr)">${[1, 2, 3, 4].map(k => `<i style="background:var(--k${k})"></i>`).join('')}<i style="background:var(--line-c)"></i></div>
+    <div class="mini-stack">${months.map(m => `<div class="col">${m.map((v, i) => `<i style="height:${v * 8}px;background:var(--a-${ags[i]})"></i>`).join('')}</div>`).join('')}</div>
+    <div class="pal-row">${ring}<div class="legend leg">${ags.map((a, i) => `<div class="lrow"><span class="sq" style="background:var(--a-${a})"></span><span class="nm">${AG[a]}</span><span class="vl">${['$6.97', '$5.63', '$4.94', '$4.74'][i]}</span></div>`).join('')}</div></div>
+    <div class="segbar">${[40, 30, 20, 10].map((w, i) => `<i style="flex:${w};background:var(--k${i + 1})"></i>`).join('')}</div>
+    <svg class="trend" viewBox="0 0 290 48" preserveAspectRatio="none"><polyline points="${trendPts}" fill="none" stroke="var(--line-c)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+  </div>`;
+}
+$('#pals').innerHTML = PALS.map(palCard).join('');
+// palette cards always show their own palette, whatever the board uses
+document.querySelectorAll('[data-pal-card]').forEach(card => { const key = card.dataset.palCard; card.style.cssText = ''; card.removeAttribute('data-palette'); card.classList.add('pal-' + key); });
+const palStyle = document.createElement('style');
+palStyle.textContent = PALS.map(([key]) => { const rule = [...document.styleSheets[1].cssRules].find(r => r.selectorText === `body[data-palette="${key}"]`); return rule ? `.pal-${key} { ${rule.style.cssText} }` : ''; }).join('\n');
+document.head.appendChild(palStyle);
+
+/* ----- summary parts ----- */
+const segbar = (items, track) => `<div class="segbar" data-grow>${items.map(([w, color, label]) => `<i style="flex:${w};background:${color}" title="${label || ''}"></i>`).join('')}${track ? `<i class="track" style="flex:${track}"></i>` : ''}</div>`;
+const days = (vals, label, avg) => { const max = Math.max(...vals.filter(v => v !== null)); return `<div class="days-head"><span>${label}</span><span>平均 <b>${avg}</b> / 天</span></div><div class="days" data-days>${vals.map((v, i) => v === null ? `<i class="none" title="没有记录"></i>` : `<i class="${i === vals.length - 1 ? 'today' : ''}" style="height:${Math.max(3, v / max * 36)}px"></i>`).join('')}</div>`; };
+
+function costSummary() {
+  const total = cost.agents.reduce((s, a) => s + a[1], 0);
+  return `<div class="sum" data-sum="cost">
+    <div class="sum-sec">
+      <div class="sum-label"><span>本月至今</span><span class="pill">推算整月 $${cost.proj[0]} – ${cost.proj[1]}</span></div>
+      <div class="fig-row"><span class="fig" data-num="${cost.lo}" data-fmt="money">${money(cost.lo)}</span><span class="fig-sub">– ${money(cost.hi)}</span></div>
+      ${segbar(cost.agents.map(([a, v]) => [v, `var(--a-${a})`, AG[a]]))}
+      <div class="legend">${cost.agents.map(([a, v, model, note]) => `<button class="lrow" aria-expanded="false" data-expand="c-${a}"><svg class="chev" viewBox="0 0 12 12"><path d="M4.5 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="sq" style="background:var(--a-${a})"></span><span class="nm">${AG[a]}</span><span class="vl">${money(v)}${note && note.startsWith('已计入') ? '+' : ''}</span><span class="pc">${Math.round(v / total * 100)}%</span></button>
+        <div class="expand" id="c-${a}"><div class="expand-in"><div class="subrow"><span>${model}</span><b>${money(v)}</b><span class="bar"><i style="width:100%;background:var(--a-${a})"></i></span></div>${note ? `<div class="subrow"><span>${note}</span></div>` : ''}</div></div>`).join('')}</div>
+    </div>
+    <div class="sum-sec">${days(cost.days, '每天 · 近 14 天', '$0.35')}</div>
+    <div class="sum-foot"><span class="foot-status warn"><span class="dot"></span>${cost.unpriced} Token 未计入</span><button class="btn line">查看覆盖 <span aria-hidden="true">→</span></button></div>
+  </div>`;
+}
+
+function quotaSummary() {
+  const steps = Array.from({ length: 30 }, (_, i) => `<i class="${i < 19 ? 'on' : ''}"></i>`).join('');
+  const nextRows = [['codex', 'Codex', '5 小时', '今天 15:40', '恢复'], ['workbuddy', 'WorkBuddy', '80 积分', '周四', '到期'], ['codex', 'Codex', '每周', '周一 09:00', '恢复']];
+  return `<div class="sum" data-sum="quota">
+    <div class="sum-sec">
+      <div class="sum-label"><span>下一次恢复</span><span class="pill">1 小时 49 分后</span></div>
+      <div class="fig-row"><span class="fig">今天 15:40</span></div>
+      <div class="erow" style="min-height:20px;margin-top:-6px"><img src="${logo('codex')}" alt=""><span class="cap">Codex · 5 小时 · 剩余 0%</span></div>
+      <div class="steps" data-steps>${steps}</div>
+      <div class="sum-label"><span>窗口已过 3 小时 11 分</span><span>共 5 小时</span></div>
+    </div>
+    <div class="sum-sec">
+      <div class="meters">
+        <div class="meter"><span class="k">Codex 每周</span><span class="v">84% <span>剩余</span></span><span class="t"><i style="width:84%;background:var(--a-codex)"></i></span></div>
+        <div class="meter"><span class="k">WorkBuddy</span><span class="v">3,114 <span>/ 4,350</span></span><span class="t"><i style="width:71.6%;background:var(--a-workbuddy)"></i></span></div>
+        <div class="meter"><span class="k">Antigravity</span><span class="v">待刷新</span><span class="t hatch"></span></div>
+      </div>
+    </div>
+    <div class="sum-sec">
+      <div class="sum-label"><b>接下来</b><span>7 天</span></div>
+      <div>${nextRows.map(([a, n, w, t, verb]) => `<div class="erow"><img src="${logo(a)}" alt=""><span class="nm">${n}</span><span class="pill">${w}</span><span class="sp"></span><span class="meta">${t} <b>${verb}</b></span></div>`).join('')}</div>
+    </div>
+    <div class="sum-sec">
+      <div class="sum-label"><b>需要处理</b><span class="pill warn">2</span></div>
+      <div class="ecards">
+        <div class="ecard"><div class="top"><img src="${logo('workbuddy')}" alt=""><span class="nm">WorkBuddy 网站</span><button class="btn line">重新连接</button></div><span class="sub">登录已过期</span></div>
+        <div class="ecard"><div class="top"><img src="${logo('opencode')}" alt=""><span class="nm">OpenCode</span><button class="btn line">重新连接</button></div><span class="sub">授权已过期 · 下方是 1 天前的数据</span></div>
+      </div>
+    </div>
+    <div class="sum-foot"><span class="foot-status"><span class="avatars">${['claude', 'gemini', 'deepseek'].map(a => `<img src="${logo(a)}" alt="">`).join('')}</span>5 个 Agent 未连接</span><button class="btn line">连接 <span aria-hidden="true">→</span></button></div>
+  </div>`;
+}
+
+function usageSummary() {
+  const total = usage.kinds.reduce((s, k) => s + k[1], 0); let cells = [], acc = 0;
+  usage.kinds.forEach(([, v], i) => { const n = Math.round((acc + v) / total * 100) - Math.round(acc / total * 100); acc += v; for (let j = 0; j < n; j++) cells.push(i + 1); });
+  return `<div class="sum" data-sum="usage">
+    <div class="sum-sec">
+      <div class="sum-label"><span>今天 · 全部 Agent</span><span class="pill">昨天 1.20M</span></div>
+      <div class="fig-row"><span class="fig" data-num="${usage.total}" data-fmt="m">${usage.total.toFixed(2)}M</span><span class="fig-sub">Token</span></div>
+      <div class="waffle" data-waffle>${cells.map(k => `<i style="background:var(--k${k})"></i>`).join('')}</div>
+      <div class="legend">${usage.kinds.map(([n, v], i) => { const ex = usage.byKind[n]; return `<${ex ? 'button aria-expanded="false" data-expand="u-' + i + '"' : 'div'} class="lrow">${ex ? '<svg class="chev" viewBox="0 0 12 12"><path d="M4.5 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' : '<span style="width:12px"></span>'}<span class="sq" style="background:var(--k${i + 1})"></span><span class="nm">${n}</span><span class="vl">${(v * 1000).toFixed(0)}K</span><span class="pc">${Math.round(v / total * 100)}%</span></${ex ? 'button' : 'div'}>
+        ${ex ? `<div class="expand" id="u-${i}"><div class="expand-in">${ex.map(([a, x]) => `<div class="subrow"><span>${AG[a]}</span><b>${(x * 1000).toFixed(0)}K</b><span class="bar"><i style="width:${x / v * 100}%;background:var(--a-${a})"></i></span></div>`).join('')}</div></div>` : ''}`; }).join('')}</div>
+    </div>
+    <div class="sum-sec">${days(usage.days, 'Token · 近 14 天', '1.06M')}</div>
+    <div class="sum-foot"><span class="foot-status"><img src="${logo('claude')}" alt="" style="width:16px;height:16px">用得最多 Claude Code · 41%</span><button class="btn line">分析 <span aria-hidden="true">→</span></button></div>
+  </div>`;
+}
+
+function sessionsSummary() {
+  const rows = [['claude', 'token 项目 · UI 迁移', 'claude-opus-4-6-thinking', '$1.84', '2 小时 10 分', null], ['codex', 'token 项目 · M8 费用', 'gpt-6.1-sol', '$0.56', '1 小时 20 分', null], ['antigravity', 'site 项目', 'gemini-3.1-pro', '$0.29', '45 分', null], ['deepseek', '脚本整理', 'deepseek-v4.1-flash', '未计价', '12 分', 'warn']];
+  return `<div class="sum" data-sum="sessions">
+    <div class="sum-sec">
+      <div class="sum-label"><span>今天</span><span class="pill">4 个项目</span></div>
+      <div class="fig-row"><span class="fig" data-num="12" data-fmt="int">12</span><span class="fig-sub">个会话 · 共 4 小时 27 分</span></div>
+      ${segbar([[130, 'var(--a-claude)', 'Claude Code'], [80, 'var(--a-codex)', 'Codex'], [45, 'var(--a-antigravity)', 'Antigravity'], [12, 'var(--a-deepseek)', 'DeepSeek Harness']])}
+    </div>
+    <div class="sum-sec">
+      <div class="sum-label"><b>最近</b><span>按最后活动</span></div>
+      <div class="ecards">${rows.map(([a, t, m, c, d, w]) => `<div class="ecard"><div class="top"><img src="${logo(a)}" alt=""><span class="nm">${t}</span>${w ? '<span class="pill warn">未计价</span>' : ''}</div><span class="sub">${m}</span><div class="bot"><span><b>${w ? '—' : c}</b> · ${d}</span><span>${['14:02', '13:40', '11:15', '09:58'][rows.findIndex(r => r[1] === t)]}</span></div></div>`).join('')}</div>
+    </div>
+    <div class="sum-foot"><span class="cap">只看本机记录的会话</span><button class="btn line">全部会话 <span aria-hidden="true">→</span></button></div>
+  </div>`;
+}
+
+function sourcesSummary() {
+  return `<div class="sum" data-sum="sources">
+    <div class="sum-sec">
+      <div class="sum-label"><span>来源</span><span class="pill warn"><span class="dot"></span>3 个要处理</span></div>
+      <div class="fig-row"><span class="fig">7</span><span class="fig-sub">/ 10 个正在读取</span></div>
+      ${segbar([[6, 'var(--text)', '正常'], [1, 'var(--warn)', '部分'], [3, 'var(--fill-strong)', '未发现']])}
+      <div class="legend two"><div class="lrow"><span class="sq" style="background:var(--text)"></span><span class="nm">正常</span><span class="vl">6</span></div><div class="lrow"><span class="sq" style="background:var(--warn)"></span><span class="nm">部分</span><span class="vl">1</span></div><div class="lrow"><span class="sq" style="background:var(--fill-strong)"></span><span class="nm">未发现</span><span class="vl">3</span></div><div class="lrow"><span class="sq" style="background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted)"></span><span class="nm">自定义</span><span class="vl">1</span></div></div>
+    </div>
+    <div class="sum-sec">
+      <div class="sum-label"><b>要处理</b></div>
+      <div>${[['cursor', 'Cursor', '部分扫描 · 缺 2 个字段'], ['mimo', 'MiMo Code', '没找到默认目录'], ['zcode', 'ZCode', '没找到默认目录']].map(([a, n, why]) => `<div class="erow"><img src="${logo(a)}" alt=""><span class="nm">${n}</span><span class="sp"></span><span class="meta">${why}</span></div>`).join('')}</div>
+    </div>
+    <div class="sum-foot"><span class="cap">上次扫描 14:02</span><button class="btn line">来源管理 <span aria-hidden="true">→</span></button></div>
+  </div>`;
+}
+
+$('#sums').innerHTML = [['额度监控', quotaSummary], ['费用', costSummary], ['用量', usageSummary], ['会话', sessionsSummary], ['来源管理', sourcesSummary]].map(([n, f]) => `<div class="sum-col"><span class="cap"><b>${n}</b></span>${f()}</div>`).join('');
+
+/* ----- quota page mock ----- */
+$('#win').innerHTML = `
+  <div class="title"><span>○ 采集已暂停</span><span>☀</span><span>···</span><span class="sumbtn" title="摘要">▥</span></div>
+  <div class="brand"><span class="ico" style="opacity:1"></span>Agent Usage</div>
+  <nav class="side" style="padding-top:116px">
+    <div class="nav on"><span class="ico"></span>额度监控<span class="n">2</span></div>
+    <div class="nav"><span class="ico"></span>用量</div><div class="nav"><span class="ico"></span>费用</div><div class="nav"><span class="ico"></span>会话</div>
+    <div class="navgap">管理</div>
+    <div class="nav"><span class="ico"></span>来源管理<span class="n">3</span></div><div class="nav"><span class="ico"></span>设置</div>
+  </nav>
+  <div class="panel">
+    <div class="page">
+      <div class="phead">
+        <div><h1>额度监控</h1><div class="cap"><span>已连接 5 / 10</span><span>·</span><span style="color:var(--warn-text)">2 个需要处理</span><span>·</span><span>2 个超过 1 天未更新</span></div></div>
+        <div class="ctl"><div class="seg-ctl"><button aria-pressed="true">剩余</button><button>已用</button></div><div class="select">自动刷新 · 关闭 <span>⌄</span></div><button class="btn dark" style="height:32px;padding:0 14px">↻ 全部刷新</button></div>
+      </div>
+      <div class="cards"><img class="cards-img l" src="cards-light.png" alt="当前的 Agent 卡片（浅色）"><img class="cards-img d" src="cards-dark.png" alt="当前的 Agent 卡片（深色）"></div>
+    </div>
+    <div class="dock">${quotaSummary()}</div>
+  </div>`;
+$('#strip').innerHTML = `<div><img src="${logo('codex')}" alt=""><span>下一次恢复 <b>今天 15:40</b></span><span class="cap">Codex 5 小时</span></div><div><span class="pill warn"><span class="dot"></span>2 个需要处理</span></div><div><span class="cap">5 个 Agent 未连接</span></div><div class="sp"></div><div><span class="link">展开摘要 ›</span></div>`;
+
+/* ----- spec table ----- */
+$('#specTable').innerHTML = `<tr><th>部件</th><th>外观</th><th>动效</th><th>用在</th></tr>` + [
+  ['弹出卡', '宽 304，圆角 14，<code>--panel</code> 底色，<code>--card-edge</code> 加轻阴影；各节之间用细线分开；页脚是独立的一条', '打开：透明度 0→1，向下 4px 回到原位，缩放 0.97→1，原点在右上角，<code>spring.moderate</code>。关闭反向。固定时不做缩放', '全部'],
+  ['头部大数字', '上方是说明文字（12px，灰），右边是状态胶囊；28px 半粗数字，后面跟灰色的范围或单位', '数字滚动（沿用现有 Figure）；更新时用 <code>data.update</code> 0.5s', '全部'],
+  ['分段条', '高 8，段与段间隔 3，段的圆角 4；有上限时剩下的部分画成浅灰底条', '各段从左往右依次展开，<code>data.enter</code> 0.8s，每段错开 0.04s；数据变化时段宽用 0.5s 平滑过渡', '费用、会话、来源'],
+  ['图例行', '每行 28px，8px 圆角方块、名称（灰）、数值、占比；空间够时排成两栏', '点击有箭头的行，在原位展开明细（不弹浮卡、不压暗其他行）；高度用 <code>spring.fast</code>，明细小条用 <code>data.enter</code>', '费用、用量'],
+  ['每天小柱', '高 36，近 14 天，中性灰，今天用墨色；没有记录的那天只画一条细线，不当成 0', '自下而上长出，错开 0.04s，总时长不超过 0.4s', '费用、用量'],
+  ['三联小表', '名称、数值加单位、4px 小条；未知或待刷新的项画斜纹，不显示 0', '小条从左展开，<code>data.enter</code>', '额度'],
+  ['格子图', '20 × 5 共 100 格，按占比上色', '按阅读顺序淡入，总时长不超过 0.4s', '用量'],
+  ['卡片', '<code>--fill</code> 底，圆角 10；标题加状态胶囊，下一行灰字，再下一行“金额 · 时长”', '随所在节淡入', '额度（需要处理）、会话'],
+  ['页脚', '左边是状态（圆点加文字，或叠在一起的图标），右边是按钮带箭头', '—', '全部'],
+  ['减少动效', '—', '打开后直接显示最终状态，没有滚动和展开动画', '全部'],
+].map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+
+/* ----- motion ----- */
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const EASE = 'cubic-bezier(.23, 1, .32, 1)';
+const stagger = i => Math.min(i * 40, 400);
+function fmt(v, kind) { return kind === 'money' ? money(v) : kind === 'm' ? v.toFixed(2) + 'M' : String(Math.round(v)); }
+function count(el, from, to, ms) {
+  const kind = el.dataset.fmt, t0 = performance.now();
+  const step = now => { const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 4); el.textContent = fmt(from + (to - from) * e, kind); if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function replay() {
+  if (reduced) return;
+  document.querySelectorAll('.sum').forEach((sum, n) => {
+    sum.animate([{ opacity: 0, transform: 'translateY(-4px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 360, easing: 'cubic-bezier(.32,.72,0,1)', delay: n * 60, fill: 'backwards' }).playbackRate = 1;
+    sum.style.transformOrigin = 'top right';
+    sum.querySelectorAll('.sum-sec, .sum-foot').forEach((sec, i) => sec.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 800, easing: EASE, delay: n * 60 + 80 + stagger(i), fill: 'backwards' }));
+    sum.querySelectorAll('[data-grow] i, .meter .t i, .subrow .bar i').forEach((seg, i) => seg.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 800, easing: EASE, delay: n * 60 + 120 + stagger(i), fill: 'backwards' }));
+    sum.querySelectorAll('[data-days] i').forEach((bar, i) => bar.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 800, easing: EASE, delay: n * 60 + 160 + Math.min(i * 30, 400), fill: 'backwards' }));
+    sum.querySelectorAll('[data-steps] i, [data-waffle] i').forEach((cell, i, all) => cell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: EASE, delay: n * 60 + 120 + i * (400 / all.length), fill: 'backwards' }));
+    sum.querySelectorAll('[data-num]').forEach(el => count(el, 0, Number(el.dataset.num), 800));
+  });
+}
+let bumped = false;
+function update() {
+  const d = bumped ? -1 : 1; bumped = !bumped;
+  document.querySelectorAll('[data-sum="cost"]').forEach(sum => {
+    const fig = sum.querySelector('[data-num]'), from = Number(fig.dataset.num), to = Math.round((from + d * 0.42) * 100) / 100; fig.dataset.num = to;
+    reduced ? fig.textContent = fmt(to, 'money') : count(fig, from, to, 500);
+    const segs = sum.querySelectorAll('[data-grow] i'); const first = segs[0], f0 = Number(first.style.flex.split(' ')[0]) || Number(first.style.flex);
+    if (reduced) { first.style.flex = String(f0 + d * 0.42); return; }
+    const target = f0 + d * 0.42, t0 = performance.now();
+    const tick = now => { const p = Math.min(1, (now - t0) / 500), e = 1 - Math.pow(1 - p, 4); first.style.flex = String(f0 + (target - f0) * e); if (p < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
+}
+document.addEventListener('click', event => {
+  const row = event.target.closest('[data-expand]'); if (!row) return;
+  const panel = document.getElementById(row.dataset.expand), open = row.getAttribute('aria-expanded') !== 'true';
+  row.setAttribute('aria-expanded', String(open));
+  const h = panel.firstElementChild.offsetHeight;
+  if (reduced) { panel.style.height = open ? 'auto' : '0'; return; }
+  panel.animate([{ height: (open ? 0 : h) + 'px' }, { height: (open ? h : 0) + 'px' }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }).onfinish = () => { panel.style.height = open ? 'auto' : '0'; };
+  panel.style.height = open ? 'auto' : '0';
+  if (open) panel.querySelectorAll('.bar i').forEach((bar, i) => bar.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 800, easing: EASE, delay: 60 + stagger(i), fill: 'backwards' }));
+});
+const press = (ctl, attr, apply) => ctl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ctl.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); apply(b.dataset[attr]); });
+press($('#palCtl'), 'pal', v => { document.body.dataset.palette = v; });
+press($('#themeCtl'), 'theme', v => { document.body.classList.toggle('dark', v === 'dark'); });
+$('#replay').addEventListener('click', replay);
+$('#update').addEventListener('click', update);
+const params = new URLSearchParams(location.search);
+if (params.get('theme') === 'dark') $('#themeCtl [data-theme="dark"]').click();
+if (params.get('palette')) $(`#palCtl [data-pal="${params.get('palette')}"]`)?.click();
+for (const id of (params.get('open') || '').split(',').filter(Boolean)) document.querySelector(`[data-expand="${id}"]`)?.click();
+if (!params.has('still')) replay();
+</script>
+</body>
+</html>

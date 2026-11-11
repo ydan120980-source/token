@@ -1,0 +1,428 @@
+{
+  "scenes": [
+    {
+      "name": "period-all",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-period=\"all\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-periods] [data-fluid-hover-index=\"0\"]"
+        }
+      ]
+    },
+    {
+      "name": "period-30",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-period=\"30\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-periods] [data-fluid-hover-index=\"1\"]"
+        }
+      ]
+    },
+    {
+      "name": "period-7",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-period=\"7\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-periods] [data-fluid-hover-index=\"2\"]"
+        }
+      ]
+    },
+    {
+      "name": "period-today",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-period=\"today\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-periods] [data-fluid-hover-index=\"3\"]"
+        }
+      ]
+    },
+    {
+      "name": "recent-day",
+      "view": "usage",
+      "before": [
+        {
+          "click": "#overviewWeek [data-habit-date=\"2026-10-26\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-strip] [data-chart-key=\"2026-10-26\"]"
+        }
+      ]
+    },
+    {
+      "name": "calendar-day-hours",
+      "view": "usage",
+      "before": [
+        {
+          "click": "#heatmap [data-date=\"2026-10-26\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-calendar] [data-heat-key=\"2026-10-26\"]"
+        }
+      ]
+    },
+    {
+      "name": "calendar-year",
+      "view": "usage",
+      "before": [
+        {
+          "click": ".heat-range [data-value=\"2026\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-calendar-range] [data-fluid-hover-index=\"1\"]"
+        }
+      ]
+    },
+    {
+      "name": "calendar-palette-orange",
+      "view": "usage",
+      "before": [
+        {
+          "click": ".heat-palette [data-value=\"orange\"]"
+        },
+        {
+          "scroll": "#heatmap"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-palette] [data-swatch-key=\"orange\"]"
+        },
+        {
+          "scroll": "[data-usage-calendar]"
+        }
+      ]
+    },
+    {
+      "name": "calendar-palette-blue",
+      "view": "usage",
+      "before": [
+        {
+          "click": ".heat-palette [data-value=\"blue\"]"
+        },
+        {
+          "scroll": "#heatmap"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-palette] [data-swatch-key=\"blue\"]"
+        },
+        {
+          "scroll": "[data-usage-calendar]"
+        }
+      ]
+    },
+    {
+      "name": "calendar-palette-green",
+      "view": "usage",
+      "before": [
+        {
+          "click": ".heat-palette [data-value=\"green\"]"
+        },
+        {
+          "scroll": "#heatmap"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-palette] [data-swatch-key=\"green\"]"
+        },
+        {
+          "scroll": "[data-usage-calendar]"
+        }
+      ]
+    },
+    {
+      "name": "calendar-palette-mono",
+      "view": "usage",
+      "before": [
+        {
+          "click": ".heat-palette [data-value=\"mono\"]"
+        },
+        {
+          "scroll": "#heatmap"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-palette] [data-swatch-key=\"mono\"]"
+        },
+        {
+          "scroll": "[data-usage-calendar]"
+        }
+      ]
+    },
+    {
+      "name": "trend-mode-flow",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-trend-mode=\"flow\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-trend-mode] [data-fluid-hover-index=\"0\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-mode-total",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-trend-mode=\"total\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-trend-mode] [data-fluid-hover-index=\"1\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-mode-models",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-trend-mode=\"models\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-trend-mode] [data-fluid-hover-index=\"2\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-metric-tokens",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-metric=\"tokens\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-metric] [data-fluid-hover-index=\"0\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-metric-cost",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[data-metric=\"cost\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-metric] [data-fluid-hover-index=\"1\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-display-daily",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[aria-label=\"趋势数值\"] [data-value=\"daily\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-display] [data-fluid-hover-index=\"0\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-display-average",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[aria-label=\"趋势数值\"] [data-value=\"average\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-display] [data-fluid-hover-index=\"1\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-display-total",
+      "view": "usage",
+      "before": [
+        {
+          "click": "[aria-label=\"趋势数值\"] [data-value=\"total\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-display] [data-fluid-hover-index=\"2\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-range-open",
+      "view": "usage",
+      "before": [
+        {
+          "click": "#trendRangeButton"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-trend-range] button"
+        }
+      ]
+    },
+    {
+      "name": "trend-agent",
+      "view": "usage",
+      "before": [
+        {
+          "click": "#agentPicker [data-agent=\"codex\"]"
+        },
+        {
+          "scroll": "#trend"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-agents] [data-agent=\"codex\"]"
+        },
+        {
+          "scroll": "[data-usage-trend]"
+        }
+      ]
+    },
+    {
+      "name": "trend-keyboard-readout",
+      "view": "usage",
+      "before": [
+        {
+          "click": "#trendGrain-trigger"
+        },
+        {
+          "press": "Escape"
+        },
+        {
+          "press": "Tab"
+        },
+        {
+          "press": "ArrowRight"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-usage-grain] [role=\"combobox\"]"
+        },
+        {
+          "press": "Escape"
+        },
+        {
+          "press": "Tab"
+        },
+        {
+          "press": "ArrowRight"
+        }
+      ]
+    },
+    {
+      "name": "today-session-drill",
+      "view": "sessions",
+      "before": [
+        {
+          "click": "[data-view=\"usage\"]"
+        },
+        {
+          "click": "#todayClients [data-session-agent=\"claude\"]"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-view=\"usage\"]"
+        },
+        {
+          "click": "[data-usage-today] [data-usage-session-agent=\"claude\"] button"
+        }
+      ]
+    }
+  ]
+}

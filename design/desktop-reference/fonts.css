@@ -1,0 +1,7 @@
+/* Current font faces (owner 2026-10-29: Inter + 思源黑体). Assets and their licenses are in assets/fonts:
+   Inter 4.1 variable (rsms/inter, OFL), Noto Sans SC variable (Google Fonts, the Source Han Sans design, OFL)
+   cut down to GB2312 plus the interface's own characters (docs/m2/UI-FONTS-20261029.md), Geist Mono (OFL).
+   Latin and digits come from Inter; Chinese falls through to Noto Sans SC. */
+@font-face{font-family:Inter;src:url('assets/fonts/Inter.woff2') format('woff2');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Noto Sans SC';src:url('assets/fonts/NotoSansSC.woff2') format('woff2');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('assets/fonts/GeistMono.woff2') format('woff2');font-weight:100 900;font-display:swap}

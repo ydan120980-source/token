@@ -1,0 +1,420 @@
+/* Design tokens: the only place colours, type, spacing, radii, shadows and motion are
+   declared. Loaded first; every other stylesheet reads these and declares none of its
+   own (component-scoped helpers such as rhythm.css --ring stay with their component).
+   Direction (2026-10-14): neutral grey surfaces, Apple-style restraint — one accent,
+   hairlines over borders, translucent material only for floating surfaces. */
+:root {
+  color-scheme: light;
+
+  /* Surfaces and text */
+  --bg: #ececee;             /* window ground: sidebar, title bar, widget column */
+  --card: #fff;
+  --sidebar: #ececee;
+  --soft: #ebebee;           /* fills and control tracks, on the page and inside cards */
+  --line: #e5e5e7;
+  --text: #242426;
+  --muted: #66676b;          /* >= 4.5:1 on bg, card, soft and sidebar */
+  --nav-selected: #dcdcdf;
+
+  /* Accent: --blue is for graphics, fills and borders (>= 3:1 is not guaranteed on
+     white); text in the accent colour uses --accent-text (>= 4.5:1). */
+  --blue: #5b98fa;
+  --accent-text: #1f63c6;
+  --warn-text: #8a5a12;
+  --good-text: #18733a;
+
+  /* Usage categories (charts): palette C's one blue ramp, darkest first (owner 2026-10-27,
+     UI-PALETTE-QUOTA-SUMMARY-PROPOSAL-20261027.md section 2). */
+  --input: #1e579f;
+  --output: #487bc0;
+  --read: #75a1dc;
+  --write: #a5c7f5;
+  /* The cost detail card's usage composition only: four vivid, distinct kinds (owner 2026-10-28,
+     UI-COST-DETAIL-CARD-20261028.md). Everywhere else keeps palette C's ramp. */
+  --vivid-input: #3b82f6; --vivid-output: #22b07d; --vivid-read: #f08a24; --vivid-write: #9b5de5;
+  --reason: #cbe0fc;
+  --on-category: #fff;      /* labels inside category-coloured bars */
+
+  /* Agent colours, palette C (owner 2026-10-27, UI-PALETTE-QUOTA-SUMMARY-PROPOSAL-20261027.md section 2):
+     one equal-lightness colour per Agent (OKLCH L≈0.645, C≈0.155, by hue) for quota cards and every
+     chart. Identity only — never good or bad; a window under 20% still turns --warn. */
+  --agent-codex: #3391e7;
+  --agent-claude: #da673d;
+  --agent-cursor: #a571d7;
+  --agent-workbuddy: #19ad84;
+  --agent-antigravity: #61b44f;
+  --agent-deepseek: #7b74dd;
+  --agent-gemini: #c665b1;
+  --agent-opencode: #82868e;
+  --agent-zcode: #00a5be;
+  --agent-mimo: #d98800;
+  --agent-copilot: #788bc5;
+  --agent-cline: #93924e;
+  --agent-pi: #bd7682;
+  --agent-continue: #a77baf;
+  --agent-kilo: #b68054;
+  --agent-qwen: #7c9c0d;
+  --agent-kimi: #d95f7f;
+  --quota-inside: #94600f; /* a model's own limit inside a window (the Claude reference) */
+  --on-agent: #1d1e21;       /* text on an Agent-toned ticket */
+  /* The person's own avatar (profile, sidebar): three tones they pick from, a soft diagonal fill
+     with matching initials. Same in both themes, like a photo. */
+  --avatar-indigo-from: #dbe5f3;
+  --avatar-indigo-to: #afc3e5;
+  --avatar-indigo-text: #304f7d;
+  --avatar-teal-from: #d2eee5;
+  --avatar-teal-to: #99cabc;
+  --avatar-teal-text: #275b50;
+  --avatar-coral-from: #f7e0d4;
+  --avatar-coral-to: #e6b4a4;
+  --avatar-coral-text: #874e42;
+  /* Cost chart series: since palette C (2026-10-27) the same colours as --agent-*, kept as aliases
+     for the cost page's names. Declared again in the dark theme so they resolve there. */
+  --series-claude: var(--agent-claude); --series-mimo: var(--agent-mimo); --series-antigravity: var(--agent-antigravity); --series-workbuddy: var(--agent-workbuddy); --series-zcode: var(--agent-zcode); --series-codex: var(--agent-codex); --series-deepseek: var(--agent-deepseek); --series-cursor: var(--agent-cursor); --series-gemini: var(--agent-gemini); --series-opencode: var(--agent-opencode); --series-copilot: var(--agent-copilot); --series-cline: var(--agent-cline); --series-pi: var(--agent-pi); --series-continue: var(--agent-continue); --series-kilo: var(--agent-kilo); --series-qwen: var(--agent-qwen); --series-kimi: var(--agent-kimi);
+  --series-other: #9aa0aa;
+  /* Palette C's single blue ramp (UI-PALETTE-QUOTA-SUMMARY-PROPOSAL-20261027.md section 2), darkest
+     first: a widget's "单色" colour mode. Ink is the text colour in four strengths ("墨色"). */
+  --ramp-1: #1e579f; --ramp-2: #487bc0; --ramp-3: #75a1dc; --ramp-4: #a5c7f5; --ramp-5: #cbe0fc;
+  --ink-1: var(--text); --ink-2: color-mix(in srgb, var(--text) 62%, transparent);
+  --ink-3: color-mix(in srgb, var(--text) 38%, transparent); --ink-4: color-mix(in srgb, var(--text) 20%, transparent);
+  --ticket-shade: rgba(17, 19, 24, .12); /* the soft shadow a wallet pocket and slip cast */
+
+  /* Activity heat scale (preview.js reverses it on dark surfaces) */
+  /* Token categories, UI-MIG-M4-M8-RULINGS-20261025 section 4.1. */
+  /* Discrete measurement/model series from the original usage trend (owner 2026-10-28).
+     Shared chart identity colours; the existing C category ramp remains unchanged. */
+  --measure-input: #5998e0;
+  --palette-orange: #d9824a;
+  --palette-blue: #5f81bd;
+  --palette-green: #5f9672;
+  --palette-mono: #8a9099;
+  --measure-output: #63ad95;
+  --measure-cache-read: #9575df;
+  --measure-cache-write: #d9ab59;
+  --measure-estimate: #dd7b84;
+  --model-0: #5d8dcc;
+  --model-1: #599981;
+  --model-2: #c18b53;
+  --model-3: #bd796a;
+  --model-4: #9172b2;
+  --model-5: #57a2b4;
+  --model-6: #af8e41;
+  --model-7: #888fac;
+  --model-8: #a1778f;
+  --model-9: #72964a;
+  --category-input: #1e579f;
+  --category-output: #487bc0;
+  --category-cache-read: #75a1dc;
+  --category-cache-write: #a5c7f5;
+  --category-reasoning: #cbe0fc;
+  --heat0: #e8e9eb;
+  --heat1: #713b23;
+  --heat2: #aa5028;
+  --heat3: #d96f34;
+  --heat4: #f2a16c;
+
+  /* Type: system UI stack, fixed scale. Smallest step is 11px. */
+  --ui-font: Inter, 'Noto Sans SC', system-ui, 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+  --text-caption2: 11px;
+  --text-caption: 12px;
+  --text-footnote: 13px;
+  --text-body: 14px;
+  /* Raw shell/account-card typography; separate from Tailwind role names. */
+  --app-leaf-body: var(--text-body);
+  --app-leaf-caption: var(--text-caption);
+  --text-title3: 15px;
+  --text-title2: 17px;
+  --text-title1: 22px;
+  --text-large: 28px;
+  --text-figure: 20px;       /* a figure in a row of facts */
+  --text-hero: 52px;         /* the one estimate a page leads with */
+  --text-cost-hero: 60px;    /* the cost page's estimate (UI-COST-V2-20261023.md) */
+  --ff-cost-figure-leading: 1.05;
+  --ff-cost-figure-tracking: -1.5px;
+  --text-sub-multiple: 56px; /* mockup B's subscription multiple */
+  --text-quota: 40px;        /* a quota card's remaining percentage or balance */
+  --line-body: 1.5;
+  --weight-medium: 500;
+
+  /* Spacing on a 4px grid */
+  --space-1: 4px;
+  --hairline-width: 1px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Radii: controls, cards, sheets */
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --radius-sheet: 20px;
+  --radius-pill: 999px;
+
+  /* Layout */
+  --sidebar-width: 176px; /* narrowed 2026-10-28 (owner) so pages keep their room beside the widget column */
+  --sidebar-rail: 60px;
+  /* Shell (owner, 2026-10-27, UI-LAYOUT-SPEC-20261027.md): the sidebar and the title bar sit on the
+     window ground (--bg); every page sits on one rounded panel inset from the window edge. A page
+     may offer a summary column on the panel's right. */
+  --panel: #f5f5f7;          /* the page: Apple's grouped background; cards are white on it */
+  --panel-edge: rgba(17, 19, 24, .05);
+  --panel-radius: 16px;
+  --panel-inset: 8px;
+  --summary-width: 304px;
+  --summary-gap: 16px;       /* between the page panel and the docked widget column */
+  --panel-padding-docked: 32px; /* a page beside the docked summary column keeps two card columns at 1180px */
+  --scroll-fade-size: 12px;
+  --compact-icon: 24px;
+  --card-column: 360px;        /* owner 2026-11-03: list cards on Agent 管理 are wide enough to read without cutting anything */
+  --home-column: 280px;        /* owner 2026-11-02: 概览's widgets and Agent cards use one column rule, so their edges line up */
+  --cost-rail-width: 252px;    /* the cost page's range and Agent rail */
+  --cost-ring-size: 168px;     /* the cost page's "where it went" ring */
+  --cost-month-height: 150px;  /* the cost page's month columns */
+  --cost-sub-card: 240px;      /* the narrowest subscription card */
+  --cost-cover-size: 132px;    /* the cost page's coverage ring */
+  --quota-hero-read: 272px;    /* the first screen's readout beside the rings */
+  --quota-hero-time-read: 188px; /* the readout beside the timeline and the credit staircase */
+  --quota-hero-dial: 136px;    /* one set of rings at most */
+  --quota-hero-dial-min: 112px; /* … and at least, before the rings wrap to a second row */
+  --quota-hero-tile-min: 148px; /* one balance tile */
+  --quota-hero-who: 104px;     /* the timeline's name column */
+  --quota-hero-val: 124px;     /* the timeline's value column */
+  --control-compact-height: 30px;
+  --tracking-figure: -.3px;
+  --tracking-hero: -1.6px;
+  --cost-chart-color: var(--text);
+  --cost-chart-grid: #e0e4e2;
+  --cost-chart-caption: #717581;
+  --weight-section: 650;
+  --opacity-busy: .6;
+
+  /* Motion (motion.js and body[data-motion] switch these off globally) */
+  --motion-feedback: 160ms;
+  --motion-disclosure: 250ms;
+  --motion-theme: 180ms;
+  --motion-ease: cubic-bezier(.23,1,.32,1);
+  --motion-expand: cubic-bezier(.2,.9,.3,1);
+  --motion-shell: 240ms;       /* sidebar and summary column width changes (UI-SPEC spring.slow) */
+  --chart-tip-surface: #252526;
+  --chart-tip-ink: #f5f5f5;
+  --chart-tip-muted: #c6c6c8;
+}
+
+/* Dark surfaces and text follow fluid-functionalism's dark theme (owner, 2026-10-25,
+   UI-REACT-FOUNDATION-20261025.md); light keeps the approved 2026-10-14 greys. */
+body.dark {
+  color-scheme: dark;
+  --bg: #111112;
+  --card: #232326;
+  --panel: #18181a;
+  --panel-edge: rgba(255, 255, 255, .05);
+  --sidebar: #111112;
+  --soft: #2c2c2f;
+  --line: #333336;
+  --text: #f5f5f5;
+  --muted: #a3a3a3;
+  --nav-selected: #333333;
+  --blue: #95b4e5;
+  --accent-text: #95b4e5;
+  --warn-text: #e0b25c;
+  --good-text: #7fcf9c;
+  --input: #afd4ff; --output: #81ade9; --read: #5d88c2; --write: #3f6496; --reason: #2d496d;
+  --vivid-input: #609dff; --vivid-output: #3fcf98; --vivid-read: #ffa449; --vivid-write: #b884f5;
+  --category-input: #afd4ff;
+  --category-output: #81ade9;
+  --category-cache-read: #5d88c2;
+  --category-cache-write: #3f6496;
+  --category-reasoning: #2d496d;
+  --heat0: #2c2c2c;
+  --ticket-shade: rgba(0, 0, 0, .45);
+  --series-claude: var(--agent-claude); --series-mimo: var(--agent-mimo); --series-antigravity: var(--agent-antigravity); --series-workbuddy: var(--agent-workbuddy); --series-zcode: var(--agent-zcode); --series-codex: var(--agent-codex); --series-deepseek: var(--agent-deepseek); --series-cursor: var(--agent-cursor); --series-gemini: var(--agent-gemini); --series-opencode: var(--agent-opencode); --series-copilot: var(--agent-copilot); --series-cline: var(--agent-cline); --series-pi: var(--agent-pi); --series-continue: var(--agent-continue); --series-kilo: var(--agent-kilo); --series-qwen: var(--agent-qwen); --series-kimi: var(--agent-kimi);
+  --series-other: #b9bdc6;
+  --ramp-1: #afd4ff; --ramp-2: #81ade9; --ramp-3: #5d88c2; --ramp-4: #3f6496; --ramp-5: #2d496d;
+  /* Re-declared so the mixes resolve against the dark --text. */
+  --ink-1: var(--text); --ink-2: color-mix(in srgb, var(--text) 62%, transparent);
+  --ink-3: color-mix(in srgb, var(--text) 38%, transparent); --ink-4: color-mix(in srgb, var(--text) 20%, transparent);
+  --agent-codex: #73b6fa;
+  --agent-claude: #f29676;
+  --agent-cursor: #c59cef;
+  --agent-workbuddy: #6ecdab;
+  --agent-antigravity: #93d585;
+  --agent-deepseek: #9e9cf3;
+  --agent-gemini: #e292cf;
+  --agent-opencode: #a6abb3;
+  --agent-zcode: #33c6d9;
+  --agent-mimo: #f2b366;
+  --agent-copilot: #a1b5f2;
+  --agent-cline: #bdbc77;
+  --agent-pi: #ea9fab;
+  --agent-continue: #d2a5db;
+  --agent-kilo: #e2aa7c;
+  --agent-qwen: #a5c74b;
+  --agent-kimi: #ff8aa8;
+  --quota-inside: #e3ad57;
+  --cost-chart-color: var(--text);
+  --cost-chart-grid: #3a3a3a;
+  --cost-chart-caption: #a3a3a3;
+}
+
+/* Derived tokens live on body: a var() inside a custom property resolves where it is
+   declared, so on :root they would keep the light values in dark mode. */
+body {
+  --hairline: color-mix(in srgb, var(--text) 9%, transparent);
+  --fill: color-mix(in srgb, var(--text) 5.5%, transparent);
+  --fill-strong: color-mix(in srgb, var(--text) 10%, transparent);
+  --accent: var(--blue);
+  --pop-shadow: 0 18px 48px rgba(17, 19, 24, .16), 0 2px 8px rgba(17, 19, 24, .06), 0 0 0 1px rgba(17, 19, 24, .05);
+  /* A card is lifted off the grey page by a soft shadow, not outlined (Apple-style, owner 2026-10-28). */
+  --card-edge: 0 0 0 .5px rgba(17, 19, 24, .06), 0 1px 2px rgba(17, 19, 24, .04), 0 4px 14px -4px rgba(17, 19, 24, .06);
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-sheet: cubic-bezier(.32, .72, 0, 1);
+  --warn: #b2652f;
+  --warn-soft: color-mix(in srgb, var(--warn) 14%, transparent); /* the ground of a warning mark */
+}
+body.dark {
+  --fill: color-mix(in srgb, var(--text) 7%, transparent);
+  --fill-strong: color-mix(in srgb, var(--text) 12%, transparent);
+  --pop-shadow: 0 22px 60px rgba(0, 0, 0, .55), 0 2px 10px rgba(0, 0, 0, .3), 0 0 0 1px rgba(255, 255, 255, .07);
+  /* Dark cards: a faint top highlight and edge, and a shadow into the darker page. */
+  --card-edge: inset 0 1px 0 rgba(255, 255, 255, .05), 0 0 0 1px rgba(255, 255, 255, .05), 0 2px 8px rgba(0, 0, 0, .35);
+  --warn: #e3a06a;
+}
+
+/* React layer semantic tokens (fluid-functionalism names with an --ff- prefix; ui/src/theme/index.css
+   maps them inside React roots). Light: the app's approved greys (option B, owner 2026-10-25).
+   Dark: fluid-functionalism's own dark theme, values from its app/globals.css at 7387f36 (MIT).
+   Type scale: fluid's six roles, pending the unified style decision. */
+:root {
+  --fs-display: 28px; --lh-display: 34px; --fs-display-compact: 24px; --lh-display-compact: 30px;
+  --fs-title: 16px; --lh-title: 22px; --fs-title-compact: 15px; --lh-title-compact: 20px;
+  --fs-subtitle: 14px; --lh-subtitle: 20px; --fs-subtitle-compact: 13px; --lh-subtitle-compact: 18px;
+  --fs-body: 13px; --lh-body: 20px; --fs-body-compact: 12px; --lh-body-compact: 18px;
+  --fs-caption: 12px; --lh-caption: 16px; --fs-caption-compact: 11px; --lh-caption-compact: 14px;
+  --fs-micro: 11px; --lh-micro: 14px; --fs-micro-compact: 10px; --lh-micro-compact: 12px;
+}
+body {
+  --ff-surface-1: var(--bg);
+  --ff-surface-2: var(--soft);
+  --ff-bubble: #dcdce2;
+  --ff-diff-add: #2f9e5f;
+  --ff-diff-del: #d1495b;
+  /* The same two sides as words on a card, and a file that was edited; which side of a change, never good or bad. */
+  --ff-count-add: #146c2e;
+  --ff-count-del: #b02a37;
+  --ff-count-edit: #80560a;
+  /* The chosen row of a side list: quiet enough that these words keep 4.5:1 on it. */
+  --ff-side-selected: #e4e4e7;
+  /* Corners whose curvature starts at zero, the way Apple draws them (UI-AUDIT-20261104.md). */
+  --corner: superellipse(1.25);
+  /* Where a held pane would land; its edge keeps 3:1 against the card under it. */
+  --ff-pane-drop: rgb(120 120 128 / .22);
+  --ff-pane-drop-edge: rgb(60 60 67 / .6);
+  /* Kinds of file in the change tree (after Codex): what a file is, nothing more. */
+  --ff-file-blue: #2a64b8;
+  --ff-file-amber: #a16207;
+  --ff-file-green: #146c2e;
+  --ff-file-purple: #7a4fc4;
+  --ff-file-orange: #c2570c;
+  --ff-code-keyword: #2a5fb0;
+  --ff-code-string: #2f7a4b;
+  --ff-code-number: #9a5a14;
+  --ff-surface-3: var(--card);
+  --ff-surface-4: var(--card);
+  --ff-surface-5: var(--card);
+  --ff-surface-6: var(--card);
+  --ff-surface-7: var(--card);
+  --ff-surface-8: var(--card);
+  --ff-background: var(--bg);
+  --ff-foreground: var(--text);
+  --ff-card: var(--card);
+  --ff-muted: var(--soft);
+  --ff-muted-foreground: var(--muted);
+  --ff-accent: var(--line);
+  --ff-selected: var(--nav-selected);
+  --ff-border: var(--hairline);
+  --ff-ring: var(--line);
+  --ff-input: var(--line);
+  --ff-destructive: #ef4444;
+  --ff-destructive-light: #fef2f2;
+  --ff-info: #3b82f6;
+  --ff-success: #22c55e;
+  --ff-warning: #f59e0b;
+  --ff-focus-ring: var(--blue);
+  --ff-overlay: 0 0 0;
+  --ff-hover: var(--fill);
+  --ff-active: var(--fill-strong);
+  --ff-tint: rgb(0 0 0 / .08);
+  --ff-tint-hover: rgb(0 0 0 / .065);
+  --ff-shadow-color: rgb(0 0 0 / .06);
+  --ff-shadow-1: 0 0 0 1px var(--ff-shadow-color);
+  --ff-shadow-2: 0 0 0 1px var(--ff-shadow-color), 0 1px 1px -.5px var(--ff-shadow-color);
+  --ff-shadow-3: var(--ff-shadow-2), 0 3px 3px -1.5px var(--ff-shadow-color);
+  --ff-shadow-4: var(--ff-shadow-3), 0 6px 6px -3px var(--ff-shadow-color);
+  --ff-shadow-5: var(--ff-shadow-4), 0 12px 12px -6px var(--ff-shadow-color);
+  --ff-shadow-6: var(--ff-shadow-5), 0 24px 24px -12px var(--ff-shadow-color);
+  --ff-shadow-7: var(--ff-shadow-6), 0 48px 48px -24px var(--ff-shadow-color);
+  --ff-shadow-8: var(--ff-shadow-7), 0 96px 96px -48px var(--ff-shadow-color);
+  --ff-shadow-2-inset: inset 0 0 0 1px var(--ff-shadow-color), 0 1px 1px -.5px var(--ff-shadow-color);
+  --ff-shadow-3-inset: var(--ff-shadow-2-inset), 0 3px 3px -1.5px var(--ff-shadow-color);
+}
+body.dark {
+  --ff-surface-1: #111112;
+  --ff-surface-2: #2c2c2f;
+  --ff-bubble: #4a4a50;
+  --ff-diff-add: #4cc38a;
+  --ff-diff-del: #f0717f;
+  --ff-count-add: #4cc38a;
+  --ff-count-del: #ff8f99;
+  --ff-count-edit: #e0b25c;
+  --ff-side-selected: rgb(255 255 255 / .12);
+  --ff-pane-drop: rgb(235 235 245 / .16);
+  --ff-pane-drop-edge: rgb(235 235 245 / .5);
+  --ff-file-blue: #8fb8f0;
+  --ff-file-amber: #e0b25c;
+  --ff-file-green: #8fd1a6;
+  --ff-file-purple: #c1a7f0;
+  --ff-file-orange: #f0a26a;
+  --ff-code-keyword: #8fb8f0;
+  --ff-code-string: #8fd1a6;
+  --ff-code-number: #e6b27a;
+  --ff-surface-3: #232326;
+  --ff-surface-4: #2c2c2f;
+  --ff-surface-5: #333336;
+  --ff-surface-6: #3a3a3d;
+  --ff-surface-7: #414144;
+  --ff-surface-8: #48484b;
+  --ff-background: #111112;
+  --ff-foreground: #f5f5f5;
+  --ff-card: #232326;
+  --ff-muted: #18181a;
+  --ff-muted-foreground: #a3a3a3;
+  --ff-accent: #525252;
+  --ff-selected: #525252;
+  --ff-border: color-mix(in oklab, #f5f5f5 12%, transparent);
+  --ff-ring: #404040;
+  --ff-input: #404040;
+  --ff-destructive: #fca5a5;
+  --ff-destructive-light: #450a0a;
+  --ff-info: #93c5fd;
+  --ff-success: #86efac;
+  --ff-warning: #fcd34d;
+  --ff-focus-ring: #6b97ff;
+  --ff-overlay: 255 255 255;
+  --ff-hover: rgb(255 255 255 / .06);
+  --ff-active: rgb(255 255 255 / .1);
+  --ff-tint: rgb(255 255 255 / .25);
+  --ff-tint-hover: rgb(255 255 255 / .2);
+  --ff-dm-drop: rgb(0 0 0 / .18);
+  --ff-shadow-1: inset 0 0 0 1px rgb(255 255 255 / .02);
+  --ff-shadow-2: inset 0 1px 0 0 rgb(255 255 255 / .01), inset 0 0 0 1px rgb(255 255 255 / .02), 0 1px 1px -.5px var(--ff-dm-drop);
+  --ff-shadow-3: inset 0 1px 0 0 rgb(255 255 255 / .02), inset 0 0 0 1px rgb(255 255 255 / .02), 0 0 0 1px rgb(0 0 0 / .12), 0 1px 1px -.5px var(--ff-dm-drop), 0 3px 3px -1.5px var(--ff-dm-drop);
+  --ff-shadow-4: inset 0 1px 0 0 rgb(255 255 255 / .02), inset 0 0 0 1px rgb(255 255 255 / .04), 0 0 0 1px rgb(0 0 0 / .14), 0 1px 1px -.5px var(--ff-dm-drop), 0 3px 3px -1.5px var(--ff-dm-drop), 0 6px 6px -3px var(--ff-dm-drop);
+  --ff-shadow-5: inset 0 1px 0 0 rgb(255 255 255 / .04), inset 0 0 0 1px rgb(255 255 255 / .04), 0 0 0 1px rgb(0 0 0 / .16), 0 1px 1px -.5px var(--ff-dm-drop), 0 3px 3px -1.5px var(--ff-dm-drop), 0 6px 6px -3px var(--ff-dm-drop), 0 12px 12px -6px var(--ff-dm-drop);
+  --ff-shadow-6: inset 0 1px 0 0 rgb(255 255 255 / .04), inset 0 0 0 1px rgb(255 255 255 / .06), 0 0 0 1px rgb(0 0 0 / .18), 0 1px 1px -.5px var(--ff-dm-drop), 0 3px 3px -1.5px var(--ff-dm-drop), 0 6px 6px -3px var(--ff-dm-drop), 0 12px 12px -6px var(--ff-dm-drop), 0 24px 24px -12px var(--ff-dm-drop);
+  --ff-shadow-7: inset 0 1px 0 0 rgb(255 255 255 / .06), inset 0 0 0 1px rgb(255 255 255 / .06), 0 0 0 1px rgb(0 0 0 / .2), 0 1px 1px -.5px var(--ff-dm-drop), 0 3px 3px -1.5px var(--ff-dm-drop), 0 6px 6px -3px var(--ff-dm-drop), 0 12px 12px -6px var(--ff-dm-drop), 0 24px 24px -12px var(--ff-dm-drop), 0 48px 48px -24px var(--ff-dm-drop);
+  --ff-shadow-8: inset 0 1px 0 0 rgb(255 255 255 / .06), inset 0 0 0 1px rgb(255 255 255 / .06), 0 0 0 1px rgb(0 0 0 / .22), 0 1px 1px -.5px var(--ff-dm-drop), 0 3px 3px -1.5px var(--ff-dm-drop), 0 6px 6px -3px var(--ff-dm-drop), 0 12px 12px -6px var(--ff-dm-drop), 0 24px 24px -12px var(--ff-dm-drop), 0 48px 48px -24px var(--ff-dm-drop), 0 96px 96px -48px var(--ff-dm-drop);
+  --ff-shadow-2-inset: var(--ff-shadow-2);
+  --ff-shadow-3-inset: var(--ff-shadow-3);
+}

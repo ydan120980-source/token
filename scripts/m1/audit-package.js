@@ -6,7 +6,9 @@ const asar = require('@electron/asar');
 const root = path.resolve(__dirname, '../..'), directory = path.resolve(process.argv[2] || path.join(root, 'dist/win-unpacked'));
 const archive = path.join(directory, 'resources/app.asar'), entries = asar.listPackage(archive);
 assert.deepEqual(entries.filter(p => /\\src\\(?:electron|shared|agent|hub)\\|\\src\\m1\\(?:main\.js|calendar\.js)|\\scripts\\/.test(p)), []);
-const excluded = new Set(['src/m1/crypto.js', 'src/m1/read-snapshot.js', 'design/desktop-reference/serve.js', 'design/desktop-reference/README.md']);
+const currentEntries = new Set(entries.map(entry => entry.replaceAll('\\', '/').replace(/^\//, '')));
+for (const name of ['legacy.css', 'islands.js', 'motion.js', 'morph.js', 'segmented.js', 'select-ui.js', 'focus.js', 'scroll-fade.js', 'interactions.js', 'detail-interactions.js', 'window-shell.js']) assert.ok(!currentEntries.has('design/desktop-reference/' + name), 'Retired renderer packaged: ' + name);
+const excluded = new Set(['src/m1/crypto.js', 'design/desktop-reference/serve.js', 'design/desktop-reference/README.md']);
 const files = [];
 function check(file) { const raw = path.relative(root, file), relative = raw.replaceAll('\\', '/'); if (excluded.has(relative)) return; assert.ok(asar.extractFile(archive, raw).equals(fs.readFileSync(file)), 'Mismatch: ' + relative); files.push(relative); }
 function walk(dir) { for (const entry of fs.readdirSync(dir, { withFileTypes: true })) { const file = path.join(dir, entry.name); if (entry.isDirectory()) walk(file); else check(file); } }
@@ -19,6 +21,7 @@ const { TOKSCALE, trustedBinary } = require('../../src/m1/native');
 const unpacked = path.join(directory, 'resources/app.asar.unpacked/node_modules/@tokscale/cli-win32-x64-msvc');
 assert.equal(JSON.parse(fs.readFileSync(path.join(unpacked, 'package.json'), 'utf8')).version, TOKSCALE.version);
 trustedBinary(path.join(unpacked, 'bin/tokscale.exe'));
+for (const helper of ['windows-job-host.ps1', 'windows-job-host.cs', 'agent-install-host.ps1', 'claude-statusline-export.ps1']) assert.ok(fs.readFileSync(path.join(directory, 'resources/app.asar.unpacked/src/quota', helper)).equals(fs.readFileSync(path.join(root, 'src/quota', helper))), 'Unpacked installer helper mismatch: ' + helper);
 fs.mkdirSync(path.join(root, 'artifacts/maintenance'), { recursive: true });
 fs.writeFileSync(path.join(root, 'artifacts/maintenance/asar-results.json'), JSON.stringify({ currentProductSourceMatches: true, files, retiredPathsAbsent: true, packageRuntimeMetadataMatches: true, packageDevelopmentFieldsPrunedByBuilder: true, dependencies: ['sql.js', 'tokscale'], unpackedNativeBinary: { version: TOKSCALE.version, sha256: TOKSCALE.sha256 } }, null, 2));
 console.log('PASS: ' + files.length + ' source/assets/docs match ASAR byte-for-byte; runtime package metadata matches; unpacked tokscale ' + TOKSCALE.version + ' matches its pinned SHA-256.');

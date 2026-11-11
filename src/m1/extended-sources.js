@@ -182,4 +182,4 @@ function zcode(rows, salt) {
   }
   return records;
 }
-module.exports = {gemini, cursor, cursorCsv, csvIdentity, csvRows, generation, canonicalFiles, decodeDeepseek, deepseek, zcode};
+module.exports = {gemini, cursor, cursorCsv, csvIdentity, generation, canonicalFiles, decodeDeepseek, deepseek, zcode};

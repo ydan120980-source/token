@@ -1,5 +1,7 @@
 'use strict';
 const MESSAGES = Object.freeze({
+  PROVIDER_CHROME_MISSING: '未找到 Chrome。请安装 Chrome 后重试；本次官方授权已取消。',
+  PROVIDER_BROWSER_FAILED: 'Chrome 未能打开；本次官方授权已取消，可以重试。',
   CODEX_EXECUTABLE_REQUIRED: '请选择官方 Codex CLI。',
   CODEX_PROCESS_UNAVAILABLE: 'Codex CLI 无法启动，请检查所选程序。',
   SYSTEM_CREDENTIAL_STORE_REQUIRED: '系统凭据存储不可用；本应用不使用明文存储。',

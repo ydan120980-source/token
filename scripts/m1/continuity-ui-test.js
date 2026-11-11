@@ -1,10 +1,12 @@
 'use strict';
-/* global document, Chart, getComputedStyle, innerWidth */
+/* global document, getComputedStyle */
 // Browser plugin not available: native Electron/Playwright, own synthetic homes only.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {_electron:electron}=require('playwright');
-const {Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../src/m1/normalize'),{fixtures}=require('../../tests/m1/fixtures');
-const {settle,cleanup}=require('./ui-settle');
+const {SOURCES}=require('../../src/m1/policy'),{Store,atomic}=require('../../src/m1/store'),{normalize}=require('../../src/m1/normalize'),{fixtures}=require('../../tests/m1/fixtures');
+const {settle,cleanup,keepVisible,showView}=require('./ui-settle');
+const q=require('./quota-ui-helpers');
+const {usageContinuityChecks}=require('./usage-continuity-checks');
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'agent-usage-continuity-')),output=process.env.CONTINUITY_EVIDENCE_DIR||'artifacts/m2-motion/continuity-source',evidence=[];fs.mkdirSync(output,{recursive:true});
  try{
@@ -24,7 +26,7 @@ const {settle,cleanup}=require('./ui-settle');
    atomic(path.join(quota,'quota-cache.json'),{accounts:[{id,provider:'codex',alias:'合成动效验收',plan:'plus',quota:{schemaVersion:'AccountQuotaV1',fetchedAt:new Date().toISOString(),windows:[{bucket:'codex',name:'codex',kind:'primary',durationMins:300,usedPercent:22,remainingPercent:78,resetsAt:null},{bucket:'codex',name:'codex',kind:'secondary',durationMins:10080,usedPercent:76,remainingPercent:24,resetsAt:null}],resetCredits:null}}]});
    const app=await electron.launch({executablePath:process.env.QUOTA_PACKAGED_EXE||require('electron'),args:[...(process.env.QUOTA_PACKAGED_EXE?[]:['src/quota/main.js']),'--usage-data-dir',usage,'--quota-data-dir',quota,'--m1-fixture-root',home,'--force-device-scale-factor='+scale],timeout:60000});
    try{
-    const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});await page.locator('#quotaCards .quota-card').waitFor();await settle(page);await page.emulateMedia({reducedMotion:'no-preference'});
+    const page=await app.firstWindow(),errors=[];await keepVisible(app);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});await showView(page,'quota');await page.locator('#quotaCards .quota-card').waitFor();await settle(page);await page.emulateMedia({reducedMotion:'no-preference'});
     // Obtain the real renderer animation after a synthetic main-process quota read.
     await app.evaluate(()=>{
      const req=process.mainModule.require.bind(process.mainModule),module=Object.values(req('node:module')._cache).find(m=>/[/\\]src[/\\]quota[/\\]service\.js$/.test(m.filename)),{EventEmitter}=req('node:events');
@@ -32,23 +34,27 @@ const {settle,cleanup}=require('./ui-settle');
      module.exports.QuotaService.prototype.client=async function(id){fixture.service=this;const rpc=new EventEmitter();rpc.close=()=>{};rpc.request=async method=>method==='account/read'?{account:{type:'chatgpt',planType:'plus'}}:{rateLimits:{primary:{usedPercent:fixture.used,windowDurationMins:300},secondary:{usedPercent:76,windowDurationMins:10080}}};this.clients.set(id,rpc);return rpc;};
     });
     await page.locator('#quotaCards [data-quota-refresh]').click();
-    await page.waitForFunction(()=>document.querySelector('#quotaCards .quota-fill').getAnimations().some(a=>a.effect.getTiming().duration===820));
+    // The approved overview pushes cards below the fold. Clicking refresh scrolls a
+    // card in and can start its entrance before the synthetic read has returned.
+    // Sample the confirmed refresh target, never that earlier entrance animation.
+    await page.waitForFunction(()=>{const l=document.querySelectorAll('#quotaCards .quota-fill')[1];return l.parentElement.getAttribute('aria-valuenow')==='45'&&l.getAnimations().some(a=>a.effect.getTiming().duration===820);});
     const frames=[];
     for(const time of [0,100,200,410,620,720,800]){
-     frames.push(await page.evaluate(time=>{const layer=document.querySelector('#quotaCards .quota-fill'),a=layer.getAnimations()[0];a.pause();a.currentTime=time;return {time,clip:getComputedStyle(layer).clipPath,aria:layer.parentElement.getAttribute('aria-valuenow'),easing:a.effect.getTiming().easing};},time));
+     frames.push(await page.evaluate(time=>{const layer=document.querySelectorAll('#quotaCards .quota-fill')[1],a=layer.getAnimations()[0];a.pause();a.currentTime=time;return {time,clip:getComputedStyle(layer).clipPath,aria:layer.parentElement.getAttribute('aria-valuenow'),easing:a.effect.getTiming().easing};},time));
      if([0,200,620,800].includes(time))await page.screenshot({path:path.join(output,'quota-'+scale+'-'+time+'.png')});
     }
     assert(new Set(frames.map(f=>f.clip)).size>5);assert(frames.every(f=>f.aria==='45'));assert.equal(frames[0].easing,'cubic-bezier(0.42, 0, 0.2, 1)');
     // Interrupt at an intermediate presentation value and reverse the target.
-    const interrupted=await page.evaluate(()=>{const l=document.querySelector('#quotaCards .quota-fill'),a=l.getAnimations()[0];a.currentTime=410;return getComputedStyle(l).clipPath;});
+    const interrupted=await page.evaluate(()=>{const l=document.querySelectorAll('#quotaCards .quota-fill')[1],a=l.getAnimations()[0];a.currentTime=410;return getComputedStyle(l).clipPath;});
     await app.evaluate(()=>{const req=process.mainModule.require.bind(process.mainModule);Object.values(req('node:module')._cache).find(m=>/[/\\]src[/\\]quota[/\\]service\.js$/.test(m.filename)).exports.QuotaService.prototype.motionFixture.used=10;});
     await page.locator('#quotaCards [data-quota-refresh]').click();
-    const redirected=await page.evaluate(()=>{const l=document.querySelector('#quotaCards .quota-fill'),a=l.getAnimations()[0];a.pause();a.currentTime=0;return getComputedStyle(l).clipPath;});assert.equal(redirected,interrupted);
-    await page.evaluate(()=>document.querySelector('#quotaCards .quota-fill').getAnimations().forEach(a=>a.finish()));await settle(page);
-    assert.equal(await page.locator('#quotaCards .quota-fill').first().evaluate(l=>getComputedStyle(l).clipPath),'inset(0px 10% 0px 0px)');
-    const layerHandle=await page.locator('#quotaCards .quota-fill').first().elementHandle();await page.evaluate(()=>window.dispatchEvent(new Event('ui-motion-change')));assert.equal(await layerHandle.evaluate(l=>l.getAnimations().length),0);await layerHandle.dispose();
-    await page.locator('#quotaInterval-trigger').click();await page.locator('#selectOptions').getByRole('option',{name:'每分钟',exact:true}).click();const cadence=await page.evaluate(()=>window.quotaBridge.get());assert.equal(cadence.state.autoRefresh,'1min');assert(Date.parse(cadence.state.nextAutoAt)-Date.now()<=60000);
-    await page.locator('#quotaInterval-trigger').click();await page.locator('#selectOptions').getByRole('option',{name:'关闭',exact:true}).click();
+    await page.waitForFunction(()=>document.querySelectorAll('#quotaCards .quota-segments')[1].getAttribute('aria-valuenow')==='90');
+    const redirected=await page.evaluate(()=>{const l=document.querySelectorAll('#quotaCards .quota-fill')[1],a=l.getAnimations()[0];a.pause();a.currentTime=0;return getComputedStyle(l).clipPath;});assert.equal(redirected,interrupted);
+    await page.evaluate(()=>document.querySelectorAll('#quotaCards .quota-fill')[1].getAnimations().forEach(a=>a.finish()));await settle(page);
+    assert.equal(await page.locator('#quotaCards .quota-fill').nth(1).evaluate(l=>getComputedStyle(l).clipPath),'inset(0px 10% 0px 0px)');
+    const layerHandle=await page.locator('#quotaCards .quota-fill').nth(1).elementHandle();await page.evaluate(()=>window.dispatchEvent(new Event('ui-motion-change')));assert.equal(await layerHandle.evaluate(l=>l.getAnimations().length),0);await layerHandle.dispose();
+    await q.choose(page,'额度自动刷新','每分钟');const cadence=await page.evaluate(()=>window.quotaBridge.get());assert.equal(cadence.state.autoRefresh,'1min');assert(Date.parse(cadence.state.nextAutoAt)-Date.now()<=60000);
+    await q.choose(page,'额度自动刷新','关闭');
     async function capture(name, run) {
      if(!process.env.CONTINUITY_CAPTURE || scale!==1){await run();return;}
      const folder=path.join(output,name+'-frames');fs.mkdirSync(folder,{recursive:true});const session=await page.context().newCDPSession(page),frames=[];
@@ -58,25 +64,12 @@ const {settle,cleanup}=require('./ui-settle');
     }
     await capture('quota-motion',async()=>{
      await app.evaluate(()=>{const req=process.mainModule.require.bind(process.mainModule);Object.values(req('node:module')._cache).find(m=>/[/\\]src[/\\]quota[/\\]service\.js$/.test(m.filename)).exports.QuotaService.prototype.motionFixture.used=35;});
-     await page.locator('#quotaCards [data-quota-refresh]').click();await settle(page);
+     await page.locator('#quotaCards [data-quota-refresh]').click();await page.waitForFunction(()=>document.querySelectorAll('#quotaCards .quota-segments')[1].getAttribute('aria-valuenow')==='65');await settle(page);
     });
-    await capture('trend-motion',async()=>{await page.locator('[data-view="usage"]').click();await page.locator('#trend').scrollIntoViewIfNeeded();await settle(page);await page.waitForFunction(()=>Chart.getChart(document.getElementById('trendCanvas')).$reveal===1);});
-    assert.equal(await page.locator('#agentPicker button').count(),10);assert.equal(await page.locator('#agentFilter-trigger').count(),0);
-    const continuity=await page.evaluate(()=>{const c=Chart.getChart(document.getElementById('trendCanvas'));return c.data.datasets.map((d,i)=>({key:d.usageKey,nulls:d.data.filter(v=>v===null).length,segments:c.getDatasetMeta(i).dataset.segments.map(s=>s.style)}));});
-    assert(continuity.some(d=>d.nulls>10));assert(continuity.some(d=>d.segments.some(s=>s?.borderDash?.join(',')==='2,4')),'real chart must draw missing-date bridges');
-    assert(continuity.find(d=>d.key==='cost').segments.some(s=>s?.borderColor==='transparent'),'recorded unknown costs must retain a gap');
-    await page.mouse.move(5,80);await page.screenshot({path:path.join(output,'trend-light-'+scale+'.png')});
-    const missingPoint=await page.evaluate(()=>{const c=Chart.getChart(document.getElementById('trendCanvas')),i=c.data.datasets[0].data.findIndex(v=>v===null);return {x:c.scales.x.getPixelForValue(i),y:c.chartArea.top+80};});
-    const box=await page.locator('#trendCanvas').boundingBox();await page.mouse.move(box.x+missingPoint.x,box.y+missingPoint.y);await page.locator('#trendTooltip').getByText('未记录',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>Chart.getChart(document.getElementById('trendCanvas')).getActiveElements().length),0);await page.screenshot({path:path.join(output,'trend-gap-'+scale+'.png')});
-    await page.mouse.move(5,80);const before=await page.evaluate(()=>Chart.getChart(document.getElementById('trendCanvas')).id);
-    for(const key of keys){await page.locator('#agentPicker [data-agent="'+key+'"]').click();await settle(page);assert.equal(await page.locator('#agentFilter').inputValue(),key);assert.equal(await page.locator('#agentPicker [aria-pressed="true"]').count(),1);}
-    await page.locator('#agentPicker [data-agent="mimo"]').focus();await page.keyboard.press('Home');assert.equal(await page.locator('#agentFilter').inputValue(),'all');await page.keyboard.press('End');assert.equal(await page.locator('#agentFilter').inputValue(),'deepseek');
-    await page.locator('#agentPicker [data-agent="all"]').click();assert.equal(await page.evaluate(()=>Chart.getChart(document.getElementById('trendCanvas')).id),before);
-    await page.locator('#theme').click();await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(800,600));await page.locator('#trend').scrollIntoViewIfNeeded();await settle(page);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:path.join(output,'trend-dark-narrow-'+scale+'.png')});
-    const logos=await page.locator('#agentPicker img').evaluateAll(imgs=>imgs.map(i=>({src:i.getAttribute('src'),loaded:i.complete&&i.naturalWidth>0})));assert(logos.every(l=>l.loaded));
+    const {continuity,logos}=await usageContinuityChecks(page,app,{SOURCES,keys,output,scale,capture});
     await page.emulateMedia({reducedMotion:'reduce'});await page.locator('[data-view="quota"]').click();
     await app.evaluate(()=>{const req=process.mainModule.require.bind(process.mainModule);Object.values(req('node:module')._cache).find(m=>/[/\\]src[/\\]quota[/\\]service\.js$/.test(m.filename)).exports.QuotaService.prototype.motionFixture.used=100;});
-    await page.locator('#quotaCards [data-quota-refresh]').click();await settle(page);assert.equal(await page.locator('#quotaCards .quota-fill').first().evaluate(l=>l.getAnimations().length),0);assert.equal(await page.locator('#quotaCards .quota-segments').first().getAttribute('aria-valuenow'),'0');
+    await page.locator('#quotaCards [data-quota-refresh]').click();await page.waitForFunction(()=>document.querySelectorAll('#quotaCards .quota-segments')[1].getAttribute('aria-valuenow')==='0');await settle(page);assert.equal(await page.locator('#quotaCards .quota-fill').nth(1).evaluate(l=>l.getAnimations().length),0);assert.equal(await page.locator('#quotaCards .quota-segments').nth(1).getAttribute('aria-valuenow'),'0');
     await page.screenshot({path:path.join(output,'quota-dark-narrow-'+scale+'.png')});assert.deepEqual(errors,[]);assert.equal(fs.existsSync(path.join(quota,'codex-homes')),false);
     evidence.push({scale,packaged:Boolean(process.env.QUOTA_PACKAGED_EXE),frames,redirectedFromPresentation:true,oneMinuteCadence:true,continuity,unrecordedTooltip:true,agentLogos:logos,allAgentAndKeyboardFilters:true,reducedMotion:true,noOverflow:true,errors});
    }finally{await app.close();}

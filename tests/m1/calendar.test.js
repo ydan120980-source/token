@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { localDay, startFor } = require('../../design/desktop-reference/usage-math');
+const { localDay, startFor } = require('../../src/m1/usage-math');
 test('today follows the snapshot timezone across midnight and the year boundary', () => {
   assert.equal(localDay('Asia/Shanghai', '2026-10-03T15:59:59Z'), '2026-10-03');
   assert.equal(localDay('Asia/Shanghai', '2026-10-03T16:00:00Z'), '2026-10-04');

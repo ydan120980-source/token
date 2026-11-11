@@ -89,7 +89,7 @@ async function queue() {
       await Promise.all(Array.from({ length: 20 }, () => service.refreshAll()));
       assert.equal(service.busy.size, 0); assert.equal(service.busyCounts.size, 0); assert.equal(active, 0);
     }
-    assert.equal(maximum, 1); assert.equal(reads, 1000); assert.equal(service.clients.size, 0);
+    assert.equal(maximum, 4); assert.equal(reads, 1000); assert.equal(service.clients.size, 0);
     return { accounts: 20, concurrentBatchCalls: 1000, attemptedAccountRefreshes: 20000, actualReads: reads, maxActiveChildren: maximum, pendingAtEnd: service.busy.size };
   } finally { await service.close(); }
 }
@@ -112,8 +112,8 @@ async function protocol() {
   } finally { await rpc.close(); }
 }
 async function projection() {
-  const { selectSnapshot } = require('../../design/desktop-reference/local-snapshot');
-  const { series } = require('../../design/desktop-reference/usage-math');
+  const { selectSnapshot } = require('../../src/m1/local-snapshot');
+  const { series } = require('../../src/m1/usage-math');
   const rows = Array.from({ length: 20000 }, (_, i) => ({ date: new Date(Date.UTC(2026, 0, 1 + i % 180)).toISOString().slice(0, 10), agent: 'codex', entry: 'cli', provider: 'openai', model: 'synthetic-' + i % 100, totalTokens: 100, inputUncached: 80, output: 20, cacheRead: 0, cacheWrite: 0, reasoning: 0, records: 1, pricedTokens: 0, estimatedCostUsd: null, partialRecords: 0 }));
   const snapshot = selectSnapshot({ schemaVersion: 'UsageSnapshotV1', sequence: 1, daily: rows });
   const days = Array.from({ length: 180 }, (_, i) => new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10));

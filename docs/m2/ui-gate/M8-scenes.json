@@ -1,0 +1,477 @@
+{
+  "scenes": [
+    {
+      "name": "cost-range-all",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costRailToggle"
+        },
+        {
+          "click": "[data-cost-period='all']"
+        },
+        {
+          "press": "Escape"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label=\"用日历选择范围\"]"
+        },
+        {
+          "click": "[data-cost-range-sheet] button:has-text(\"累计\")"
+        },
+        {
+          "press": "Escape"
+        }
+      ]
+    },
+    {
+      "name": "cost-range-30",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costRailToggle"
+        },
+        {
+          "click": "[data-cost-period='30']"
+        },
+        {
+          "press": "Escape"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label=\"用日历选择范围\"]"
+        },
+        {
+          "click": "[data-cost-range-sheet] button:has-text(\"30 天\")"
+        },
+        {
+          "press": "Escape"
+        }
+      ]
+    },
+    {
+      "name": "cost-range-7",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costRailToggle"
+        },
+        {
+          "click": "[data-cost-period='7']"
+        },
+        {
+          "press": "Escape"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label=\"用日历选择范围\"]"
+        },
+        {
+          "click": "[data-cost-range-sheet] button:has-text(\"7 天\")"
+        },
+        {
+          "press": "Escape"
+        }
+      ]
+    },
+    {
+      "name": "cost-range-today",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costRailToggle"
+        },
+        {
+          "click": "[data-cost-period='today']"
+        },
+        {
+          "press": "Escape"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label=\"用日历选择范围\"]"
+        },
+        {
+          "click": "[data-cost-range-sheet] button:has-text(\"今日\")"
+        },
+        {
+          "press": "Escape"
+        }
+      ]
+    },
+    {
+      "name": "cost-range-calendar",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costRailToggle"
+        },
+        {
+          "click": "[data-cost-day='2026-10-10']"
+        },
+        {
+          "click": "[data-cost-day='2026-10-20']"
+        },
+        {
+          "press": "Escape"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label=\"用日历选择范围\"]"
+        },
+        {
+          "click": "[data-calendar-day=\"2026-10-10\"]"
+        },
+        {
+          "click": "[data-calendar-day=\"2026-10-20\"]"
+        },
+        {
+          "press": "Escape"
+        }
+      ]
+    },
+    {
+      "name": "cost-range-sheet",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costRailToggle"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label=\"用日历选择范围\"]"
+        }
+      ]
+    },
+    {
+      "name": "cost-agent-codex",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-agent='codex']"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-agents] button[aria-label=\"Codex\"]"
+        }
+      ]
+    },
+    {
+      "name": "cost-composition",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-panel-tab='composition']"
+        },
+        {
+          "scroll": "#costDuo"
+        }
+      ],
+      "after": [
+        {
+          "click": "button:has-text(\"费用构成\")"
+        },
+        {
+          "scroll": "[data-cost-duo]"
+        }
+      ]
+    },
+    {
+      "name": "cost-subscriptions",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-panel-tab='subscriptions']"
+        },
+        {
+          "scroll": "#costDuo"
+        }
+      ],
+      "after": [
+        {
+          "click": "button:has-text(\"订阅对照\")"
+        },
+        {
+          "scroll": "[data-cost-duo]"
+        }
+      ]
+    },
+    {
+      "name": "cost-months-expanded",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-panel='months']"
+        },
+        {
+          "scroll": "#costDuo"
+        }
+      ],
+      "after": [
+        {
+          "click": "button[aria-label=\"把按月放大到整行\"]"
+        },
+        {
+          "scroll": "[data-cost-duo]"
+        }
+      ]
+    },
+    {
+      "name": "cost-details-model",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-by='model']"
+        },
+        {
+          "scroll": "#costTable"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-table-section] button:has-text(\"模型\")"
+        },
+        {
+          "scroll": "[data-cost-table]"
+        }
+      ]
+    },
+    {
+      "name": "cost-details-agent",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-by='agent']"
+        },
+        {
+          "scroll": "#costTable"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-table-section] button:has-text(\"Agent\")"
+        },
+        {
+          "scroll": "[data-cost-table]"
+        }
+      ]
+    },
+    {
+      "name": "cost-detail-sheet",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-by='model']"
+        },
+        {
+          "click": "#costTable .cost-row"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-table-section] button:has-text(\"模型\")"
+        },
+        {
+          "click": "[data-cost-table] li[data-row-key]:first-child > button"
+        }
+      ]
+    },
+    {
+      "name": "cost-coverage-cache",
+      "view": "cost",
+      "before": [
+        {
+          "scroll": "#costCoverage"
+        }
+      ],
+      "after": [
+        {
+          "scroll": "[data-cost-page] [data-cost-coverage]"
+        }
+      ]
+    },
+    {
+      "name": "cost-project-expanded",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-section='projects']"
+        },
+        {
+          "wait": 1000
+        },
+        {
+          "click": "#wbProjects details > summary"
+        },
+        {
+          "wait": 1000
+        },
+        {
+          "scroll": "#wbProjects"
+        },
+        {
+          "wait": 1000
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-page] .ff-ref-cost-sections button:has-text(\"项目与预算\")"
+        },
+        {
+          "wait": 1000
+        },
+        {
+          "click": "[data-cost-project-list] details:first-child > summary"
+        },
+        {
+          "wait": 1000
+        },
+        {
+          "scroll": "[data-cost-project-list]"
+        },
+        {
+          "wait": 1000
+        }
+      ]
+    },
+    {
+      "name": "cost-budget-empty",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-section='projects']"
+        },
+        {
+          "click": "#wbLimit"
+        },
+        {
+          "press": "Control+A"
+        },
+        {
+          "press": "Backspace"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-page] .ff-ref-cost-sections button:has-text(\"项目与预算\")"
+        },
+        {
+          "wait": 1000
+        },
+        {
+          "click": "input[placeholder=\"未设置\"]"
+        },
+        {
+          "press": "Control+A"
+        },
+        {
+          "press": "Backspace"
+        }
+      ]
+    },
+    {
+      "name": "cost-budget-filled",
+      "view": "cost",
+      "before": [
+        {
+          "click": "[data-cost-section='projects']"
+        },
+        {
+          "click": "#wbLimit"
+        },
+        {
+          "press": "Control+A"
+        },
+        {
+          "press": "4"
+        },
+        {
+          "press": "2"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-page] .ff-ref-cost-sections button:has-text(\"项目与预算\")"
+        },
+        {
+          "wait": 1000
+        },
+        {
+          "click": "input[placeholder=\"未设置\"]"
+        },
+        {
+          "press": "Control+A"
+        },
+        {
+          "press": "Backspace"
+        },
+        {
+          "press": "4"
+        },
+        {
+          "press": "2"
+        }
+      ]
+    },
+    {
+      "name": "cost-unpriced-only",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costRailToggle"
+        },
+        {
+          "click": "#costGapsOnly"
+        },
+        {
+          "press": "Escape"
+        },
+        {
+          "scroll": "#costTable"
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label=\"用日历选择范围\"]"
+        },
+        {
+          "click": "[data-cost-range-sheet] input[type=checkbox]"
+        },
+        {
+          "press": "Escape"
+        },
+        {
+          "scroll": "[data-cost-table]"
+        }
+      ]
+    },
+    {
+      "name": "cost-hero-month",
+      "view": "cost",
+      "before": [
+        {
+          "click": "#costOverview button[data-hero-step='1']"
+        },
+        {
+          "wait": 1000
+        }
+      ],
+      "after": [
+        {
+          "click": "[data-cost-hero] button[aria-label='下一页']"
+        },
+        {
+          "wait": 1000
+        }
+      ]
+    }
+  ]
+}

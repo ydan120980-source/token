@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Agent Usage</title>
+  <link rel="stylesheet" href="../fonts.css">
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="card.css">
+</head>
+<body>
+  <main id="card" aria-label="额度">
+    <header><h1>额度</h1><button id="open" type="button">打开 Agent Usage</button></header>
+    <ul id="rows"></ul>
+    <p id="empty" hidden>还没有连接额度</p>
+    <button id="connect" type="button" hidden>连接额度</button>
+    <p id="more" hidden></p>
+  </main>
+  <script src="card.js"></script>
+</body>
+</html>

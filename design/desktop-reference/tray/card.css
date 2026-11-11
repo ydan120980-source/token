@@ -1,0 +1,25 @@
+/* The tray card: one surface, one list. Everything reads tokens.css. */
+html, body { margin: 0; background: var(--card); color: var(--text); font-family: var(--font-ui, "Inter", "Noto Sans SC", system-ui, sans-serif); font-size: var(--text-footnote); user-select: none; overflow: hidden; }
+#card { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: var(--text-title3); font-weight: 600; }
+button { font: inherit; color: var(--accent-text); background: none; border: 0; border-radius: var(--radius-s); padding: 2px 6px; margin: -2px -6px; cursor: pointer; }
+button:hover { background: var(--soft); }
+button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+li { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+li.is-old { opacity: .62; }
+.mark { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+/* As the kit's AgentMark: Claude's mark in its own tone; single-colour marks turn light on a dark card. */
+.mark[data-agent="claude"] { filter: brightness(0) saturate(100%) invert(54%) sepia(45%) saturate(1200%) hue-rotate(335deg) brightness(95%); }
+body.dark .mark:is([data-agent="codex"], [data-agent="opencode"], [data-agent="cursor"], [data-agent="mimo"], [data-agent="copilot"], [data-agent="pi"], [data-agent="continue"]) { filter: invert(1); }
+.body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.name { min-width: 0; overflow-wrap: anywhere; }
+.figure { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar { height: 4px; border-radius: var(--radius-pill); background: var(--soft); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: inherit; background: var(--blue); }
+.note { font-size: var(--text-caption); color: var(--muted); }
+#empty, #more { margin: 0; color: var(--muted); }
+#connect { align-self: flex-start; }
+#connect[hidden], #empty[hidden], #more[hidden] { display: none; }

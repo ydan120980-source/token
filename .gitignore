@@ -1,5 +1,7 @@
 node_modules/
 data/
+# The React layer's data adapters are source, not runtime data.
+!ui/src/data/
 build/
 dist/
 _site/

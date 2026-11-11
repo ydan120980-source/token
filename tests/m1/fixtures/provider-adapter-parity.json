@@ -1,0 +1,1679 @@
+{
+  "baseline": "032c914",
+  "syntheticOnly": true,
+  "rows": [
+    {
+      "adapter": "gemini-web",
+      "raw": [
+        {
+          "data": {
+            "viewer": {
+              "rpcs": {
+                "getUsageInfo": {
+                  "pools": [
+                    {
+                      "poolType": "GXU_FIVE_HOURLY",
+                      "percentageUsed": 0.25
+                    },
+                    {
+                      "poolType": "GXU_WEEKLY",
+                      "percentageUsed": 0
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "gemini",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "GXU_FIVE_HOURLY",
+            "label": "Gemini app · 5 小时",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": null,
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 25,
+                "remainingPercent": 75,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": 300,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          },
+          {
+            "id": "GXU_WEEKLY",
+            "label": "Gemini app · 每周",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": null,
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 0,
+                "remainingPercent": 100,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": 10080,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "opencode-zen",
+      "raw": {
+        "balanceMicroCents": "-125000001"
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "opencode",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "zen-payg",
+            "label": "Zen 按量余额 · 不含 Go 订阅或月预算",
+            "scope": "workspace",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "balance",
+                "label": "待结清金额（不是可用余额）",
+                "unit": "currency",
+                "currency": "USD",
+                "total": null,
+                "used": "1.25000001",
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unavailable",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "purchased",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "opencode-web",
+      "raw": {
+        "access": {
+          "meters": {
+            "fiveHour": {
+              "usedMicroCents": "10000000",
+              "limitMicroCents": "100000000"
+            },
+            "month": {
+              "usedMicroCents": "0",
+              "limitMicroCents": "200000000"
+            }
+          }
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "opencode",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "console-go",
+            "label": "所选工作区 Go 订阅约束",
+            "scope": "workspace",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "fiveHour",
+                "label": null,
+                "unit": "currency",
+                "currency": "USD",
+                "total": "1",
+                "used": "0.1",
+                "remaining": "0.9",
+                "reserved": null,
+                "remainingMode": "total-minus-used",
+                "remainingSource": "total-minus-used",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": 300,
+                "resetsAt": null
+              },
+              {
+                "id": "month",
+                "label": null,
+                "unit": "currency",
+                "currency": "USD",
+                "total": "2",
+                "used": "0",
+                "remaining": "2",
+                "reserved": null,
+                "remainingMode": "total-minus-used",
+                "remainingSource": "total-minus-used",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "deepseek-web",
+      "raw": {
+        "code": 0,
+        "data": {
+          "biz_code": 0,
+          "biz_data": {
+            "normal_wallets": [
+              {
+                "currency": "CNY",
+                "balance": "3.125"
+              }
+            ],
+            "bonus_wallets": [
+              {
+                "currency": "USD",
+                "balance": "0"
+              }
+            ]
+          }
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "deepseek",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "normal_wallets-0",
+            "label": "充值钱包 · CNY",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "balance",
+                "label": null,
+                "unit": "currency",
+                "currency": "CNY",
+                "total": null,
+                "used": null,
+                "remaining": "3.125",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "purchased",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          },
+          {
+            "id": "bonus_wallets-0",
+            "label": "赠送钱包 · USD",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "balance",
+                "label": null,
+                "unit": "currency",
+                "currency": "USD",
+                "total": null,
+                "used": null,
+                "remaining": "0",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "promotional",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "claude-web",
+      "raw": {
+        "five_hour": {
+          "utilization": 20
+        },
+        "seven_day_opus": {
+          "utilization": 0
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "claude",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "five_hour",
+            "label": "5 小时订阅窗口",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": null,
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 20,
+                "remainingPercent": 80,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": 300,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          },
+          {
+            "id": "seven_day_opus",
+            "label": "Opus 周窗口",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": null,
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 0,
+                "remainingPercent": 100,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": 10080,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "claude-oauth",
+      "raw": {
+        "five_hour": {
+          "utilization": 20
+        },
+        "seven_day_opus": {
+          "utilization": 0
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "claude",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "five_hour",
+            "label": "5 小时订阅窗口",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": null,
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 20,
+                "remainingPercent": 80,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": 300,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          },
+          {
+            "id": "seven_day_opus",
+            "label": "Opus 周窗口",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": null,
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 0,
+                "remainingPercent": 100,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": 10080,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "zcode-device",
+      "raw": {
+        "code": 0,
+        "data": {
+          "balances": [
+            {
+              "unit_type": "token",
+              "remaining_units": "9007199254740993.125",
+              "available_units": "10"
+            }
+          ]
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "zcode",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "bucket-0",
+            "label": "ZCode 额度桶 1",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "book",
+                "label": "账面额度（与可用额度不相加）",
+                "unit": "tokens",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": "9007199254740993.125",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": null
+              },
+              {
+                "id": "available",
+                "label": "可用额度（同一资源包）",
+                "unit": "tokens",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": "10",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "workbuddy-desktop",
+      "raw": {
+        "code": 0,
+        "data": {
+          "Response": {
+            "Data": {
+              "Accounts": [
+                {
+                  "CapacityType": 1,
+                  "CapacityRemain": "9007199254740993.125",
+                  "PackageName": "Synthetic credits",
+                  "ExpiredTime": "2027-01-01 00:00:00"
+                },
+                {
+                  "CapacityType": 4,
+                  "CycleCapacitySize": "100",
+                  "CycleCapacityRemain": "40",
+                  "CycleEndTime": "2026-11-01 00:00:00"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "workbuddy",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": false,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "package-0",
+            "label": "Synthetic credits",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "credits",
+                "label": "积分包",
+                "unit": "credits",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": "9007199254740993.125",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": "2026-12-31T16:00:00.000Z"
+              }
+            ]
+          },
+          {
+            "id": "package-1",
+            "label": "客户端资源包 2",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "credits",
+                "label": "周期积分",
+                "unit": "credits",
+                "currency": null,
+                "total": "100",
+                "used": null,
+                "remaining": "40",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": "2026-10-31T16:00:00.000Z"
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "workbuddy-web",
+      "raw": {
+        "code": 0,
+        "data": {
+          "Packages": [
+            {
+              "CapacityUnit": "credits",
+              "CycleTotalCapacity": "9007199254740993.125",
+              "CycleRemainCapacity": "20.125",
+              "CycleFrozenCapacity": "1.1"
+            }
+          ]
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "workbuddy",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "package-0",
+            "label": "资源包 1",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "credits",
+                "label": "周期积分 · 冻结部分单列",
+                "unit": "credits",
+                "currency": null,
+                "total": "9007199254740993.125",
+                "used": null,
+                "remaining": "20.125",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": null
+              },
+              {
+                "id": "frozen",
+                "label": "冻结积分（与余量不可相加）",
+                "unit": "credits",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": "1.1",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unavailable",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "mimo-web",
+      "raw": {
+        "balance": {
+          "code": 0,
+          "data": {
+            "balance": "0.29",
+            "cashBalance": "0.2",
+            "giftBalance": "0.09",
+            "currency": "CNY"
+          }
+        },
+        "plan": {
+          "code": 0,
+          "data": {
+            "planCode": "synthetic",
+            "currentPeriodEnd": "2026-11-01T00:00:00Z"
+          }
+        },
+        "usage": {
+          "code": 0,
+          "data": {
+            "monthUsage": {
+              "items": [
+                {
+                  "name": "Synthetic plan",
+                  "limit": "100",
+                  "used": "20"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "mimo",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": false,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": "synthetic",
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": "2026-11-01T00:00:00.000Z",
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "api-money",
+            "label": "普通 API 余额 · 总额与组成不相加",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "total",
+                "label": "总余额",
+                "unit": "currency",
+                "currency": "CNY",
+                "total": null,
+                "used": null,
+                "remaining": "0.29",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": null
+              },
+              {
+                "id": "cash",
+                "label": "付费组成（包含在总额中）",
+                "unit": "currency",
+                "currency": "CNY",
+                "total": null,
+                "used": null,
+                "remaining": "0.2",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "purchased",
+                "validFrom": null,
+                "expiresAt": null
+              },
+              {
+                "id": "gift",
+                "label": "赠送组成（包含在总额中）",
+                "unit": "currency",
+                "currency": "CNY",
+                "total": null,
+                "used": null,
+                "remaining": "0.09",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "promotional",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          },
+          {
+            "id": "token-plan",
+            "label": "Token Plan Credits · 与 API 金额独立",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "credits-0",
+                "label": "Synthetic plan",
+                "unit": "credits",
+                "currency": null,
+                "total": "100",
+                "used": "20",
+                "remaining": "80",
+                "reserved": null,
+                "remainingMode": "total-minus-used",
+                "remainingSource": "total-minus-used",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": true,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": "2026-11-01T00:00:00.000Z"
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "cursor-web",
+      "raw": {
+        "membershipType": "synthetic",
+        "individualUsage": {
+          "plan": {
+            "totalPercentUsed": 30
+          },
+          "overall": {
+            "used": "125",
+            "limit": "1000"
+          }
+        },
+        "teamUsage": {
+          "pooled": {
+            "used": "10",
+            "limit": "1000"
+          }
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "cursor",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": "synthetic",
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "reported-total",
+            "label": "服务端总体口径（与分池不可相加）",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "reported",
+                "label": null,
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 30,
+                "remainingPercent": 70,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          },
+          {
+            "id": "personal-cap",
+            "label": "个人消费上限约束",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "budget",
+                "label": "个人消费上限约束",
+                "unit": "currency",
+                "currency": "USD",
+                "total": "10",
+                "used": "1.25",
+                "remaining": "8.75",
+                "reserved": null,
+                "remainingMode": "total-minus-used",
+                "remainingSource": "total-minus-used",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          },
+          {
+            "id": "team-pool",
+            "label": "共享团队约束（不可与个人约束相加）",
+            "scope": "workspace",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "budget",
+                "label": "共享团队约束（不可与个人约束相加）",
+                "unit": "currency",
+                "currency": "USD",
+                "total": "10",
+                "used": "0.1",
+                "remaining": "9.9",
+                "reserved": null,
+                "remainingMode": "total-minus-used",
+                "remainingSource": "total-minus-used",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "gemini-code-assist",
+      "raw": {
+        "buckets": [
+          {
+            "modelId": "synthetic-model",
+            "tokenType": "REQUESTS",
+            "remainingFraction": 0.25,
+            "remainingAmount": "9007199254740993",
+            "resetTime": "2026-11-01T00:00:00Z"
+          }
+        ]
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "gemini",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": false,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "5112e32927e0bb4f1464f57eb1372fb8",
+            "label": "synthetic-model · REQUESTS",
+            "scope": "project",
+            "modelIds": [
+              "synthetic-model"
+            ],
+            "windows": [
+              {
+                "id": "fraction",
+                "label": "该模型额度比例",
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 75,
+                "remainingPercent": 25,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": "2026-11-01T00:00:00.000Z"
+              },
+              {
+                "id": "amount",
+                "label": "同一约束余量 · 不与比例相加",
+                "unit": "requests",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": "9007199254740993",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": "2026-11-01T00:00:00.000Z"
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "deepseek-api",
+      "raw": {
+        "is_available": true,
+        "balance_infos": [
+          {
+            "currency": "CNY",
+            "total_balance": "9007199254740993.125",
+            "granted_balance": "0.125",
+            "topped_up_balance": "9007199254740993"
+          }
+        ]
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "deepseek",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": false,
+        "provenance": {
+          "kind": "official-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "CNY",
+            "label": "CNY · 总额与组成不可相加",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "total",
+                "label": "总可用余额",
+                "unit": "currency",
+                "currency": "CNY",
+                "total": null,
+                "used": null,
+                "remaining": "9007199254740993.125",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "available",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": null
+              },
+              {
+                "id": "granted",
+                "label": "未到期赠送余额（总额组成）",
+                "unit": "currency",
+                "currency": "CNY",
+                "total": null,
+                "used": null,
+                "remaining": "0.125",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "available",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "promotional",
+                "validFrom": null,
+                "expiresAt": null
+              },
+              {
+                "id": "topup",
+                "label": "充值余额（总额组成）",
+                "unit": "currency",
+                "currency": "CNY",
+                "total": null,
+                "used": null,
+                "remaining": "9007199254740993",
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": "reported",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "available",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "purchased",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "workbuddy-credit",
+      "raw": {
+        "total_capacity_size": "100",
+        "total_capacity_used": "25"
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "workbuddy",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": false,
+        "provenance": {
+          "kind": "official-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "personal-aggregate",
+            "label": "有效与用尽资源包聚合 · 不含逐包有效期",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [],
+            "balances": [
+              {
+                "id": "credits",
+                "label": "当前周期积分",
+                "unit": "credits",
+                "currency": null,
+                "total": "100",
+                "used": "25",
+                "remaining": "75",
+                "reserved": null,
+                "remainingMode": "total-minus-used",
+                "remainingSource": "total-minus-used",
+                "usedPercent": null,
+                "remainingPercent": null,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "kind": "unknown",
+                "validFrom": null,
+                "expiresAt": null
+              }
+            ]
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "opencode-go",
+      "raw": {
+        "usage": {
+          "rolling": {
+            "status": "ok",
+            "percent": 40
+          },
+          "monthly": {
+            "status": "rate-limited",
+            "percent": 60
+          }
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "opencode",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": false,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "go",
+            "label": "Go 订阅窗口 · 不含按量余额",
+            "scope": "unknown",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "rolling",
+                "label": "滚动窗口",
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 40,
+                "remainingPercent": 60,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "rolling",
+                "durationMins": 300,
+                "resetsAt": null
+              },
+              {
+                "id": "monthly",
+                "label": "每月窗口",
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 60,
+                "remainingPercent": 40,
+                "availability": "unavailable",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "calendar",
+                "durationMins": null,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "zai-cn",
+      "raw": {
+        "code": 200,
+        "data": {
+          "limits": [
+            {
+              "type": "CREDIT_LIMIT",
+              "percentage": 0
+            },
+            {
+              "type": "NEW_UNKNOWN",
+              "percentage": 9
+            }
+          ]
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "zcode",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": true,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "limit-0",
+            "label": "CREDIT_LIMIT",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": "CREDIT_LIMIT",
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 0,
+                "remainingPercent": 100,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    },
+    {
+      "adapter": "zai-global",
+      "raw": {
+        "code": 200,
+        "data": {
+          "limits": [
+            {
+              "type": "TIME_LIMIT",
+              "percentage": 10
+            }
+          ]
+        }
+      },
+      "fetchedAt": "2026-10-23T00:00:00.000Z",
+      "options": {
+        "completePackages": true
+      },
+      "expected": {
+        "schemaVersion": "AccountQuotaV2",
+        "provider": "zcode",
+        "fetchedAt": "2026-10-23T00:00:00.000Z",
+        "incomplete": false,
+        "provenance": {
+          "kind": "undocumented-api",
+          "version": null
+        },
+        "entitlement": {
+          "plan": null,
+          "state": "unknown",
+          "observedAt": null,
+          "validUntil": null,
+          "cancelAt": null,
+          "issues": []
+        },
+        "pools": [
+          {
+            "id": "limit-0",
+            "label": "TIME_LIMIT",
+            "scope": "account",
+            "modelIds": [],
+            "windows": [
+              {
+                "id": "window",
+                "label": "TIME_LIMIT",
+                "unit": "percent",
+                "currency": null,
+                "total": null,
+                "used": null,
+                "remaining": null,
+                "reserved": null,
+                "remainingMode": "reported-only",
+                "remainingSource": null,
+                "usedPercent": 10,
+                "remainingPercent": 90,
+                "availability": "unknown",
+                "requiresEntitlement": false,
+                "observedAt": "2026-10-23T00:00:00.000Z",
+                "issues": [],
+                "role": "other",
+                "cadence": "unknown",
+                "durationMins": null,
+                "resetsAt": null
+              }
+            ],
+            "balances": []
+          }
+        ],
+        "resetCredits": null
+      }
+    }
+  ]
+}

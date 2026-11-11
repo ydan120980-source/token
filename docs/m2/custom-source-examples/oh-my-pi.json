@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "CustomSourceV1",
+  "template": "mapped",
+  "mode": "per-request",
+  "timeUnit": "iso",
+  "inputSemantics": "exclusive",
+  "outputIncludesReasoning": true,
+  "name": "公开格式 OMP",
+  "mapping": {
+    "id": "id",
+    "time": "timestamp",
+    "model": "message.model",
+    "provider": "message.provider",
+    "input": "message.usage.input",
+    "output": "message.usage.output",
+    "cacheRead": "message.usage.cacheRead",
+    "cacheWrite": "message.usage.cacheWrite",
+    "total": "message.usage.totalTokens"
+  },
+  "filters": [
+    {
+      "path": "type",
+      "values": [
+        "message"
+      ]
+    },
+    {
+      "path": "message.role",
+      "values": [
+        "assistant"
+      ]
+    }
+  ]
+}

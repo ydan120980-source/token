@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": false,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@/components/ui/*": ["src/vendor/fluid/components/*"],
+      "@/lib/*": ["src/vendor/fluid/lib/*"],
+      "@/hooks/*": ["src/vendor/fluid/hooks/*"],
+      "@ui/*": ["src/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

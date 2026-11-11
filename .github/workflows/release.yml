@@ -1,0 +1,138 @@
+name: release
+
+# A release is cut by pushing a version tag (owner decision 2026-11-08, docs/m2/AUTO-UPDATE-20261108.md). The job builds the
+# NSIS installer, checks the packaged tree, and uploads a DRAFT release; nothing reaches a client until the owner publishes it.
+# The tag must be v<package.json version>: electron-updater asks GitHub for that tag and then reads latest.yml beside it.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build, e.g. v0.1.1 (a draft release is created or updated)'
+        required: true
+
+# `contents: write` is only for creating the draft release with the workflow's own GITHUB_TOKEN, so no personal token is
+# ever needed in the build or in the installed app.
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          # Match the Windows runtime used for package and source verification.
+          node-version: '24.13.1'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Download Electron binary
+        # `--ignore-scripts` skips Electron's postinstall, and electron-builder needs that distribution to package.
+        run: node node_modules/electron/install.js
+
+      - name: Verify (ESLint + types + units)
+        # This also checks that the committed UI bundle is byte-identical to a fresh build of ui/, so a release can never ship
+        # a renderer that the repository does not contain.
+        run: npm run verify
+
+      - name: Runtime audit
+        run: npm run audit:runtime
+
+      - name: Confirm the tag is the version in package.json
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $tag = $env:RELEASE_TAG
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($tag -ne "v$version") {
+            Write-Error "tag $tag does not match package.json version $version (electron-updater reads v<version>)"
+            exit 1
+          }
+          Write-Host "releasing $version"
+
+      - name: Build the installer
+        # `--publish never` keeps the upload out of electron-builder: the draft is created below with the workflow token, and
+        # the build still writes latest.yml and resources/app-update.yml, which is what a client reads.
+        run: npm run dist:win:setup
+
+      - name: Audit the packaged tree
+        run: npm run audit:package
+
+      - name: Check the update metadata the client needs
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $setup = "dist/AgentUsage-$version-preview-setup.exe"
+          # Each path is built into a variable first: inside @(...) a `+` binds looser than the comma, which would split the
+          # blockmap name into separate array items and fail the check even when every file is present.
+          $blockmap = "${setup}.blockmap"
+          foreach ($file in @($setup, 'dist/latest.yml', $blockmap)) {
+            if (-not (Test-Path $file)) { Write-Error "missing $file"; exit 1 }
+          }
+          if (-not (Test-Path 'dist/win-unpacked/resources/app-update.yml')) { Write-Error 'missing app-update.yml in the packaged resources'; exit 1 }
+          $yaml = Get-Content 'dist/latest.yml' -Raw
+          if ($yaml -notmatch [regex]::Escape("version: $version")) { Write-Error "latest.yml does not describe $version"; exit 1 }
+          if ($yaml -notmatch 'sha512:') { Write-Error 'latest.yml has no sha512 for the installer'; exit 1 }
+          Write-Host $yaml
+
+      - name: Create or update the draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          $assets = @("dist/AgentUsage-$version-preview-setup.exe", "dist/AgentUsage-$version-preview-setup.exe.blockmap", 'dist/latest.yml')
+          $state = gh release view $tag --json isDraft --jq '.isDraft' 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            # Only a draft may be replaced. A published release is what clients are already reading, and `--clobber` would
+            # delete its assets first; rerunning a tag that was already published must fail here instead.
+            if ($state -ne 'true') {
+              Write-Error "$tag is already published; refusing to replace a published release. Bump the version and tag a new one."
+              exit 1
+            }
+            Write-Host "draft $tag exists; replacing its assets"
+            gh release upload $tag @assets --clobber
+            if ($LASTEXITCODE -ne 0) { Write-Error "upload to draft $tag failed"; exit 1 }
+          } else {
+            $notes = 'Windows x64 未签名预览版。首次从旧版启用应用内更新时，请手动安装此版本。后续可在「设置 → 关于」查看更新，下载完成后点击「重启并更新」。'
+            gh release create $tag @assets --verify-tag --draft --prerelease --title "Agent Usage Quota $version" --notes $notes
+            if ($LASTEXITCODE -ne 0) { Write-Error "creating draft $tag failed"; exit 1 }
+          }
+
+      - name: Keep the metadata with the run
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-metadata
+          path: |
+            dist/latest.yml
+            dist/win-unpacked/resources/app-update.yml
+
+  # A client only sees a version once the draft is published, so publishing is the owner's action, never this workflow's.
+  report:
+    needs: package
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: What happens next
+        shell: pwsh
+        run: |
+          Write-Host 'A draft release now holds the installer, its blockmap and latest.yml.'
+          Write-Host 'Publish it in GitHub Releases when the build is accepted; every installed copy then finds it within a day.'
+          Write-Host 'Publishing a draft is the release decision, so this workflow never does it.'

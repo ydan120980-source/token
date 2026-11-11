@@ -1,0 +1,2372 @@
+/* Current document, shell and approved account-card leaf styles.
+   Extracted from the active selectors at e67aaa9; no legacy layer or retired page styles. */
+
+/* Current selectors retained from style.css at e67aaa9; retired page rules removed. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 var(--ui-font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h1:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h2:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h3:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h4:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) p:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  margin: 0;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h1:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  font-size: 28px;
+  line-height: 1.35;
+  font-weight: 650;
+  letter-spacing: -.6px;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h2:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  font-weight: 650;
+  letter-spacing: -.3px;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h3:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  font-size: 16px;
+  font-weight: 600;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) h4:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  color: var(--muted);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) p:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+  margin-top: 5px;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) input:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  font: inherit;
+  color: var(--text);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  border: 1px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  white-space: nowrap;
+  font-size: 13px;
+  min-height: 36px;
+  border-radius: 9px;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:hover:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:hover:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  background: var(--soft);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:disabled:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  opacity: .6;
+  cursor: default;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button img:not(:where([data-ui-root] *, [data-ui-portal] *)), .local-badge img {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) a:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) input:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) summary:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 3px;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  padding: 5px 25px 5px 8px;
+  max-width: 240px;
+  font-size: 13px;
+  min-height: 36px;
+  border-radius: 8px;
+}
+body.dark img[src*='/ui/'] {
+  filter: invert(.85);
+}
+.skip {
+  position: absolute;
+  top: -100px;
+  z-index: 10;
+}
+.skip:focus {
+  top: 10px;
+  left: 10px;
+  padding: 10px;
+  background: var(--card);
+}
+[hidden] {
+  display: none!important;
+}
+.topbar-inner {
+  display: flex;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  font-weight: 650;
+  text-decoration: none;
+  color: var(--text);
+}
+.topbar nav {
+  display: flex;
+}
+.topbar nav button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.top-actions {
+  display: flex;
+}
+.icon-button {
+  width: 31px;
+  min-width: 34px;
+  padding: 7px;
+  border-color: transparent;
+  background: transparent;
+}
+.local-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.profile {
+  display: flex;
+}
+.profile-meta {
+  display: flex;
+  align-items: center;
+}
+.card {
+  border-radius: 20px;
+  background: var(--card);
+  overflow: hidden;
+  box-shadow: var(--card-edge);
+}
+.range-tabs {
+  display: flex;
+  padding: 3px;
+  background: #e9e9ec;
+  border-radius: 10px;
+  gap: 3px;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) footer:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 15px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 20px 0;
+}
+.notice img {
+  width: 16px;
+  height: 16px;
+}
+.status.partial {
+  color: #936526;
+}
+.wide {
+  width: 100%;
+  margin-top: 18px;
+}
+#toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  z-index: 20;
+  padding: 12px 20px;
+  background: var(--text);
+  color: var(--card);
+  border-radius: 9px;
+  box-shadow: 0 6px 25px #0002;
+  font-size: 12px;
+  max-width: 90vw;
+}
+@media(max-width:1000px) {
+  .preview-badge {
+    display: none;
+  }
+}
+@media(max-width:760px) {
+  main {
+    padding: 30px 18px 0;
+  }
+  .topbar-inner {
+    padding: 0 18px;
+    gap: 12px;
+  }
+  .brand {
+    font-size: 13px;
+  }
+  .topbar nav {
+    gap: 0;
+  }
+  .topbar nav button {
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+  .local-badge {
+    display: none;
+  }
+  .top-actions {
+    gap: 0;
+  }
+  .profile {
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .profile h1 {
+    font-size: 22px;
+  }
+  .range-tabs {
+    gap: 5px;
+  }
+  .range-tabs button {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+  .topbar nav button[aria-current='page'] {
+    font-weight: 600;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  * {
+    scroll-behavior: auto!important;
+  }
+}
+.profile-avatar {
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg,var(--avatar-indigo-from),var(--avatar-indigo-to));
+  color: var(--avatar-indigo-text);
+  box-shadow: inset 0 0 0 1px #00000006;
+}
+.profile-avatar span {
+  font-weight: 600;
+}
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-avatar[data-tone=teal] {
+  background: linear-gradient(135deg,var(--avatar-teal-from),var(--avatar-teal-to));
+  color: var(--avatar-teal-text);
+}
+.profile-avatar[data-tone=coral] {
+  background: linear-gradient(135deg,var(--avatar-coral-from),var(--avatar-coral-to));
+  color: var(--avatar-coral-text);
+}
+.text-button {
+  background: transparent;
+}
+.text-button:hover {
+  color: var(--text);
+}
+.range-tabs button {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 7px;
+  min-width: 66px;
+}
+.range-tabs button[aria-pressed=true] {
+  background: var(--card);
+  border-color: var(--line);
+  box-shadow: 0 1px 3px #00000009;
+  color: var(--accent-text);
+}
+.profile-meta {
+  flex-wrap: wrap;
+}
+.profile-avatar img {
+  filter: none!important;
+}
+@media(max-width:760px) {
+  .profile {
+    align-items: flex-start;
+  }
+  .profile-avatar {
+    width: 62px;
+    height: 62px;
+    border-radius: 19px;
+  }
+  .profile-avatar span {
+    font-size: 23px;
+  }
+  .profile-meta {
+    gap: 5px;
+    font-size: 11px!important;
+  }
+  .range-tabs button {
+    min-width: 0;
+  }
+}
+#profileBio {
+  overflow-wrap: anywhere;
+}
+/* Current selectors retained from nowdex.css at e67aaa9; retired page rules removed. */
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) input:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) textarea:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  font-family: var(--ui-font);
+}
+.topbar {
+  position: fixed;
+  width: var(--sidebar-width);
+  background: var(--sidebar);
+  border: 0;
+  border-right: 1px solid var(--line);
+  z-index: 5;
+}
+.topbar-inner {
+  height: 100%;
+  max-width: none;
+  padding: 28px 14px 20px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+.brand {
+  font-size: 15px;
+  padding: 6px 10px;
+  gap: 10px;
+}
+.brand img {
+  width: 24px;
+  height: 24px;
+}
+.sidebar-caption {
+  margin: 4px 0 35px 44px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.topbar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.topbar nav button {
+  justify-content: flex-start;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  font-size: 14px;
+  min-height: 38px;
+}
+.nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-caption {
+  margin: var(--space-5) 10px var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-caption2);
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+.nav-badge {
+  flex: none;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+  color: var(--warn-text);
+  font-size: var(--text-caption2);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 20px;
+  text-align: center;
+}
+.nav-badge[hidden] {
+  display: none;
+}
+.topbar nav button img {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  opacity: .75;
+}
+.topbar nav button[aria-current='page'] img {
+  opacity: 1;
+}
+.topbar nav button:hover:not([aria-current='page']) {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.top-actions {
+  margin: auto 0 0;
+  padding: 15px 10px 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+.preview-badge {
+  display: block;
+  grid-column: 1 / -1;
+}
+.local-badge {
+  grid-row: 2;
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 11px;
+}
+#theme {
+  grid-row: 2;
+  grid-column: 2;
+}
+main {
+  margin: 0 0 0 var(--sidebar-width);
+  max-width: none;
+  padding: 40px clamp(24px,4vw,56px) 0;
+}
+main > section, main > footer {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.profile-meta {
+  font-size: 11px!important;
+  gap: 8px;
+}
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  line-height: 1;
+}
+.profile-avatar span {
+  display: block;
+  font-family: var(--ui-font);
+  line-height: 1;
+}
+.profile-avatar img {
+  display: block;
+  min-width: 0;
+}
+body.dark .range-tabs {
+  background: var(--soft);
+}
+.range-tabs button[aria-pressed='true'] {
+  color: var(--text);
+  border-color: transparent;
+  box-shadow: 0 1px 3px #00000012;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) footer:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  border-top: 0;
+  margin-top: 42px;
+  padding: 24px 0;
+  font-size: 11px;
+  gap: 20px;
+}
+@media(max-width:800px) {
+  .topbar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-inner {
+    padding: 10px 16px;
+    gap: 10px;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .brand {
+    font-size: 14px;
+    padding: 0;
+  }
+  .sidebar-caption, .preview-badge {
+    display: none;
+  }
+  .topbar nav {
+    order: 3;
+    width: 100%;
+    flex-direction: row;
+    gap: 5px;
+  }
+  .topbar nav button {
+    flex: 1;
+    min-height: 36px;
+    font-size: 12px;
+    padding: 7px 8px;
+    justify-content: center;
+  }
+  .topbar nav button img {
+    width: 15px;
+    height: 15px;
+  }
+  .top-actions {
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+    display: flex;
+    gap: 8px;
+  }
+  .local-badge {
+    display: inline-flex;
+    font-size: 11px;
+  }
+  main {
+    margin: 0;
+    padding: 25px 18px 0;
+  }
+  .profile-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+  }
+  .range-tabs {
+    margin-left: auto;
+  }
+  .range-tabs button {
+    min-width: 0;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+  :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) footer:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+    flex-wrap: wrap;
+  }
+}
+main {
+  padding-bottom: 40px;
+}
+main > section {
+  max-width: 1050px;
+}
+.brand {
+  margin-bottom: 38px;
+}
+.top-actions {
+  display: flex;
+  justify-content: flex-end;
+  border: 0;
+}
+@media (max-width: 1000px) {
+  main {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+}
+@media (max-width: 800px) {
+  main {
+    padding: 24px 20px 36px;
+  }
+  .brand {
+    margin-bottom: 0;
+  }
+  .profile {
+    flex-wrap: nowrap;
+    padding-bottom: 20px;
+  }
+}
+.integrated-titlebar {
+  --appbar-height: 44px;
+}
+.app-titlebar {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 44px;
+  z-index: 20;
+  background: var(--bg);
+  user-select: none;
+  app-region: drag;
+}
+.app-titlebar-inner {
+  max-width: calc(100% - 140px);
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 12px;
+}
+.app-titlebar button {
+  app-region: no-drag;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  min-height: 28px;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+.app-titlebar button:hover:not(:disabled) {
+  background: var(--soft);
+}
+.app-titlebar button:disabled {
+  opacity: .28;
+}
+.app-titlebar button img {
+  width: 16px;
+  height: 16px;
+}
+.app-titlebar .window-icon {
+  width: 30px;
+  padding: 6px;
+}
+.app-titlebar .window-icon:first-child {
+  margin-right: 2px;
+}
+/* A page's own controls in the title bar: the reading page's list and its two columns. */
+.titlebar-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+  app-region: no-drag;
+}
+.titlebar-page:empty { display: none; }
+.titlebar-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  min-width: 0;
+}
+.app-titlebar .titlebar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 240px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+}
+.titlebar-status[hidden] {
+  display: none;
+}
+.titlebar-status span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.titlebar-status i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 30%, transparent);
+}
+.titlebar-status[data-tone='busy'] i {
+  background: var(--accent);
+}
+.titlebar-status[data-tone='paused'] i {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+.app-titlebar #dataBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 320px;
+  margin: 0 4px 0 0;
+  padding: 0 4px 0 10px;
+  color: var(--warn-text);
+  font-size: 12px;
+  line-height: 28px;
+  white-space: nowrap;
+}
+.app-titlebar #dataBadge[hidden] {
+  display: none;
+}
+.app-titlebar #dataBadge::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.app-titlebar #dataBadge > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-titlebar #dataBadge .text-button {
+  app-region: no-drag;
+  padding: 0 6px;
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 500;
+}
+.window-inactive :is(.titlebar-status, #dataBadge) {
+  opacity: .6;
+}
+.integrated-titlebar .topbar {
+  top: 44px;
+  height: calc(100dvh - 44px);
+  background: var(--bg);
+  border-right: 0;
+}
+.integrated-titlebar main {
+  margin: 44px var(--panel-inset) var(--panel-inset) var(--sidebar-width);
+  padding-top: 36px;
+  min-height: calc(100dvh - 44px - var(--panel-inset));
+  background: var(--panel);
+}
+.panel-frame {
+  display: none;
+}
+.integrated-titlebar .panel-frame {
+  display: block;
+  position: fixed;
+  inset: 44px var(--panel-inset) var(--panel-inset) var(--sidebar-width);
+  z-index: 4;
+  border-radius: var(--panel-radius);
+  pointer-events: none;
+  box-shadow: 0 0 0 1px var(--panel-edge),0 0 0 100vmax var(--bg);
+}
+.integrated-titlebar.sidebar-collapsed .panel-frame {
+  left: var(--sidebar-rail);
+}
+body[data-motion='full'].integrated-titlebar :is(.topbar, main, .panel-frame) {
+  transition: width var(--motion-shell) var(--ease-sheet),margin var(--motion-shell) var(--ease-sheet),left var(--motion-shell) var(--ease-sheet),right var(--motion-shell) var(--ease-sheet),background-color var(--motion-theme) var(--motion-ease);
+}
+.summary-panel[hidden] {
+  display: none;
+}
+.summary-panel {
+  position: fixed;
+  top: 44px;
+  right: var(--panel-inset);
+  width: var(--summary-width);
+  max-height: calc(100dvh - 44px - var(--panel-inset));
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.summary-docked .summary-panel.is-scrolled {
+  mask-image: linear-gradient(to bottom,transparent,var(--text) var(--space-4));
+}
+.summary-docked .summary-panel {
+  z-index: 6;
+}
+.integrated-titlebar.summary-docked main {
+  padding-inline: var(--panel-padding-docked);
+  margin-right: calc(var(--summary-width) + var(--panel-inset) + var(--summary-gap));
+}
+.integrated-titlebar.summary-docked .panel-frame {
+  right: calc(var(--summary-width) + var(--panel-inset) + var(--summary-gap));
+}
+.summary-floating .summary-panel {
+  z-index: 30;
+  top: 52px;
+  right: calc(2 * var(--panel-inset));
+  max-height: calc(100dvh - 52px - 3 * var(--panel-inset));
+  padding: var(--space-4);
+  border-radius: var(--radius-l);
+  background: var(--bg);
+  box-shadow: var(--pop-shadow);
+}
+.titlebar-readout {
+  display: inline-flex;
+  align-items: center;
+  app-region: no-drag;
+}
+.app-titlebar .window-icon[aria-pressed='true'] {
+  background: var(--soft);
+  color: var(--text);
+}
+.app-titlebar .window-icon {
+  position: relative;
+}
+/* The way to the summary column: a labelled pill that stands off the title bar until the column is open. */
+.app-titlebar .window-icon.window-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  height: 28px;
+  margin-left: 6px;
+  padding: 0 11px 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  box-shadow: var(--card-edge);
+  color: var(--text);
+  font-size: var(--app-leaf-caption);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out, transform 100ms ease-out;
+}
+.window-summary[hidden] {
+  display: none !important;
+}
+.window-summary svg {
+  flex: none;
+}
+.window-summary-pane {
+  opacity: .3;
+  transition: opacity 120ms ease-out;
+}
+.app-titlebar .window-icon.window-summary:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+.app-titlebar .window-icon.window-summary:active {
+  transform: scale(.97);
+}
+.app-titlebar .window-icon.window-summary[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: none;
+  color: var(--accent-text);
+}
+.window-summary[aria-pressed='true'] .window-summary-pane {
+  opacity: 1;
+}
+.window-inactive .app-titlebar .window-icon.window-summary {
+  opacity: .72;
+}
+@media (max-width: 800px) {
+  .window-summary-label {
+    display: none;
+  }
+  .app-titlebar .window-icon.window-summary {
+    padding: 0 7px;
+  }
+}
+.window-summary .window-badge {
+  top: -1px;
+  right: -1px;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.window-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.window-badge[hidden] {
+  display: none;
+}
+.integrated-titlebar .topbar-inner {
+  padding-top: 22px;
+}
+.integrated-titlebar .skip:focus {
+  top: 48px;
+}
+.integrated-titlebar.sidebar-collapsed .topbar {
+  width: var(--sidebar-rail);
+}
+.integrated-titlebar.sidebar-collapsed main {
+  margin-left: var(--sidebar-rail);
+}
+.sidebar-collapsed .topbar-inner {
+  padding-inline: 10px;
+}
+.sidebar-collapsed :is(.brand-name, .nav-label, .sidebar-identity, .profile-edit) {
+  display: none;
+}
+.sidebar-collapsed .brand {
+  justify-content: center;
+  padding: 6px 0;
+}
+.sidebar-collapsed .topbar nav button {
+  position: relative;
+  justify-content: center;
+  padding: 8px 0;
+}
+.sidebar-collapsed .nav-caption {
+  height: 1px;
+  margin: var(--space-3) 6px;
+  overflow: hidden;
+  background: var(--line);
+  color: transparent;
+}
+.sidebar-collapsed .nav-badge {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  min-width: 0;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  background: var(--warn);
+  font-size: 0;
+}
+.sidebar-collapsed .top-actions {
+  padding-inline: 0;
+}
+.sidebar-collapsed .sidebar-profile {
+  justify-content: center;
+  padding-inline: 0;
+}
+.integrated-titlebar.sidebar-collapsed .sidebar-profile .profile-edit {
+  display: none;
+}
+@media(max-width:800px) {
+  .integrated-titlebar .topbar, .integrated-titlebar.sidebar-collapsed .topbar {
+    position: fixed;
+    inset: 44px 0 auto 0;
+    width: 100%;
+    height: auto;
+  }
+  .integrated-titlebar.sidebar-collapsed .topbar {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .integrated-titlebar main, .integrated-titlebar.sidebar-collapsed main {
+    margin-left: var(--panel-inset);
+  }
+  .integrated-titlebar .panel-frame, .integrated-titlebar.sidebar-collapsed .panel-frame {
+    left: var(--panel-inset);
+  }
+  .integrated-titlebar.summary-docked main {
+    margin-right: var(--panel-inset);
+  }
+  .nav-caption {
+    display: none;
+  }
+  .titlebar-status span {
+    display: none;
+  }
+  .integrated-titlebar main {
+    padding-top: 140px;
+  }
+  .integrated-titlebar.sidebar-collapsed main {
+    padding-top: 32px;
+  }
+  .window-title b, .window-title > span[aria-hidden] {
+    display: none;
+  }
+}
+/* Current selectors retained from motion.css at e67aaa9; retired page rules removed. */
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) a:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  transition: background-color 120ms var(--motion-ease), color 120ms var(--motion-ease), opacity var(--motion-feedback) var(--motion-ease), transform var(--motion-feedback) var(--motion-ease);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:active:not(:disabled):not([data-date]):not(.cost-value):not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  transform: scale(.98);
+  transition-duration: 0ms;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) summary:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  outline-offset: 3px;
+}
+.motion-group {
+  position: relative;
+  isolation: isolate;
+}
+.motion-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: -1;
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: 0 1px 3px #00000012;
+}
+.topbar nav .motion-indicator {
+  background: var(--nav-selected);
+  box-shadow: none;
+}
+.motion-group > button[aria-current='page'], .motion-group > button[aria-pressed='true'] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+@supports (interpolate-size: allow-keywords) and (transition-behavior: allow-discrete) {
+  :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details:not(:where([data-ui-root] *, [data-ui-portal] *))::details-content {
+    interpolate-size: allow-keywords;
+    height: 0;
+    opacity: 0;
+    overflow: clip;
+    transition: height var(--motion-disclosure) var(--motion-expand), opacity 200ms var(--motion-ease), content-visibility var(--motion-disclosure) allow-discrete;
+  }
+  :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details[open]:not(:where([data-ui-root] *, [data-ui-portal] *))::details-content {
+    height: auto;
+    opacity: 1;
+  }
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details > summary img[src*='chevron']:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  transition: transform var(--motion-disclosure) var(--motion-expand);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details[open] > summary img[src*='chevron']:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  transform: rotate(180deg);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details > summary:not(:where([data-ui-root] *, [data-ui-portal] *))::marker {
+  content: '';
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details > summary:not(:where([data-ui-root] *, [data-ui-portal] *))::-webkit-details-marker {
+  display: none;
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details > summary:not(:has(img[src*='chevron'])):not(:where([data-ui-root] *, [data-ui-portal] *))::after {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--motion-disclosure) var(--motion-expand);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) details[open] > summary:not(:has(img[src*='chevron'])):not(:where([data-ui-root] *, [data-ui-portal] *))::after {
+  transform: rotate(225deg);
+}
+body, .topbar, .card, :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) input:not(:where([data-ui-root] *, [data-ui-portal] *)), :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) select:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  transition-property: background-color, color, border-color, opacity, transform;
+}
+body, .topbar, .card, :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) input:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  transition: background-color var(--motion-theme) var(--motion-ease), color var(--motion-theme) var(--motion-ease), border-color var(--motion-theme) var(--motion-ease);
+}
+#toast {
+  transition: opacity 120ms var(--motion-ease), display 120ms allow-discrete;
+}
+#toast[hidden] {
+  opacity: 0;
+}
+body[data-page-hidden] [data-busy] img[src*='refresh'] {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) button:active:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+    transform: none !important;
+  }
+}
+/* Current selectors retained from detail-ui.css at e67aaa9; retired page rules removed. */
+/* Current selectors retained from refinement.css at e67aaa9; retired page rules removed. */
+.profile-avatar {
+  height: 38px;
+}
+.profile-avatar span {
+  letter-spacing: -.2px;
+}
+/* Current selectors retained from polish.css at e67aaa9; retired page rules removed. */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+  background: transparent;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text, #24262a) 26%, transparent) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--text, #24262a) 42%, transparent);
+}
+html::-webkit-scrollbar-thumb {
+  background-color: rgba(36, 38, 42, .26);
+}
+html::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(36, 38, 42, .42);
+}
+html:has(body.dark)::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, .22);
+}
+html:has(body.dark)::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, .36);
+}
+:where(.topbar, .app-titlebar, #quotaCards, #quotaCardsBar, #quotaHiddenLine, #toast) input:focus-visible:not(:where([data-ui-root] *, [data-ui-portal] *)) {
+  outline-offset: 0;
+}
+.text-button {
+  border: 0;
+  color: var(--accent-text);
+  padding: 4px 6px;
+  min-height: 28px;
+  font-size: 13px;
+}
+.text-button:hover:not(:disabled) {
+  background: var(--fill);
+}
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+/* Current selectors retained from insights.css at e67aaa9; retired page rules removed. */
+/* Current selectors retained from rhythm.css at e67aaa9; retired page rules removed. */
+#usage > .profile .range-tabs button {
+  min-height: 30px;
+  padding: 4px 14px;
+  font-size: 12px;
+}
+/* Current selectors retained from integrated-insights.css at e67aaa9; retired page rules removed. */
+/* Current selectors retained from pages.css at e67aaa9; retired page rules removed. */
+[data-provider-row="copilot"] {
+  --agent: var(--agent-copilot);
+}
+[data-provider-row="cline"] {
+  --agent: var(--agent-cline);
+}
+[data-provider-row="pi"] {
+  --agent: var(--agent-pi);
+}
+[data-provider-row="continue"] {
+  --agent: var(--agent-continue);
+}
+[data-provider-row="kilo"] {
+  --agent: var(--agent-kilo);
+}
+[data-provider-row="qwen"] {
+  --agent: var(--agent-qwen);
+}
+[data-provider-row="kimi"] {
+  --agent: var(--agent-kimi);
+}
+[data-provider-row="codex"] {
+  --agent: var(--agent-codex);
+}
+[data-provider-row="claude"] {
+  --agent: var(--agent-claude);
+}
+[data-provider-row="cursor"] {
+  --agent: var(--agent-cursor);
+}
+[data-provider-row="workbuddy"] {
+  --agent: var(--agent-workbuddy);
+}
+[data-provider-row="antigravity"] {
+  --agent: var(--agent-antigravity);
+}
+[data-provider-row="deepseek"] {
+  --agent: var(--agent-deepseek);
+}
+[data-provider-row="gemini"] {
+  --agent: var(--agent-gemini);
+}
+[data-provider-row="opencode"] {
+  --agent: var(--agent-opencode);
+}
+[data-provider-row="zcode"] {
+  --agent: var(--agent-zcode);
+}
+[data-provider-row="mimo"] {
+  --agent: var(--agent-mimo);
+}
+#quota {
+  container: quota / inline-size;
+}
+.quota-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--home-column), 1fr));
+  gap: 1rem;
+  margin-top: var(--space-6);
+}
+.quota-cards-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+.quota-cards-bar[hidden] {
+  display: none;
+}
+.quota-cards-bar + .quota-grid {
+  margin-top: var(--space-3);
+}
+#quota .quota-cards-bar .range-tabs {
+  margin: 0;
+  background: var(--soft);
+}
+#quota .quota-cards-bar .range-tabs button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  font-size: var(--app-leaf-caption);
+}
+#quota .quota-cards-bar .range-tabs em {
+  margin-left: var(--space-1);
+  color: var(--muted);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+.quota-filter-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: var(--space-6) 0;
+  color: var(--muted);
+  font-size: var(--text-footnote);
+  text-align: center;
+}
+.quota-grid[hidden] {
+  display: none;
+}
+.quota-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: var(--space-5) var(--space-5) var(--space-3);
+  border-radius: var(--radius-sheet);
+  overflow: hidden;
+}
+#quotaCards {
+  position: relative;
+}
+#quotaCards .quota-card {
+  align-self: stretch;
+  width: 100%;
+  overflow: visible;
+  contain: paint;
+  cursor: pointer;
+  user-select: none;
+}
+#quotaCards .quota-card.is-dragging {
+  z-index: 2;
+  box-shadow: var(--pop-shadow);
+  cursor: grabbing;
+  pointer-events: none;
+}
+body.quota-dragging, body.quota-dragging * {
+  cursor: grabbing;
+  user-select: none;
+}
+.quota-card-mark {
+  position: absolute;
+  right: -32px;
+  bottom: -32px;
+  z-index: -1;
+  width: 156px;
+  height: 156px;
+  object-fit: contain;
+  opacity: .05;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+body.dark .quota-card-mark {
+  filter: grayscale(1) invert(1);
+  opacity: .07;
+}
+.quota-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.quota-card-head[data-mark-only] h3 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+/* The chip shows whole or not at all: when it does not fit it wraps past the one line this slot shows. */
+.quota-plan-slot {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  height: 22px;
+  overflow: hidden;
+}
+.quota-plan-slot::before {
+  content: '';
+  width: 0;
+  height: 22px;
+}
+.quota-card-logo {
+  flex: none;
+  width: var(--compact-icon);
+  height: var(--compact-icon);
+  object-fit: contain;
+}
+.quota-card-head h3 {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-title2);
+  font-weight: var(--weight-section);
+  overflow-wrap: anywhere;
+}
+.quota-plan {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: var(--radius-s);
+  background: var(--fill);
+  color: var(--muted);
+  font-size: var(--text-caption2);
+  font-weight: 650;
+  letter-spacing: .3px;
+  white-space: nowrap;
+}
+.quota-age {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  min-height: 28px;
+  margin-left: auto;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+  white-space: nowrap;
+}
+.quota-age:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--text);
+}
+.quota-age:disabled {
+  opacity: 1;
+}
+.quota-age img {
+  width: 14px;
+  height: 14px;
+  opacity: .7;
+}
+.quota-age.is-old {
+  color: var(--warn-text);
+}
+.quota-alias {
+  margin: 2px 0 0 calc(var(--compact-icon) + var(--space-2));
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: safe center;
+  gap: var(--space-2);
+  min-height: 0;
+  overflow: hidden;
+  padding: 2px 0;
+}
+.quota-meter-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.quota-meter-name {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+}
+/* A window with others under it: the figure gives its name the room, so the card stays square (owner 2026-11-05). */
+.quota-card-content:has(.quota-subrows) .quota-figure:not(.is-compact, .is-strong) {
+  font-size: calc(var(--text-quota) * .8);
+}
+.quota-card-content:has(.quota-subrows) .quota-meter-name b {
+  font-size: var(--app-leaf-body);
+}
+.quota-meter-name b {
+  font-size: var(--text-title3);
+  font-weight: 600;
+}
+.quota-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-reset img {
+  width: 12px;
+  height: 12px;
+  opacity: .55;
+}
+.quota-reset.is-blocked {
+  color: var(--warn-text);
+}
+.quota-figure {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  font-size: var(--text-quota);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-figure);
+  line-height: 1;
+}
+.quota-figure small {
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.quota-figure small:first-child {
+  margin-right: var(--space-1);
+}
+.quota-figure small:last-child:not(:first-child) {
+  margin-left: 2px;
+}
+.quota-figure.is-word {
+  font-size: var(--text-title1);
+  font-weight: 500;
+}
+.quota-figure.is-muted {
+  color: var(--muted);
+}
+.quota-meter-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.quota-pace {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-caption2);
+  font-style: normal;
+}
+.quota-meter-name .quota-reset {
+  min-width: 0;
+}
+.quota-meter-name .quota-reset > span {
+  min-width: 0;
+}
+.quota-segments {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin-top: var(--space-2);
+}
+.quota-segments.is-mini {
+  height: 10px;
+  margin: 0;
+}
+.quota-track, .quota-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 3px;
+}
+.quota-segments.is-mini :is(.quota-track, .quota-fill) {
+  gap: 2px;
+}
+.quota-fill {
+  pointer-events: none;
+}
+.quota-segments i {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  border-radius: 2px;
+  background: var(--fill-strong);
+}
+.quota-segments .quota-fill i {
+  background: var(--agent, var(--blue));
+}
+.quota-segments.is-stale .quota-fill i {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--agent, var(--blue)) 55%, transparent) 0 3px, transparent 3px 6px);
+}
+.quota-tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--card);
+}
+.quota-segments.low .quota-fill i {
+  background: var(--warn);
+}
+.quota-segments.unknown .quota-fill {
+  visibility: hidden;
+}
+.quota-segments[data-progress-moving] .quota-fill {
+  will-change: clip-path;
+}
+.quota-inside {
+  color: var(--quota-inside);
+  font-size: var(--app-leaf-caption);
+  font-weight: 600;
+}
+.quota-figure.is-compact, .quota-figure.is-strong {
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.quota-figure.is-compact {
+  font-size: var(--text-title2);
+}
+.quota-figure.is-strong {
+  font-size: var(--text-large);
+}
+.quota-figure.is-compact small, .quota-figure.is-strong small {
+  align-self: center;
+}
+.quota-segments.is-solid :is(.quota-track, .quota-fill) {
+  gap: 0;
+}
+.quota-segments.is-solid i {
+  border-radius: var(--radius-s);
+}
+.quota-meter.is-thick {
+  display: grid;
+  gap: var(--space-1);
+}
+.quota-meter.is-thick b {
+  font-size: var(--text-title3);
+  font-weight: 600;
+}
+.quota-meter.is-thick .quota-meter-head {
+  align-items: baseline;
+}
+.quota-meter.is-thick .quota-reset {
+  justify-self: end;
+}
+.quota-meters.is-thick .quota-segments {
+  height: 28px;
+  margin-top: 0;
+}
+.quota-meters.is-thick .quota-track i {
+  background: color-mix(in srgb, var(--agent, var(--blue)) 22%, transparent);
+}
+.quota-meters.is-thick .quota-tick {
+  top: 30%;
+  bottom: 30%;
+  background: color-mix(in srgb, var(--agent, var(--blue)) 55%, var(--card));
+  box-shadow: none;
+}
+.quota-single {
+  display: grid;
+  gap: var(--space-2);
+}
+.quota-single .quota-meter-head {
+  align-items: baseline;
+}
+.quota-single .quota-meter-head b {
+  font-size: var(--text-title2);
+  font-weight: 650;
+}
+.quota-single .quota-segments {
+  height: 10px;
+  margin-top: 0;
+}
+.quota-split {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--hairline-width) solid var(--hairline);
+}
+.quota-split span {
+  display: grid;
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-split span:last-child {
+  text-align: right;
+}
+.quota-split b {
+  color: var(--text);
+  font-size: var(--text-title3);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.quota-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+.quota-facts div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+  font-size: var(--text-footnote);
+}
+.quota-facts dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 600;
+}
+.quota-facts dt img {
+  width: 12px;
+  height: 12px;
+  opacity: .55;
+}
+.quota-facts dd {
+  margin: 0 0 0 auto;
+  color: var(--muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.quota-facts dd.is-blocked {
+  color: var(--warn-text);
+}
+body.dark .quota-facts dt img {
+  filter: invert(.8);
+}
+.quota-meters {
+  display: grid;
+  gap: var(--space-2);
+}
+.quota-meters .quota-segments {
+  height: 12px;
+  margin-top: var(--space-1);
+}
+.quota-extra {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+  border-top: var(--hairline-width) solid var(--hairline);
+  font-size: var(--text-footnote);
+}
+.quota-extra span {
+  min-width: 0;
+  color: var(--muted);
+}
+.quota-extra b {
+  flex: none;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.quota-wallet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 0;
+}
+.quota-wallet.is-rows {
+  justify-content: flex-start;
+}
+.quota-wallet:not(:has(.quota-wallet-rows)) {
+  justify-content: center;
+}
+.quota-wallet-rows {
+  display: grid;
+}
+.quota-wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: var(--space-1) 0;
+  border-bottom: var(--hairline-width) solid var(--hairline);
+  font-size: var(--text-footnote);
+  flex-wrap: wrap;
+}
+.quota-wallet-row:last-child {
+  border-bottom: 0;
+}
+.quota-wallet-row > span {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.quota-wallet-row em, .quota-wallet-row small {
+}
+.quota-wallet-row em {
+  font-style: normal;
+  font-weight: 500;
+}
+.quota-wallet-row small {
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-wallet-row b {
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.quota-wallet-row b.is-muted {
+  color: var(--muted);
+  font-weight: 500;
+}
+.quota-wallet-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  min-width: 0;
+}
+.quota-wallet-total > small {
+  flex: 0 0 100%;
+}
+.quota-wallet-total small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-wallet-total strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: var(--space-1);
+  font-size: var(--text-quota);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-figure);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.quota-wallet-total strong[data-long] {
+  font-size: var(--text-title1);
+}
+.quota-wallet-total strong small {
+  display: inline;
+  font-size: var(--app-leaf-body);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.quota-wallet-total > span {
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+}
+.quota-card-content.is-dim {
+  color: var(--muted);
+}
+.quota-problem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-m);
+  background: var(--fill);
+}
+.quota-problem > div {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.quota-problem b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warn-text);
+  font-size: var(--text-footnote);
+  font-weight: 600;
+}
+.quota-problem b::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.quota-problem span {
+  color: var(--muted);
+  font-size: var(--text-caption2);
+}
+.quota-soft-button {
+  flex: none;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--fill-strong);
+  color: var(--text);
+  font-size: var(--app-leaf-caption);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.quota-soft-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+}
+.quota-soft-button.is-primary {
+  background: var(--text);
+  color: var(--card);
+}
+.quota-soft-button.is-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 86%, var(--card));
+}
+.quota-soft-button:disabled {
+  opacity: var(--opacity-busy);
+}
+.quota-card {
+  --pocket: var(--soft);
+}
+body.dark .quota-card {
+  --pocket: var(--card);
+}
+.quota-card-body:has(.quota-wallet.is-pocket) {
+  justify-content: safe flex-end;
+  overflow: visible;
+  padding-bottom: 0;
+}
+.quota-card-body:has(.quota-wallet.is-pocket) ~ .quota-card-foot {
+  position: relative;
+  z-index: 1;
+}
+.quota-wallet.is-pocket {
+  justify-content: safe flex-end;
+  gap: 0;
+}
+.quota-tickets {
+  display: grid;
+}
+.quota-ticket {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0 var(--space-2);
+  padding: 4px var(--space-3) 14px;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  font-size: var(--app-leaf-caption);
+}
+.quota-ticket + .quota-ticket {
+  margin: -12px 0 0;
+  box-shadow: 0 -2px 6px var(--ticket-shade);
+}
+.quota-ticket.is-first {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--agent) 74%, var(--on-agent)), color-mix(in srgb, var(--agent) 62%, var(--on-agent)));
+  color: var(--on-category);
+}
+.quota-ticket.is-second {
+  background: linear-gradient(180deg, var(--card), color-mix(in srgb, var(--text) 6%, var(--card)));
+  color: var(--text);
+}
+body.dark .quota-ticket.is-second {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--text) 94%, var(--card)), color-mix(in srgb, var(--text) 80%, var(--card)));
+  color: var(--on-agent);
+}
+.quota-ticket span {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.quota-ticket em {
+  font-style: normal;
+  font-weight: 650;
+}
+.quota-ticket small {
+  flex: none;
+  font-size: var(--text-caption2);
+  opacity: .72;
+}
+.quota-ticket.is-first.is-soon small {
+  opacity: .92;
+}
+.quota-ticket b {
+  flex: none;
+  max-width: 70%;
+  margin-left: auto;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--app-leaf-body);
+}
+.quota-wallet-total.quota-pocket {
+  position: relative;
+  margin: -14px calc(-1 * var(--space-5)) calc(-1 * (28px + var(--space-3)));
+  padding: 22px var(--space-5) calc(28px + var(--space-3) + 6px);
+  background: linear-gradient(180deg, transparent 19px, var(--pocket) 19px);
+  filter: drop-shadow(0 -3px 8px var(--ticket-shade));
+}
+.quota-pocket-lip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  fill: var(--pocket);
+}
+.quota-pocket-head {
+  display: flex;
+  flex: 0 0 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 18px;
+}
+.quota-pocket-head small {
+  min-width: 0;
+}
+.quota-pocket-meta {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-caption2);
+  font-variant-numeric: tabular-nums;
+}
+.quota-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  padding: 0 8px 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--fill-strong);
+  color: var(--text);
+  font-size: var(--text-caption2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.quota-badge.is-warn::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.quota-wallet-total.quota-pocket strong {
+  margin-top: 2px;
+  font-size: var(--text-large);
+  font-weight: 700;
+}
+.quota-wallet-total.quota-pocket strong[data-long] {
+  font-size: var(--text-title1);
+}
+.quota-wallet-total strong[data-long='more'], .quota-wallet-total.quota-pocket strong[data-long='more'] {
+  font-size: var(--text-footnote);
+  letter-spacing: 0;
+}
+.quota-wallet-total.quota-pocket > span {
+  font-size: var(--app-leaf-caption);
+}
+.quota-pocket-bar {
+  display: flex;
+  flex: 0 0 100%;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin-top: 8px;
+}
+.quota-pocket-bar .quota-ladder {
+  flex: 1;
+  margin: 0;
+}
+.quota-pocket-bar em {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: var(--text-caption2);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+.quota-pocket-bar em::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.quota-ladder {
+  margin-top: 6px;
+}
+.quota-ladder {
+  display: flex;
+  flex: 0 0 100%;
+  gap: 2px;
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+}
+.quota-ladder i {
+  display: block;
+  min-width: 3px;
+}
+.quota-wallet-total > .quota-ladder ~ span:last-child {
+  margin-top: 3px;
+  margin-left: auto;
+  font-size: var(--text-caption2);
+}
+.quota-subrows {
+  display: grid;
+  gap: var(--space-1);
+}
+.quota-subrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(40px, 72px) auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--app-leaf-caption);
+}
+.quota-subrow > span {
+  font-weight: 600;
+}
+.quota-subrow b {
+  font-variant-numeric: tabular-nums;
+}
+.quota-rings {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-around;
+  gap: var(--space-2);
+}
+.quota-ring {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  text-align: center;
+}
+.quota-ring-dial {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+.quota-ring svg {
+  width: 88px;
+  height: 88px;
+  transform: rotate(-90deg);
+}
+.quota-thin {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  font-size: var(--app-leaf-caption);
+}
+.quota-thin > span {
+  min-width: 0;
+  color: var(--muted);
+}
+.quota-thin > span b {
+  color: var(--text);
+  font-weight: 600;
+}
+.quota-thin small {
+  color: var(--muted);
+  font-size: var(--text-caption2);
+}
+.quota-thin .quota-segments {
+  grid-column: 1 / -1;
+  height: 8px;
+}
+.quota-ring circle {
+  fill: none;
+  stroke: var(--fill-strong);
+  stroke-width: 7;
+}
+.quota-ring .quota-ring-fill {
+  stroke: var(--agent, var(--blue));
+  stroke-linecap: round;
+}
+.quota-ring.low .quota-ring-fill {
+  stroke: var(--warn);
+}
+.quota-ring.is-stale .quota-ring-fill {
+  stroke: color-mix(in srgb, var(--agent, var(--blue)) 45%, transparent);
+}
+.quota-ring-dial b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-title2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.quota-ring-name {
+  font-size: var(--app-leaf-caption);
+  font-weight: 600;
+}
+.quota-ring small {
+  color: var(--muted);
+  font-size: var(--text-caption2);
+}
+.quota-empty {
+  display: grid;
+  gap: var(--space-1);
+}
+.quota-ghost {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  margin-bottom: var(--space-2);
+}
+.quota-ghost i {
+  flex: 1;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 var(--hairline-width) var(--fill-strong);
+}
+.quota-empty b {
+  font-size: var(--app-leaf-body);
+  font-weight: 600;
+}
+.quota-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+  line-height: var(--line-body);
+}
+.quota-empty-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.quota-status.is-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--warn-text);
+}
+.quota-status.is-warn::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.quota-card[data-hidden-card] {
+  opacity: .5;
+}
+.quota-hidden-line {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-hidden-line[hidden] {
+  display: none;
+}
+.quota-hidden-line .text-button {
+  margin-left: var(--space-2);
+  font-size: inherit;
+}
+.quota-card-foot.is-quiet {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-1);
+  opacity: 0;
+}
+.quota-card-foot.is-quiet .quota-status {
+  display: none;
+}
+.quota-card:hover .quota-card-foot.is-quiet, .quota-card-foot.is-quiet:focus-within {
+  opacity: 1;
+}
+.quota-card-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+}
+.quota-status {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--app-leaf-caption);
+}
+.quota-sheet-open {
+  flex: none;
+  min-height: 28px;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--accent-text);
+  font-size: var(--app-leaf-caption);
+}
+.quota-sheet-open:hover {
+  background: var(--fill);
+}
+body.dark :is(.quota-age, .quota-reset) img {
+  filter: invert(.8);
+}
+/* Current selectors retained from usage.css at e67aaa9; retired page rules removed. */
+.topbar nav button[aria-current='page'] {
+  color: var(--text);
+  font-weight: 600;
+}
+.topbar nav button[aria-current='page'] img {
+  filter: none;
+}
+body.dark .topbar nav button[aria-current='page'] img {
+  filter: invert(.92);
+}
+.top-actions {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+.top-actions #dataBadge {
+  order: -1;
+  flex: 1 0 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: var(--text-caption2);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.top-actions #dataBadge::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.top-actions #dataBadge[hidden] {
+  display: none;
+}
+.top-actions #dataBadge .text-button {
+  flex: none;
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 500;
+  line-height: inherit;
+}
+.sidebar-profile {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sidebar-profile .sidebar-avatar {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+}
+.sidebar-profile .sidebar-avatar span {
+  font-size: var(--text-caption2);
+  letter-spacing: 0;
+}
+.sidebar-identity {
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-identity strong {
+  display: block;
+  overflow: hidden;
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-profile .profile-edit {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  opacity: .55;
+}
+.integrated-titlebar .sidebar-profile .profile-edit {
+  opacity: 0;
+}
+.sidebar-profile:hover .profile-edit, .sidebar-profile .profile-edit:focus-visible {
+  opacity: 1;
+}
+.sidebar-profile .profile-edit:hover, .sidebar-profile .profile-edit:focus-visible {
+  opacity: 1;
+  background: var(--fill);
+}
+.sidebar-profile .profile-edit img {
+  width: 14px;
+  height: 14px;
+}
+body.dark .sidebar-profile .profile-edit img {
+  filter: invert(.85);
+}
+@media (max-width: 760px) {
+  .sidebar-profile {
+    display: none;
+  }
+}
+/* Current selectors retained from cost.css at e67aaa9; retired page rules removed. */
+#cost {
+  font-family: var(--ui-font);
+  font-size: var(--app-leaf-body);
+  line-height: 1.5;
+}
+#cost :is(b,strong) {
+  font-weight: 600;
+}
+#cost > .profile .range-tabs button {
+  min-height: var(--control-compact-height);
+  padding: var(--space-1) var(--radius-l);
+  font-size: var(--app-leaf-caption);
+}
+#cost .motion-indicator {
+}
+/* Current selectors retained from containers.css at e67aaa9; retired page rules removed. */
+#cost {
+  container: cost-page / inline-size;
+}
+#sessions {
+  container: sessions-page / inline-size;
+}
+#sources {
+  container: sources-page / inline-size;
+}
+#sources [aria-disabled="true"] {
+  opacity: var(--opacity-busy);
+  cursor: progress;
+}
+
+/* The reading view (SESSIONS-READER-20261101.md): a turn out of view is laid out at an estimated height and
+   not painted, so a long conversation scrolls like a short one; its outline stays in view beside it. */
+/* The reading view takes the page (owner 2026-11-02): the widget column steps aside and the page does not scroll,
+   the conversation scrolls inside it under its own bar. */
+.session-reading .summary-panel, .session-reading #windowSummary { display: none; }
+.integrated-titlebar.summary-docked.session-reading main { margin-right: var(--panel-inset); padding-inline: var(--space-6); }
+.integrated-titlebar.summary-docked.session-reading .panel-frame { right: var(--panel-inset); }
+.integrated-titlebar.session-reading main { padding-top: var(--space-4); padding-bottom: var(--space-4); padding-inline: var(--space-6); height: calc(100dvh - 44px - var(--panel-inset)); min-height: 0; overflow: hidden; box-sizing: border-box; }
+.session-reading main > section, .session-reading main > section > [data-ui-root] { max-width: none; height: 100%; }

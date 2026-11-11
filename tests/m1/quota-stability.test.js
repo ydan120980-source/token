@@ -33,13 +33,14 @@ function fixture(t) {
   const add = async alias => { await service.begin(alias); const id = service.login.id; rpcs.at(-1).emit('login', { loginId: 'login', success: true }); await service.tail; await tick(); return id; };
   return { service, rpcs, timers, add, advance: ms => { time += ms; } };
 }
-test('one queue serializes accounts and suppresses same-account overlapping reads', async t => {
+test('independent accounts run concurrently while same-account overlapping reads are suppressed', async t => {
   const { service, add, rpcs } = fixture(t); const a = await add('A'), b = await add('B');
   const read = deferred(); service.factory = () => { const rpc = new Rpc(); rpc.read = read; rpcs.push(rpc); return rpc; };
   const all = service.refreshAll(); await tick(); const started = rpcs.length;
   assert.equal(service.busy.size, 2); await service.refresh(a); assert.equal(rpcs.length, started);
   assert.equal(rpcs.at(-1).calls.includes('account/rateLimits/read'), true);
-  read.resolve(); await all; assert.equal(rpcs.length, started + 1);
+  assert.equal(rpcs.slice(-2).every(rpc => rpc.calls.includes('account/rateLimits/read')), true);
+  read.resolve(); await all; assert.equal(rpcs.length, started);
   assert.deepEqual(service.state().lastBatch, { success: 2, failed: 0, skipped: 0 }); assert.equal(service.busy.size, 0); assert.ok(service.account(b).quota);
 });
 test('safe failure cooldown preserves last success; manual and all cannot bypass it', async t => {
@@ -98,8 +99,10 @@ test('optional identities never leave main memory; known duplicates and changes 
   const { service, add } = fixture(t), a = await add('A'), b = await add('B');
   service.factory = () => { const rpc = new Rpc(); rpc.identity = 'PRIVATE_ACCOUNT_ID'; return rpc; }; await service.refreshAll();
   assert.ok(service.state().accounts.every(account => account.duplicateKnown)); assert.equal(JSON.stringify(service.state()).includes('PRIVATE_ACCOUNT_ID'), false); assert.equal(fs.readFileSync(service.file, 'utf8').includes('PRIVATE_ACCOUNT_ID'), false);
+  assert.deepEqual(service.state().accounts.find(account => account.id === a).duplicateAccountIds, [b]);
   const previous = structuredClone(service.account(a).quota); service.factory = () => { const rpc = new Rpc(); rpc.identity = 'DIFFERENT_PRIVATE'; return rpc; }; await service.refresh(a);
   assert.equal(service.account(a).status, 'login-required'); assert.deepEqual(service.account(a).quota, previous);
+  assert.equal(service.state().accounts.find(account => account.id === a).duplicateKnown, false); assert.equal(service.state().accounts.find(account => account.id === b).duplicateKnown, false);
   service.factory = () => new Rpc(); await service.refresh(b); assert.equal(service.state().accounts.find(account => account.id === b).duplicateKnown, false);
 });
 
@@ -123,4 +126,23 @@ test('server request ID collision cannot resolve a pending quota read; invalid f
   child.stdout.write('{"method":"account/updated","params":{"authMode":"chatgpt","planType":"plus","accessToken":"SECRET"}}\n');
   assert.deepEqual(notification, { authMode: 'chatgpt', plan: 'plus' });
   const broken = rpc.request('account/read'); child.stdout.write('null\n'); await assert.rejects(broken, /CODEX_PROTOCOL_INVALID/); rpc.close();
+});
+
+
+test('shared minute tick includes provider batch, waits for slow providers and does not catch up on wake', async t => {
+  const { service, advance, timers } = fixture(t); let calls = 0;
+  service.refreshProviders = async () => { calls++; advance(120000); return { success: 2, failed: 1, skipped: 3 }; };
+  service.setAutoRefresh('1min'); service.suspend(); advance(60000); await service.resume();
+  assert.equal(calls, 1); assert.deepEqual(service.state().lastProviderBatch, { success: 2, failed: 1, skipped: 3 });
+  assert.equal([...timers.values()][0].delay, 60000); await service.resume(); assert.equal(calls, 1);
+  service.setAutoRefresh('off'); advance(60000); await service.resume(); assert.equal(calls, 1);
+});
+
+
+test('wake during a slow automatic provider batch cannot start a second batch', async t => {
+  const { service, advance, timers } = fixture(t), pending = deferred(); let calls = 0;
+  service.refreshProviders = async () => { calls++; await pending.promise; return { success: 1, failed: 0, skipped: 0 }; };
+  service.setAutoRefresh('1min'); service.suspend(); advance(60000); const first = service.resume(); await tick();
+  advance(120000); await service.resume(); assert.equal(calls, 1);
+  service.setAutoRefresh('off'); pending.resolve(); await first; assert.equal(timers.size, 0);
 });

@@ -4,7 +4,9 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const {DatabaseSync} = require('node:sqlite');
 const {agentFixtures} = require('./agent-fixtures');
 const {fixtures} = require('./fixtures');
-const {scanSources} = require('../../src/m1/sources');
+const {scanSources,refreshCache} = require('../../src/m1/sources');
+const {ParseCache}=require('../../src/m1/parse-cache');
+const {remove}=require('./temp');
 const {Store} = require('../../src/m1/store');
 const {Service} = require('../../src/m1/service');
 const time = '2026-10-05T12:00:00Z';
@@ -12,6 +14,17 @@ function workspace(t) { const dir = fs.mkdtempSync(path.join(os.tmpdir(),'scan-c
 const comparable = scan => JSON.stringify(scan,(key,value) => key === 'durationMs' ? undefined : value);
 const total = store => store.snapshot().daily.reduce((sum,row) => sum + row.totalTokens,0);
 const claudeLine = id => JSON.stringify({type:'assistant',uuid:id,sessionId:'cache-session',timestamp:time,message:{id,role:'assistant',model:'claude-sonnet-4-20250514',usage:{input_tokens:7,output_tokens:3,cache_read_input_tokens:0,cache_creation_input_tokens:0}}}) + '\n';
+test('evicted parse payloads retain fingerprints, quiet checks avoid reads and changed scans equal fresh results',async t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'bounded-scan-'));t.after(()=>remove(root));
+  const fixture=fixtures(path.join(root,'home')),cache={salt:null,files:new ParseCache(64*1024*1024,1),fingerprints:new Map(),seen:new Set()};
+  await scanSources(fixture.roots,'salt',{reads:0},{cache});assert.equal(cache.files.size,1);assert(cache.fingerprints.size>cache.files.size);
+  await refreshCache(fixture.roots,'salt',{reads:0},cache);
+  const quiet={reads:0};assert.equal((await refreshCache(fixture.roots,'salt',quiet,cache)).changed,false);assert.equal(quiet.reads,0);
+  const file=path.join(fixture.roots.claude[0],'project','session.jsonl');fs.appendFileSync(file,'\n'+claudeLine('bounded-append'));
+  assert.equal((await refreshCache(fixture.roots,'salt',{reads:0},cache)).changed,true);
+  const cached=await scanSources(fixture.roots,'salt',{reads:0},{cache}),fresh=await scanSources(fixture.roots,'salt',{reads:0});assert.equal(comparable(cached),comparable(fresh));
+  fs.unlinkSync(file);await refreshCache(fixture.roots,'salt',{reads:0},cache);assert(![...cache.fingerprints.keys()].some(key=>key.endsWith(file)));
+});
 
 test('cached scans equal a fresh scan after appends, deletions, database edits, cross-Agent merges and caller mutation', async t => {
   const fixture = agentFixtures(path.join(workspace(t),'home')), selected = fixture.roots;
@@ -19,6 +32,9 @@ test('cached scans equal a fresh scan after appends, deletions, database edits, 
   const same = async label => {
     const audit = {reads:0}, cached = await scanSources(selected,'salt',audit,{cache,report:{failures:0}}), fresh = await scanSources(selected,'salt',{reads:0});
     assert.equal(comparable(cached),comparable(fresh),label);
+    const borrowed=await scanSources(selected,'salt',{reads:0},{cache,borrowRecords:true});
+    assert.equal(comparable(borrowed),comparable(fresh),label+' in the immutable owner');
+    for(const source of Object.values(borrowed))for(const record of source.records)if(!record.sharedKey)assert(Object.isFrozen(record));
     return {cached,audit};
   };
   await same('initial');
@@ -45,6 +61,20 @@ test('cached scans equal a fresh scan after appends, deletions, database edits, 
   fs.rmSync(claude);
   await same('after deletion');
   assert(![...cache.files.keys()].some(key => key.endsWith(claude)),'deleted files leave the cache');
+});
+
+test('internal scans preserve unchanged observation identities without lending mutable cache records',async t=>{
+  const fixture=fixtures(path.join(workspace(t),'home')),cache={salt:null,files:new Map(),seen:new Set()};
+  const first=await scanSources(fixture.roots,'salt',{reads:0},{cache,borrowRecords:true});
+  const previous=new Map(Object.values(first).flatMap(source=>source.records.filter(record=>!record.sharedKey).map(record=>[record.id,record])));
+  const second=await scanSources(fixture.roots,'salt',{reads:0},{cache,borrowRecords:true});
+  assert(previous.size>0);
+  for(const source of Object.values(second))for(const record of source.records)if(previous.has(record.id)){
+    assert.equal(record,previous.get(record.id));
+    assert.throws(()=>{record.totalTokens=-1;},TypeError);
+  }
+  const detached=await scanSources(fixture.roots,'salt',{reads:0},{cache});
+  for(const source of Object.values(detached))for(const record of source.records)assert(!Object.isFrozen(record),'public callers retain isolated mutable copies');
 });
 
 test('a rescan that reproduces the ledger neither rewrites statistics.json nor advances the sequence', async t => {

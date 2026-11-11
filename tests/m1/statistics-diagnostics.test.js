@@ -1,0 +1,33 @@
+'use strict';
+const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const { Store } = require('../../src/m1/store');
+const { StatisticsService } = require('../../src/m1/statistics-service');
+const { remove } = require('./temp');
+
+test('owner diagnostics are bounded and distinguish projection invalidation from cache hits without reading sources', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'statistics-diagnostics-')), dir = path.join(root, 'usage');
+  t.after(() => remove(root));
+  const store = new Store(dir, {}); store.setEnabled(false);
+  const service = new StatisticsService(dir, {}, () => {}, { home: path.join(root, 'empty-home'), appData: null, localAppData: null }, { offline: true });
+  t.after(() => service.close());
+  const before = fs.readFileSync(path.join(dir, 'statistics.json'));
+  const first = await service.get(); await service.get(first.snapshotRevision); await service.getPacked(); await service.getPacked(first.snapshotRevision);
+  const metrics = await service.diagnostics();
+  assert.equal(metrics.owner.storage.counters.initial, 1);
+  assert(metrics.owner.storage.counters.snapshotHit > 0);
+  assert(metrics.owner.projection.counters.packedHits > 0);
+  await service.reprice();
+  const repriced = await service.diagnostics();
+  assert.equal(repriced.owner.storage.counters.invalidated, 1);
+  assert.equal(repriced.owner.storage.stages.persist.count, 0);
+  assert(!/empty-home|statistics\.json|records|salt|deviceId/.test(JSON.stringify(repriced.owner)));
+  assert.deepEqual(fs.readFileSync(path.join(dir, 'statistics.json')), before);
+  await assert.rejects(service.call('__proto__'), /COMMAND_REJECTED/);
+  assert.equal((await service.diagnostics()).lifecycle.rejected, 1);
+  await service.worker.terminate();
+  await new Promise(resolve => setImmediate(resolve));
+  const starts = service.performanceState().workerStarts, stopped = await service.diagnostics();
+  assert.equal(stopped.owner, null);
+  assert.equal(stopped.requests.workerPresent, false);
+  assert.equal(service.performanceState().workerStarts, starts, 'observing a failed owner must not restart it');
+});

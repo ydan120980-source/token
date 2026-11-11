@@ -106,7 +106,7 @@ test('damaged or structurally invalid statistics are quarantined, not fatal', t 
   assert.ok(!fs.existsSync(path.join(dir, 'clean', 'quarantine')));
 });
 test('calendar ranges include today and respect month/year boundaries', () => {
-  const { startFor } = require('../../design/desktop-reference/usage-math');
+  const { startFor } = require('../../src/m1/usage-math');
   assert.equal(startFor('2026-01-03', '7'), '2025-12-28');
   assert.equal(startFor('2026-03-01', '30'), '2026-01-31');
   assert.equal(startFor('2026-10-02', 'today'), '2026-10-02');

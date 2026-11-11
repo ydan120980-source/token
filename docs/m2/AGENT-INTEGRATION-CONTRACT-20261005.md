@@ -16,13 +16,26 @@
 | ZCode | `.zcode/cli/db/db.sqlite` 的 `model_usage` | 仅投影 id/session/provider/model/time/五桶/两个总量；每 attempt 一条，不再加 turn_usage。当前本机 input/output 为 inclusive；变体以 computed_total 对齐 disjoint 桶，无法对齐标冲突；未知保留 null |
 | DeepSeek Harness | `.dsh/sessions`、`.dsh/profiles/desktop/sessions` 下 canonical `session.vN.jsonl[.zstd]` | 支持已核对的 v2/v3/v4；只选同会话最高 generation；Zstandard 串接帧逐帧读取；未来格式拒绝且不退回旧版本；同代双编码拒绝。按 session + turn/step + attempt 序号去重，格式升级重排物理 seq 不会重计历史调用；最后 tagged end-seed 为 fork cut；已组装 usage 优先，重试 attempt 的 stream usage 也计费；输入与缓存分离，推理已含输出；序列断裂只保留有效前缀 |
 
-所有缺失字段为 `null`，已报告的零为零。规范 total 不重复加推理；不完整/冲突记录不伪装精确费用。记录数是用量记录数；Cursor SDK 为 run，WorkBuddy 总量补充为 session，不等同网络请求数。HMAC 使用本应用已有持久 salt，原始 message/session ID 不进入统计快照。
+所有缺失字段为 `null`，已报告的零为零。规范 total 不重复加推理；不完整/冲突记录不伪装精确费用。记录数是用量记录数；Cursor SDK 为 run，WorkBuddy 总量补充为 session，不等同网络请求数。HMAC 使用本应用已有持久 salt，原始 message/session ID 不进入统计快照（2026-10-12 起会话页另存原始会话 ID 与工作目录，见文末）。
 
 SQLite 仅读取原文件与已提交 WAL 的字节，在 sql.js 内存镜像查询。没有原库连接、写锁、迁移、checkpoint、配置或认证写入。JSON/压缩/SQLite 解码需读取包含其他字段的容器字节；代码仅访问用量/路由/时间/去重字段，不提取、显示、保存或导出正文、工具参数、header.system、认证及 error_message。统计导出再次经过主进程白名单；来源错误仅允许固定代码，不能借错误文本导出任意内容。
 
+## Antigravity（2026-10-14 增补，决定见 SOURCES-DISCOVERY-20261014.md 步骤 4）
+
+| 项 | 合同 |
+| --- | --- |
+| 读取位置 | `~/.gemini/antigravity/brain`（2.0 应用）、`~/.gemini/antigravity-cli/brain`（CLI）、`~/.gemini/antigravity-ide/brain`（旧版 IDE） |
+| 文件 | 每个对话的 `brain/<id>/.system_generated/logs/transcript_full.jsonl`；同目录只有 `transcript.jsonl` 时读它，两者都在时只读前者（调用集合相同）。不读 `chunks/`、`steps/`、`messages/`、截图与其他目录 |
+| 用量 | 每条 `type = PLANNER_RESPONSE` 记录是一次模型调用，按 `step_index` 去重；`input_tokens` 为不含缓存的输入，`cache_read_tokens` 为缓存读取，`output_tokens` 为输出，三桶互不重叠，总量为三者之和。缓存写入与推理没有字段，记为未知；推理是否计入输出无法确认 |
+| 模型 | 同一产品目录下 `conversations/<id>.db` 的 `gen_metadata`，按 `idx` 排序，每次调用一行；只解码 protobuf 字段 1.19（模型 ID），能解码但没有模型 ID 的行是失败的生成尝试（如 429 RESOURCE_EXHAUSTED），不参与配对；无法解码的行保留位置，对应调用记为未知。调用数与参与配对的行数相等时按位置配对；进行中的对话里尚未写入库的调用不推断模型，库变化后下次读取时配对；不相等、库缺失或无法读取时，该对话所有调用的模型记为未知并报 `ANTIGRAVITY_MODEL_UNPAIRED`，用量照常计入 |
+| 时间、入口、会话 | 时间取 `created_at`；2.0 应用与旧版 IDE 记为 Desktop，CLI 记为 CLI；会话 ID 为对话目录名，工作目录取自 `conversation_summaries.db`（见会话元数据表，2026-10-15 增补） |
+| 变化检测 | transcript 的戳记包含对话库、摘要库及其 WAL，只有库变化时也会重读 |
+| 依据 | 本机结构核查（2026-10-14，只看键名、列名与 protobuf 字段号；字段含义用配对后的相等率确认：17 个对话、3510 次调用，1.4.2 / 1.4.3 / 1.4.5 与输入 / 输出 / 缓存读取全部一致，1.19 全部是价格目录中的模型 ID 形态）。没有官方文档；社区工具与论坛报告的路径一致，但有报告称旧版 transcript 不含 token 字段 |
+| 验收 | 合成 fixture 与测试；本机只读扫描一次，只看计数：17 个文件、3510 条记录、模型全部识别、全部 measured、无错误码，扫描前后源库不变。本机的 2 个模型不在价格目录中，显示未定价，由用户在模型映射中指定，不自动猜测 |
+
 ## Cursor 文件合同与限制
 
-新增来源默认扫描 `.cursor/projects` 中允许的 SDK 文件；已有明确自定义路径或空列表仍保留。来源面板选择 `.csv`、`runs.ndjson` 或 SDK `index.db`，取消不改变状态。新选择替换 Cursor 路径，其他 Agent 目录继续追加；选择后沿用已有暂停采集流程。不能选择本应用 usage/quota 数据目录、认证文件或不支持的文件。SDK 自定义 stateRoot 可通过选择其 index.db 接入，本应用不会创建或配置 SDK，也不会执行推理。SQLite schema 不符合 runs 字段合同则拒绝；不读 IDE 全局 state.vscdb。
+新增来源默认扫描 `.cursor/projects` 中允许的 SDK 文件。来源面板选择 `.csv`、`runs.ndjson` 或 SDK `index.db`，取消不改变状态。新选择替换 Cursor 路径（记为追加该文件并排除默认路径），其他 Agent 目录继续追加；读取范围的保存方式见 [SOURCES-DISCOVERY-20261014.md](SOURCES-DISCOVERY-20261014.md)；选择后沿用已有暂停采集流程。不能选择本应用 usage/quota 数据目录、认证文件或不支持的文件。SDK 自定义 stateRoot 可通过选择其 index.db 接入，本应用不会创建或配置 SDK，也不会执行推理。SQLite schema 不符合 runs 字段合同则拒绝；不读 IDE 全局 state.vscdb。
 
 CSV 要求逐调用的 `Date` / `Timestamp`（ISO 8601 且带时区）、`Model`、`Input Tokens`（不含缓存）、`Cache Read Tokens`、`Cache Write Tokens`、`Output Tokens`；`Total Tokens` 和 `Request ID` / `Usage ID` 可选。也接受同时存在的 `Input Tokens (w/ Cache Write)`、`Input Tokens (w/o Cache Write)`，由两者差值确定缓存写入。数值只接受非负安全整数。引号、逗号、换行、BOM 受支持；无时区日期、非法日历日期、负值、重复列、缺少必要分类会显式拒绝或标部分记录无效。
 
@@ -38,7 +51,7 @@ UI 保留现有 Nowdex / Apple 风格、图表 pointer/wheel 穿透、动画及�
 
 没有新增账号配对、钥匙、认证凭据或恢复流程。持久去重仍是本地统计账本的 HMAC ID，不等同生产同步协议的防重放。同步上传、生产密钥/配对/恢复、云区域/预算、iOS 构建分发继续受 `DESKTOP-SCOPE-20261004.md` 的独立决定约束。模型定价依然只有专门固定 URL 子进程可 GET models.dev；其他产品进程及采集器保持网络阻断。
 
-旧统计/用户偏好/定价/连接不清理。偏好仅对缺少的新来源补入默认 roots，已有自定义目录和空列表不覆盖。坏记录、忙碌文件和读取失败保留已保存历史。持久层与扫描对同调用的多份观测使用同一整份快照选择规则：有效观测（measured/partial）优先于无效观测，其次总量较大者（较晚快照；缺字段快照的总量是下限），等总量时按质量、已知字段和模型信息选择；结果与文件、Agent 及扫描先后顺序无关（2026-10-06 用户确认“总量大的优先”）；较旧用量报 SOURCE_USAGE_REGRESSION、相同总量但 measured 分类冲突报 SOURCE_USAGE_CONFLICT，不逐桶取最大值。跨 OpenCode/MiMo 身份以原调用 ID、规范时间及模型生成 HMAC，与键顺序/计量增长无关；保持首次已保存来源归属。已证明副本通过 duplicateIds 抑制，原记录和迁移备份保留，旧 agent-specific HMAC 可由两来源对应 HMAC 关联。CSV 无请求 ID 使用规范时间/模型/四桶和 occurrence，冗余 Total Tokens 不改变身份；旧完整导出按相同规范多重集迁移，无法证明不同部分导出重叠的限制仍存在。Zstandard 先确认帧/块边界完整，再原生解码；完整帧校验损坏拒绝整次文件，截断末帧仅保留完整前缀并报 DEEPSEEK_LOG_INCOMPLETE，不推进最近成功时间。新版本在独立 dist 目录交付，不覆盖之前交付，不 reset/clean。
+旧统计/用户偏好/定价/连接不清理。偏好自 2026-10-14 起只保存相对自动位置的改动（追加、排除、停用），自动位置每次启动重新计算；旧版整份列表按 [SOURCES-DISCOVERY-20261014.md](SOURCES-DISCOVERY-20261014.md) 的规则迁移，追加的目录保留，空列表迁移为停用。坏记录、忙碌文件和读取失败保留已保存历史。持久层与扫描对同调用的多份观测使用同一整份快照选择规则：有效观测（measured/partial）优先于无效观测，其次总量较大者（较晚快照；缺字段快照的总量是下限），等总量时按质量、已知字段和模型信息选择；结果与文件、Agent 及扫描先后顺序无关（2026-10-06 用户确认“总量大的优先”）；较旧用量报 SOURCE_USAGE_REGRESSION、相同总量但 measured 分类冲突报 SOURCE_USAGE_CONFLICT，不逐桶取最大值。跨 OpenCode/MiMo 身份以原调用 ID、规范时间及模型生成 HMAC，与键顺序/计量增长无关；保持首次已保存来源归属。已证明副本通过 duplicateIds 抑制，原记录和迁移备份保留，旧 agent-specific HMAC 可由两来源对应 HMAC 关联。CSV 无请求 ID 使用规范时间/模型/四桶和 occurrence，冗余 Total Tokens 不改变身份；旧完整导出按相同规范多重集迁移，无法证明不同部分导出重叠的限制仍存在。Zstandard 先确认帧/块边界完整，再原生解码；完整帧校验损坏拒绝整次文件，截断末帧仅保留完整前缀并报 DEEPSEEK_LOG_INCOMPLETE，不推进最近成功时间。新版本在独立 dist 目录交付，不覆盖之前交付，不 reset/clean。
 
 ## 验收与官方格式依据
 
@@ -56,3 +69,29 @@ UI 保留现有 Nowdex / Apple 风格、图表 pointer/wheel 穿透、动画及�
 ## 2026-10-06 第三轮修复口径
 
 跨来源应用被选中的整份快照时，必须清除该快照不含的旧条件属性（包括 usageConflict / measurementQuality），同时保留首次来源身份和已输出对象的引用关系。SOURCE_USAGE_CONFLICT 来源诊断表示本次扫描观察到过分类冲突，不等同于所有最终记录仍有冲突；当前精确定价/分类是否可用由最终记录决定。同次扫描后续出现更大有效完整快照时可以恢复明确分类与定价；新出现的同总量矛盾仍暂停精确定价。UI 提示明确区分扫描观察与未解决记录。
+
+## 2026-10-12 会话元数据口径
+
+会话页（[SESSIONS-LAYER1-20261012.md](SESSIONS-LAYER1-20261012.md)）在本机统计库里按会话另存原始会话 ID 和工作目录。它们不进入 UsageSnapshotV1、统计导出和查询接口，渲染层经独立的 SessionListV1 白名单拿到，恢复命令只在主进程生成。
+
+| Agent | 会话 ID | 工作目录 |
+| --- | --- | --- |
+| Codex | session_meta.payload.id | session_meta.payload.cwd |
+| Claude Code | 行内 sessionId | 行内 cwd，取该会话第一次报告的值 |
+| OpenCode | message.sessionID / session_id | SQLite session.directory（列存在时）；历史 message JSON 无目录 |
+| Gemini CLI | sessionId / $set.sessionId | 与 chats 同级的 .project_root（≤ 4 KB，不跟随链接） |
+| DeepSeek Harness | 会话头 id | 会话头 cwd（可选） |
+| Antigravity | 对话目录名（`brain/<id>`） | 同一产品目录下 `conversation_summaries.db` 中该对话的 `workspace_uris`：恰好一个 `file:///` 地址时转为本地路径，否则未知；只读 `conversation_id` 与 `workspace_uris` 两列 |
+| WorkBuddy | 项目 JSONL 行内 `sessionId` | 行内 `cwd`；`workbuddy.db` 的会话总量补充取 `sessions.cwd`（只读 `id` 与 `cwd`） |
+| MiMo Code | message.sessionID | 与 OpenCode 相同：`session.directory`（列存在时） |
+| ZCode | `model_usage.session_id` | `session.directory`（只读 `id` 与 `directory`） |
+| Cursor | 不保存 | 不保存（本机无数据，未核对） |
+
+2026-11-01 起另取 Agent 自己保存的会话标题（[SESSIONS-NEXT-20261101.md](SESSIONS-NEXT-20261101.md)）：Codex 读 `sessions`/`archived_sessions` 上一级的 `session_index.jsonl`，只取 `id` 与 `thread_name`；Claude Code 取 `custom-title` 行的 `customTitle`；OpenCode、MiMo Code 取 `session.title`；Antigravity 取 `conversation_summaries.title`（`preview` 不读）。其他来源没有标题，不从消息截取。
+
+只保留带用量记录的会话；不带用量的行不改变解析结果。目录必须是本地绝对路径（拒绝 UNC 与控制字符），否则记为未知。一次新的观测完整替换该会话的元数据；源文件不再出现时元数据随记录保留。以上为合成测试口径，尚未用真实样本核对。
+
+
+## 独立静态配置检查（2026-10-20）
+
+所有者另行授权首批 Codex / Claude Code 的 MCP/hooks/skills 静态检查，见 `CONFIG-HEALTH-STATIC-20261020.md`。它不经过用量 `policy.allowedFile/localPath`，不扩大上述来源读取范围，不使用 session cwd、自动 home、真实认证或混合账号文件。独立 CLI 只接受显式绝对根和固定候选，不执行配置，不跟随引用；前端、查询、导出和原始配置之间不共享数据结构。首批使用受限安全语法；未知语法/版本行为保持未检查。本轮只有合成配置验收，没有真实配置扫描。
