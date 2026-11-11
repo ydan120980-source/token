@@ -14,9 +14,9 @@ jobs:
       matrix:
         candidate:
           - version: 0.1.3
-            sha: adf8f89c268a995b8fe86970cf6d79ee64f4b07c
+            sha: f7c29c48953178010d2faa5195e64aad73bf0079
           - version: 0.1.4
-            sha: a61593655918f899a670e7557db454014cfef6ef
+            sha: dcbc59f6f7857ee9e8b1a17578ad16827b6feda2
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,7 +39,12 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not $fixturePath) { throw 'Unable to resolve the release test directory' }
           $env:TEMP = $fixturePath
           $env:TMP = $fixturePath
-          npm run verify
+          npm run lint
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run typecheck:ui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Keep the Windows job fixtures from competing for compiler/startup time.
+          node --test --test-concurrency=1 tests/m1/*.test.js
       - name: Runtime audit
         run: npm run audit:runtime
       - name: Confirm the tag is the version in package.json
