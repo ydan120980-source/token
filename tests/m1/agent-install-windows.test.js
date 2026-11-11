@@ -35,5 +35,11 @@ test('Windows installer profile allows bounded long tasks while quota profile re
   const target = path.join(root, 'current.bin'), staged = path.join(root, 'replacement.bin'), input = path.join(root, 'replace.json'), script = path.join(root, 'replace.ps1');
   fs.writeFileSync(target, 'OLD'); fs.writeFileSync(staged, 'NEW'); fs.writeFileSync(input, JSON.stringify({ target, staged }));
   fs.writeFileSync(script, "param([string]$InputFile)\n$ErrorActionPreference='Stop'\n$r=[IO.File]::ReadAllText($InputFile)|ConvertFrom-Json\nAdd-Type -TypeDefinition '" + definition + "'\nif(![ClaudeNativeReplace]::ReplaceFile($r.target,$r.staged,[IntPtr]::Zero,0,[IntPtr]::Zero,[IntPtr]::Zero)){throw [Runtime.InteropServices.Marshal]::GetLastWin32Error()}\n[Console]::Out.WriteLine('REPLACED')");
-  const replaced = await runWindowsInstallerJob(powerShell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', script, '-InputFile', input], options); assert.equal(replaced.code, 0, replaced.stderr); assert.equal(replaced.reaped, true); assert.equal(fs.readFileSync(target, 'utf8'), 'NEW'); assert.equal(fs.existsSync(staged), false);
+  const replaceArgs = ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', script, '-InputFile', input];
+  // This fixture also compiles the P/Invoke type on a clean Windows runner.
+  const replaced = await runWindowsInstallerJob(powerShell, replaceArgs, { ...options, timeoutMs: 90000 });
+  assert.equal(replaced.code, 0, replaced.stderr);
+  assert.equal(replaced.reaped, true);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'NEW');
+  assert.equal(fs.existsSync(staged), false);
 });

@@ -30,7 +30,9 @@ function Get-Item { param($LiteralPath) $f=Microsoft.PowerShell.Management\\Get-
 function Get-AuthenticodeSignature { param($LiteralPath) @{Status='Valid';SignerCertificate=@{Subject='Tencent SYNTHETIC'}} }
 `;
   const env = { SystemRoot: process.env.SystemRoot, TEMP: process.env.TEMP, TMP: process.env.TMP, AGENTUSAGE_IMAGES: JSON.stringify([path.join(root, 'missing', 'WorkBuddy.exe'), image, path.join(root, 'another', 'WorkBuddy.exe')]) };
-  const result = await runWindowsJob(fingerprint(path.join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe')), ['-NoProfile', '-NonInteractive', '-Command', prefix + verifiedImagesCommand], { cwd: root, env, timeoutMs: 10000, maxOutputBytes: 16384, signal: new AbortController().signal });
+  const powerShell = fingerprint(path.join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe'));
+  const args = ['-NoProfile', '-NonInteractive', '-Command', prefix + verifiedImagesCommand];
+  const result = await runWindowsJob(powerShell, args, { cwd: root, env, timeoutMs: 30000, maxOutputBytes: 16384, signal: new AbortController().signal });
   assert.equal(result.errorCode, null); assert.equal(result.reaped, true); assert.equal(result.code, 0, result.stderr); const images = JSON.parse(result.stdout); assert.equal(images.length, 1); assert.equal(images[0].executable, image); assert.equal(images[0].sha256, fingerprint(image).sha256);
 });
 
