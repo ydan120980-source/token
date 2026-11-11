@@ -1,0 +1,83 @@
+name: Release preflight
+'on':
+  push:
+    branches:
+      - codex/release-preflight-20261111
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        candidate:
+          - version: 0.1.3
+            sha: adf8f89c268a995b8fe86970cf6d79ee64f4b07c
+          - version: 0.1.4
+            sha: a61593655918f899a670e7557db454014cfef6ef
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.candidate.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.13.1
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Download Electron binary
+        run: node node_modules/electron/install.js
+      - name: Verify (ESLint + types + units)
+        shell: pwsh
+        run: |
+          # Windows runner TEMP may contain a short-name alias. Use an owned, canonical directory for the test fixtures.
+          $fixtureDir = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP 'agent-usage-release-fixtures') -Force
+          $fixturePath = node -p "require('node:fs').realpathSync.native(process.argv[1])" $fixtureDir.FullName
+          if ($LASTEXITCODE -ne 0 -or -not $fixturePath) { throw 'Unable to resolve the release test directory' }
+          $env:TEMP = $fixturePath
+          $env:TMP = $fixturePath
+          npm run verify
+      - name: Runtime audit
+        run: npm run audit:runtime
+      - name: Confirm the tag is the version in package.json
+        shell: pwsh
+        env:
+          RELEASE_TAG: v${{ matrix.candidate.version }}
+        run: |
+          $tag = $env:RELEASE_TAG
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($tag -ne "v$version") {
+            Write-Error "tag $tag does not match package.json version $version (electron-updater reads v<version>)"
+            exit 1
+          }
+          Write-Host "releasing $version"
+      - name: Build the installer
+        run: npm run dist:win:setup
+      - name: Audit the packaged tree
+        run: npm run audit:package
+      - name: Check the update metadata the client needs
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $setup = "dist/AgentUsage-$version-preview-setup.exe"
+          # Each path is built into a variable first: inside @(...) a `+` binds looser than the comma, which would split the
+          # blockmap name into separate array items and fail the check even when every file is present.
+          $blockmap = "${setup}.blockmap"
+          foreach ($file in @($setup, 'dist/latest.yml', $blockmap)) {
+            if (-not (Test-Path $file)) { Write-Error "missing $file"; exit 1 }
+          }
+          if (-not (Test-Path 'dist/win-unpacked/resources/app-update.yml')) { Write-Error 'missing app-update.yml in the packaged resources'; exit 1 }
+          $yaml = Get-Content 'dist/latest.yml' -Raw
+          if ($yaml -notmatch [regex]::Escape("version: $version")) { Write-Error "latest.yml does not describe $version"; exit 1 }
+          if ($yaml -notmatch 'sha512:') { Write-Error 'latest.yml has no sha512 for the installer'; exit 1 }
+          Write-Host $yaml
+      - name: Keep the metadata with the run
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-metadata-v${{ matrix.candidate.version }}
+          path: |
+            dist/latest.yml
+            dist/win-unpacked/resources/app-update.yml
