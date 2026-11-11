@@ -56,7 +56,12 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not $fixturePath) { throw 'Unable to resolve the release test directory' }
           $env:TEMP = $fixturePath
           $env:TMP = $fixturePath
-          npm run verify
+          npm run lint
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run typecheck:ui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Keep the Windows job fixtures from competing for compiler/startup time.
+          node --test --test-concurrency=1 tests/m1/*.test.js
 
       - name: Runtime audit
         run: npm run audit:runtime
