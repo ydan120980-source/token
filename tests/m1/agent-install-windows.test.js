@@ -36,8 +36,17 @@ test('Windows installer profile allows bounded long tasks while quota profile re
   fs.writeFileSync(target, 'OLD'); fs.writeFileSync(staged, 'NEW'); fs.writeFileSync(input, JSON.stringify({ target, staged }));
   fs.writeFileSync(script, "param([string]$InputFile)\n$ErrorActionPreference='Stop'\n$r=[IO.File]::ReadAllText($InputFile)|ConvertFrom-Json\nAdd-Type -TypeDefinition '" + definition + "'\nif(![ClaudeNativeReplace]::ReplaceFile($r.target,$r.staged,[IntPtr]::Zero,0,[IntPtr]::Zero,[IntPtr]::Zero)){throw [Runtime.InteropServices.Marshal]::GetLastWin32Error()}\n[Console]::Out.WriteLine('REPLACED')");
   const replaceArgs = ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', script, '-InputFile', input];
-  // This fixture also compiles the P/Invoke type on a clean Windows runner.
-  const replaced = await runWindowsInstallerJob(powerShell, replaceArgs, { ...options, timeoutMs: 90000 });
+  // Windows PowerShell's compiler uses the system code page for its scratch
+  // paths. Keep the interop target in the Unicode fixture and compile separately.
+  const compilerDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-install-compiler-'));
+  t.after(() => remove(compilerDir));
+  const compilerOptions = {
+    ...options,
+    cwd: compilerDir,
+    timeoutMs: 90000,
+    env: { ...options.env, TEMP: compilerDir, TMP: compilerDir },
+  };
+  const replaced = await runWindowsInstallerJob(powerShell, replaceArgs, compilerOptions);
   assert.equal(replaced.code, 0, replaced.stderr);
   assert.equal(replaced.reaped, true);
   assert.equal(fs.readFileSync(target, 'utf8'), 'NEW');
