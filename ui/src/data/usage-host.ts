@@ -47,8 +47,8 @@ export interface UsageTrend {
   x: { key: string; label: string; partial: boolean; missing: boolean }[];
   entries: { key: string; label: string; tone: ChartTone; values: (number | null)[];
     style: "area" | "dashed"; axis: "left" | "right" }[];
-  readouts: UsageReadout[]; facts: UsageFact[];
-  tips: UsageTip[];
+  readout(index: number): UsageReadout | null; facts: UsageFact[];
+  tip(index: number): UsageTip | null;
   ticks: { left: { value: number; label: string }[]; right: { value: number; label: string }[] };
 }
 export interface UsageView {

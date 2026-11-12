@@ -58,6 +58,7 @@ test('B prices only what has no usable price of its own, and is labelled apart',
   assert.deepEqual(plan.fallback.models.map(item => item.key), ['router/none-such']);
   assert.equal(plan.after.fallbackTokens, 170); assert(plan.after.fallbackUsd > 0);
   value.setBilling({ ...value.billing, fallback: 'ref/anything' });
+  assert.deepEqual(value.pricing('coverage'), plan.after);
   const [unpriced, priced] = Object.values(value.state.records);
   assert.equal(value.estimate(unpriced).fallback, true);
   assert.equal(value.estimate(priced).lower, saved, 'a model with its own price keeps it');
@@ -73,10 +74,12 @@ test('C is off until asked, floors incomplete records on what they reported, and
   const records = [{ provider: 'vendor', model: 'one-model', quality: 'partial', output: null, totalTokens: 120 }, { provider: 'vendor', model: 'one-model', usageConflict: true }, { provider: 'vendor', model: 'one-model', quality: 'invalid-cache' }];
   const value = store(t, records, CATALOG), [partial, conflict, contradiction] = Object.values(value.state.records);
   assert.equal(value.estimate(partial).lower, null, 'off by default');
+  assert.equal(value.pricing('coverage'), null);
   assert.equal(value.pricePlan({ auto: false }).after.floorTokens, 0);
   const plan = value.pricePlan({ auto: false, partial: true });
   assert.equal(plan.after.floorTokens, 120); assert.equal(plan.floor.tokens, 120);
   value.setBilling({ ...value.billing, partialLowerBound: true });
+  assert.deepEqual(value.pricing('coverage'), plan.after);
   const floor = value.estimate(partial);
   assert.equal(floor.lowerBound, true); assert.equal(floor.reason, 'usage-lower-bound');
   assert.equal(floor.lower, 100 * 2e-6 + 20 * 2e-7, 'only the reported fields, output stays unknown');

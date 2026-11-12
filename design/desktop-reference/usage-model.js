@@ -24,22 +24,26 @@
   const weekday = day => (new Date(day + 'T12:00:00Z').getUTCDay() + 6) % 7;
   function sum(rows, field) { return rows.reduce((value, row) => value + (row[field] ?? 0), 0); }
   function reported(rows, field) {
-    const values = rows.map(row => row[field]).filter(known);
-    return values.length ? values.reduce((a, b) => a + b, 0) : null;
+    let total = null;
+    for (const row of rows) if (known(row[field])) total = (total ?? 0) + row[field];
+    return total;
   }
   function aggregate(rows) {
-    const priced = rows.filter(row => known(row.estimatedCostUsd));
-    const total = reported(rows, 'totalTokens');
-    const savings = rows.filter(row => known(row.cacheSavingsUsd) && row.cacheSavingsUsd > 0);
-    return {
-      total, partial: rows.some(row => !known(row.totalTokens)),
-      cost: priced.length ? sum(priced, 'estimatedCostUsd') : null,
-      upper: priced.length ? priced.reduce((n, row) => n + (row.estimatedCostUpperUsd ?? row.estimatedCostUsd), 0) : null,
-      costPartial: priced.length < rows.length || rows.some(row => row.unpricedRecords > 0 || row.pricedTokens < row.totalTokens),
-      savings: savings.length ? sum(savings, 'cacheSavingsUsd') : null,
-      bounded: sum(rows, 'boundedTokens'), records: sum(rows, 'records'),
-      coverage: total ? sum(rows, 'pricedTokens') / total : null
-    };
+    let total = null, cost = null, upper = null, savings = null;
+    let partial = false, costPartial = false, bounded = 0, records = 0, pricedTokens = 0;
+    for (const row of rows) {
+      if (known(row.totalTokens)) total = (total ?? 0) + row.totalTokens; else partial = true;
+      if (known(row.estimatedCostUsd)) {
+        cost = (cost ?? 0) + row.estimatedCostUsd;
+        upper = (upper ?? 0) + (row.estimatedCostUpperUsd ?? row.estimatedCostUsd);
+      } else costPartial = true;
+      if (row.unpricedRecords > 0 || row.pricedTokens < row.totalTokens) costPartial = true;
+      if (known(row.cacheSavingsUsd) && row.cacheSavingsUsd > 0) savings = (savings ?? 0) + row.cacheSavingsUsd;
+      bounded += row.boundedTokens ?? 0;
+      records += row.records ?? 0;
+      pricedTokens += row.pricedTokens ?? 0;
+    }
+    return { total, partial, cost, upper, costPartial, savings, bounded, records, coverage: total ? pricedTokens / total : null };
   }
   function filterRows(rows, state, skip = null) {
     const agent = skip === 'agent' ? 'all' : state.agent;
@@ -55,15 +59,15 @@
     return { from, to, complete: from >= coverageStart };
   }
   function dayTotals(rows) {
-    const groups = new Map();
+    const totals = new Map();
     for (const row of rows) {
-      if (!groups.has(row.date)) groups.set(row.date, []);
-      groups.get(row.date).push(row);
+      if (known(row.totalTokens)) totals.set(row.date, (totals.get(row.date) ?? 0) + row.totalTokens);
+      else if (!totals.has(row.date)) totals.set(row.date, null);
     }
-    return new Map([...groups].map(([day, items]) => [day, reported(items, 'totalTokens')]));
+    return totals;
   }
   function strip(rows, today) {
-    const days = dates(shift(today, -29), today), totals = dayTotals(rows);
+    const start = shift(today, -29), days = dates(start, today), totals = dayTotals(within(rows, start, today));
     const maximum = Math.max(1, ...days.map(day => totals.get(day) ?? 0));
     return days.map(day => ({ key: day, value: totals.has(day) ? totals.get(day) : null,
       state: !totals.has(day) ? 'unobserved' : totals.get(day) === null ? 'unpriced' : totals.get(day) === 0 ? 'zero' : 'value',
@@ -186,7 +190,10 @@
     const bucket = values => hourly ? hours.map((hour, index) => ({ label: pad(hour) + ':00', start, end, hour,
       value: values[index], partial: false })) : chart.bucketSeries(shown, lead ? values.slice(lead) : values, grain, state.display);
     const buckets = bucket(total);
-    entries = entries.map(entry => ({ ...entry, buckets: bucket(entry.values), values: bucket(entry.values).map(item => item.value) }));
+    entries = entries.map(entry => {
+      const buckets = bucket(entry.values);
+      return { ...entry, buckets, values: buckets.map(item => item.value) };
+    });
     return { start, end, grain, hourly, buckets, entries, subset, aggregate: aggregate(subset), observed,
       displayLabel: hourly ? '每小时' : grain === 'week' ? '每周' : grain === 'month' ? '每月' : '每日',
       autoLabel: '自动（' + (grain === 'week' ? '按周' : '按日') + '）', lead: lead ? shown[0] : null };
@@ -205,7 +212,8 @@
   const short = value => value === null || value === undefined ? '未知' : value >= 1e9 ? (value / 1e9).toFixed(1) + 'B' :
     value >= 1e6 ? (value / 1e6).toFixed(1) + 'M' : value >= 1e3 ? (value / 1e3).toFixed(1) + 'K' : String(value);
   const displayModel = value => value === 'unknown' ? '模型未记录' : value;
-  const exact = value => value === null ? null : value.toLocaleString('zh-CN');
+  const exactNumber = new Intl.NumberFormat('zh-CN');
+  const exact = value => typeof value === 'number' ? exactNumber.format(value) : value === null ? null : value.toLocaleString('zh-CN');
   const hasUsage = row => row.totalTokens > 0 || [...fields, 'reasoning']
     .some(field => (row.knownUsage?.[field] ?? row[field]) > 0);
   const percentage = value => value > 0 && value < .005 ? '<1%' : (value * 100).toFixed(0) + '%';
@@ -233,6 +241,8 @@
     return { title, aside: summary.total === null ? '数值未知' : '合计 ' + value(summary.total), rows, note };
   }
   function project(input, state, globals) {
+    // Each view can outlive the next input event while its sections mount.
+    state = { ...state, hidden: [...state.hidden] };
     const { rows, hourlyRows, today, coverageStart, realData, recorded, currentHour, sessionCounts, sources } = input;
     const { usageMath: math, insightsMath: insights, displayValues: display, chartUi: chart, agents } = globals;
     const filtered = filterRows(rows, state), start = math.startFor(today, state.period, coverageStart);
@@ -276,14 +286,20 @@
       return Object.entries(agents).filter(([id]) => items.some(row => row.agent === id && used(row))).map(([id, meta]) => {
         const subset = items.filter(row => row.agent === id), amount = aggregate(subset);
         const entries = new Set(subset.map(row => row.entry));
+        const byModel = new Map();
+        for (const row of subset) {
+          let group = byModel.get(row.model);
+          if (!group) byModel.set(row.model, group = []);
+          group.push(row);
+        }
         const entry = entries.size !== 1 ? '多个入口' : ({ desktop: 'Desktop', cli: 'CLI', sdk: 'SDK', export: '用量导出',
           harness: 'Harness', unknown: '入口未知' }[[...entries][0]] || '入口未知');
         const name = meta.name + (['codex', 'mimo'].includes(id) ? ' / ' + entry : '');
         return { id, name, records: String(amount.records), tokens: tokens(amount), price: price(amount, meta.name + ' 估算'),
           sessions: sessionCounts[date + ':' + id] ?? null,
-          models: [...new Set(subset.map(row => row.model))].filter(model => subset.some(row => row.model === model && used(row)))
-            .map(key => {
-              const group = subset.filter(row => row.model === key), amount = aggregate(group), hit = insights.cacheHitRate(group, recorded);
+          models: [...byModel].filter(([, group]) => group.some(used))
+            .map(([key, group]) => {
+              const amount = aggregate(group), hit = insights.cacheHitRate(group, recorded);
               const output = group.every(row => row.output !== null && row.output !== undefined) ? short(sum(group, 'output')) :
                 sum(group.map(row => ({ value: row.knownUsage?.output || 0 })), 'value') > 0 ?
                   '≥ ' + short(group.reduce((n, row) => n + (row.knownUsage?.output || 0), 0)) : null;
@@ -301,78 +317,149 @@
     const signed = value => value === null ? null : Math.abs(value) < .005 ? '持平' : (value > 0 ? '+' : '−') + Math.abs(value * 100).toFixed(1) + '%';
     const average = observed.size && total.total !== null ? total.total / observed.size : null;
     const change = state.period !== 'today' && observed.size > 1 && average > 0 && daily.length && current.total !== null ? current.total / average - 1 : null;
-    const trendContext = { ...input, hourlyReady: input.hourlyReady(state.trendRange?.start ?? start) };
-    const projection = trend(rows, hourlyRows, trendContext, state, math, chart);
-    const selected = state.selectedDay;
-    const dayRows = selected ? filtered.filter(row => row.date === selected) : [];
-    const daySeen = selected && (realData ? rows.some(row => row.date === selected) : selected >= coverageStart && rows.length > 0);
-    const activityRows = within(filterRows(hourlyRows, state), state.heatRange === '365' ? shift(today, -364) : state.heatRange + '-01-01', today);
-    const grid = insights.weekHour(activityRows), slotObserved = new Set(), slotKnown = new Set(), slotPartial = new Set();
-    for (const row of activityRows) {
-      const key = weekday(row.date) + ':' + row.hour;
-      slotObserved.add(key);
-      if (known(row.totalTokens)) slotKnown.add(key); else slotPartial.add(key);
-    }
-    const slot = state.slot ? slotRows(activityRows, state.slot.day, state.slot.hour) : [];
-    const slotAmount = aggregate(slot), slotDates = slot.filter(row => row.totalTokens > 0).map(row => row.date);
-    const cal = calendar(filtered, rows, today, coverageStart, state.heatRange, realData, selected, selected ? [] : slotDates);
-    const runs = insights.streaks(cal.totals, cal.start, today), peak = insights.peakWindow(grid.hours);
-    const hours = selected ? dayHours(filterRows(hourlyRows, state), selected, today, currentHour, input.hourlyReady(selected)) : null;
     const labelDay = day => day + ' · ' + weekdays[weekday(day)];
     const bars = strip(filtered, today).map(bar => ({ ...bar, tone: 'ink:1',
       label: labelDay(bar.key) + '：' + (bar.state === 'unobserved' ? '未观测到记录' :
         bar.value === null ? '未知' : exact(bar.value) + ' Token') + '，查看明细' }));
-    const timeCells = grid.cells.flatMap((cells, day) => cells.map((cell, hour) => {
-      const key = day + ':' + hour, unknown = slotObserved.has(key) && !slotKnown.has(key);
-      const partial = slotPartial.has(key) ? '+' : '';
-      return { key, row: day, col: hour, level: unknown ? null : level(cell.tokens, grid.max),
-        label: slotName(day, hour) + '，' + (unknown ? '未知' : cell.tokens || partial ?
-          exact(cell.tokens) + partial + ' Token，' + cell.days + ' 天' : '无用量'),
-        tip: { title: slotName(day, hour), aside: unknown ? '未知' : cell.tokens || partial ?
-          short(cell.tokens) + partial + ' Token' : '无用量', note: cell.tokens ? cell.days + ' 天有用量' : null } };
-    }));
-    const trendEntries = projection.entries.map(entry => ({ ...entry, label: displayModel(entry.label),
-      style: entry.unit === 'cost' && state.metric === 'tokens' ? 'dashed' : 'area',
-      axis: entry.unit === 'cost' && state.metric === 'tokens' ? 'right' : 'left' }));
-    const axisTicks = axis => {
-      const visible = trendEntries.filter(entry => entry.axis === axis && !state.hidden.includes(entry.key));
-      if (!visible.length && axis === 'right') return [];
-      const peak = Math.max(0, ...visible.flatMap(entry => entry.values.filter(known)));
-      // Same numeric scale as the existing kit geometry/cost-model niceStep; display stays with existing formatters.
-      const raw = peak / 4, exponent = raw > 0 ? Math.floor(Math.log10(raw)) : 0, base = raw / 10 ** exponent;
-      const step = raw > 0 ? (base <= 1 ? 1 : base <= 2 ? 2 : base <= 2.5 ? 2.5 : base <= 5 ? 5 : 10) * 10 ** exponent : 1;
-      return Array.from({ length: Math.max(1, Math.ceil(peak / step)) + 1 }, (_, index) => ({ value: index * step,
-        label: axis === 'right' || state.metric === 'cost' ? display.usd(index * step) : short(index * step) }));
-    };
-    function trendReadout(index) {
-      const bucket = projection.buckets[index];
-      if (!bucket) return null;
-      const items = trendEntries.filter(entry => !state.hidden.includes(entry.key)).map(entry => ({ key: entry.key,
-        label: entry.label, tone: entry.tone, value: entry.values[index] === null ? null :
-          entry.unit === 'cost' ? display.usd(entry.values[index]) : exact(entry.values[index]) }));
-      const missing = !projection.hourly && !dates(bucket.start, bucket.end).some(day => projection.observed.has(day));
-      return { label: projection.hourly ? bucket.start + ' ' + bucket.label : bucket.start === bucket.end ? bucket.start : bucket.start + ' 至 ' + bucket.end,
-        items, partial: bucket.partial, missing };
+    function activityView() {
+      const selected = state.selectedDay;
+      const dayRows = selected ? filtered.filter(row => row.date === selected) : [];
+      const daySeen = selected && (realData ? rows.some(row => row.date === selected) : selected >= coverageStart && rows.length > 0);
+      const activityRows = within(filterRows(hourlyRows, state), state.heatRange === '365' ? shift(today, -364) : state.heatRange + '-01-01', today);
+      const grid = insights.weekHour(activityRows), slotObserved = new Set(), slotKnown = new Set(), slotPartial = new Set();
+      const weekdaysByDate = new Map();
+      for (const row of activityRows) {
+        let day = weekdaysByDate.get(row.date);
+        if (day === undefined) { day = weekday(row.date); weekdaysByDate.set(row.date, day); }
+        const key = day + ':' + row.hour;
+        slotObserved.add(key);
+        if (known(row.totalTokens)) slotKnown.add(key); else slotPartial.add(key);
+      }
+      const slot = state.slot ? slotRows(activityRows, state.slot.day, state.slot.hour) : [];
+      const slotAmount = aggregate(slot), slotDates = slot.filter(row => row.totalTokens > 0).map(row => row.date);
+      const cal = calendar(filtered, rows, today, coverageStart, state.heatRange, realData, selected, selected ? [] : slotDates);
+      const runs = insights.streaks(cal.totals, cal.start, today), peak = insights.peakWindow(grid.hours);
+      const hours = selected ? dayHours(filterRows(hourlyRows, state), selected, today, currentHour, input.hourlyReady(selected)) : null;
+      const timeCells = grid.cells.flatMap((cells, day) => cells.map((cell, hour) => {
+        const key = day + ':' + hour, unknown = slotObserved.has(key) && !slotKnown.has(key);
+        const partial = slotPartial.has(key) ? '+' : '';
+        return { key, row: day, col: hour, level: unknown ? null : level(cell.tokens, grid.max),
+          label: slotName(day, hour) + '，' + (unknown ? '未知' : cell.tokens || partial ?
+            exact(cell.tokens) + partial + ' Token，' + cell.days + ' 天' : '无用量'),
+          tip: { title: slotName(day, hour), aside: unknown ? '未知' : cell.tokens || partial ?
+            short(cell.tokens) + partial + ' Token' : '无用量', note: cell.tokens ? cell.days + ' 天有用量' : null } };
+      }));
+      const dayAmount = selected ? aggregate(dayRows) : null;
+      return {
+        calendar: { ...cal, totals: undefined, cells: cal.cells.map(cell => ({ ...cell,
+          label: labelDay(cell.key) + ' · ' + (cell.observed && cell.value !== null ? exact(cell.value) + ' Token' : '未观测到记录'),
+          tip: { title: labelDay(cell.key), aside: !cell.observed ? '未观测到记录' : cell.value === null ? '未知' : exact(cell.value) + ' Token' } })) },
+        activity: { rangeLabel: '星期 × 小时 · ' + (state.heatRange === '365' ? '最近一年' : state.heatRange + ' 年') +
+            (scope === '全部 Agent' ? '' : ' · ' + scope),
+          cells: timeCells, empty: grid.max || slotPartial.size ? '' : '当前范围暂无按小时的用量。',
+          peakSlot: grid.peak ? grid.peak.weekday + ':' + grid.peak.hour : null,
+          stats: [{ label: '活跃', value: String([...cal.totals.values()].filter(value => value > 0).length) + ' 天' },
+            { label: '当前连续', value: runs.current + ' 天' }, { label: '最长连续', value: runs.longest.length + ' 天',
+              title: runs.longest.from ? runs.longest.from + ' 至 ' + runs.longest.to : '' },
+            ...(peak ? [{ label: '高峰三小时', value: pad(peak.start) + '–' + (peak.end ? pad(peak.end) : '24') + ' 点',
+              title: '这三个小时占范围内 ' + (peak.share * 100).toFixed(0) + '% 的 token' }] : [])],
+          facts: [{ label: '最集中的时段', value: grid.peak ? slotName(grid.peak.weekday, grid.peak.hour) : null },
+            { label: '最活跃的星期', value: grid.peakWeekday === null ? null : weekdays[grid.peakWeekday] },
+            { label: '有用量的时段', value: grid.active + ' / 168' }],
+          slot: state.slot ? { key: state.slot.day + ':' + state.slot.hour, label: slotName(state.slot.day, state.slot.hour),
+            tokens: tokens(slotAmount), price: price(slotAmount, '时段估算'),
+            shares: insights.shares(slot, 'agent', 4).map(item => ({ key: item.key ?? 'other', name: item.key ? agents[item.key]?.name ?? item.key :
+              '其他 ' + item.count + ' 个 Agent', tokens: short(item.tokens), share: percentage(item.tokenShare),
+              value: item.tokens, tone: item.key ? 'agent:' + item.key : 'muted' })) } : null,
+          hours: hours ? { ...hours, draw: Boolean(hours.peak) || hours.hours.some(hour => !hour.future && hour.value === null),
+            facts: [{ label: '有用量的小时', value: hours.used + ' / ' + (hours.last + 1) },
+            { label: '峰值', value: hours.peak ? pad(hours.peak.hour) + ':00 · ' + short(hours.peak.value) + ' Token' : null }],
+            ticks: [0, 6, 12, 18, 23].map(value => ({ value, label: pad(value) })),
+            hours: hours.hours.map(hour => {
+              const lead = hour.value ? insights.shares(hour.items, 'agent', 1)[0] : null;
+              const name = lead?.key ? agents[lead.key]?.name : null;
+              return { key: hour.key, value: hour.future ? null : hour.value,
+            state: hour.future ? 'future' : hour.value === null ? 'unpriced' : hour.value === 0 ? 'zero' : 'value',
+            tone: hours.peak?.hour === hour.hour ? 'heat:4' : 'heat:3', mark: hours.peak?.hour === hour.hour ? 'peak' : undefined,
+            label: pad(hour.hour) + ':00–' + pad(hour.hour + 1) + ':00，' + (hour.future ? '尚未到达' : hour.value === null ? '未知' : exact(hour.value) + ' Token'),
+            tip: { title: pad(hour.hour) + ':00–' + pad(hour.hour + 1) + ':00',
+              aside: hour.future ? '尚未到达' : hour.value === null ? '未知' : hour.value ? short(hour.value) + ' Token' : '无用量',
+              note: name ? name + ' ' + percentage(lead.tokenShare) : null } };
+            }) } : null },
+        day: selected ? { date: selected, observed: Boolean(daySeen), tokens: daySeen ? tokens(dayAmount) : null,
+          records: daySeen ? exact(dayAmount.records) : null, price: price(dayAmount, selected + ' 估算'),
+          categories: categories(dayRows), clients: clients(dayRows, selected) } : null,
+      };
     }
-    const recent = !state.trendRange && state.period === 'all' ? { from: shift(today, -29), to: today } :
-      { from: projection.start, to: projection.end };
-    const before = { from: shift(recent.from, -(dayCount(recent.from, recent.to) + 1)), to: shift(recent.from, -1) };
-    const pick = row => state.metric === 'cost' ? row.estimatedCostUsd : row.totalTokens;
-    const valueOf = items => { const values = items.map(pick).filter(known); return values.length ? values.reduce((a, b) => a + b, 0) : null; };
-    const trendFilteredHours = filterRows(hourlyRows, state);
-    const now = projection.hourly ? valueOf(trendFilteredHours.filter(row => row.date === projection.start && row.hour <= (projection.start === today ? currentHour : 23))) : valueOf(within(filtered, recent.from, recent.to));
-    const then = projection.hourly ? input.hourlyReady(shift(projection.start, -1)) ? valueOf(trendFilteredHours.filter(row => row.date === shift(projection.start, -1) && row.hour <= (projection.start === today ? currentHour : 23))) : null :
-      before.from >= coverageStart ? valueOf(within(filtered, before.from, before.to)) : null;
-    const unitRows = projection.hourly ? trendFilteredHours.filter(row => row.date === projection.start) : projection.subset;
-    const units = new Map(), leads = new Map();
-    for (const row of unitRows) if (known(pick(row))) {
-      const key = projection.hourly ? row.hour : row.date;
-      units.set(key, (units.get(key) || 0) + pick(row));
-      leads.set(row.model, (leads.get(row.model) || 0) + pick(row));
+    function trendView() {
+      const trendContext = { ...input, hourlyReady: input.hourlyReady(state.trendRange?.start ?? start) };
+      const projection = trend(rows, hourlyRows, trendContext, state, math, chart);
+      const trendEntries = projection.entries.map(entry => ({ ...entry, label: displayModel(entry.label),
+        style: entry.unit === 'cost' && state.metric === 'tokens' ? 'dashed' : 'area',
+        axis: entry.unit === 'cost' && state.metric === 'tokens' ? 'right' : 'left' }));
+      const axisTicks = axis => {
+        const visible = trendEntries.filter(entry => entry.axis === axis && !state.hidden.includes(entry.key));
+        if (!visible.length && axis === 'right') return [];
+        const peak = Math.max(0, ...visible.flatMap(entry => entry.values.filter(known)));
+        // Same numeric scale as the existing kit geometry/cost-model niceStep; display stays with existing formatters.
+        const raw = peak / 4, exponent = raw > 0 ? Math.floor(Math.log10(raw)) : 0, base = raw / 10 ** exponent;
+        const step = raw > 0 ? (base <= 1 ? 1 : base <= 2 ? 2 : base <= 2.5 ? 2.5 : base <= 5 ? 5 : 10) * 10 ** exponent : 1;
+        return Array.from({ length: Math.max(1, Math.ceil(peak / step)) + 1 }, (_, index) => ({ value: index * step,
+          label: axis === 'right' || state.metric === 'cost' ? display.usd(index * step) : short(index * step) }));
+      };
+      function trendReadout(index) {
+        const bucket = projection.buckets[index];
+        if (!bucket) return null;
+        const items = trendEntries.filter(entry => !state.hidden.includes(entry.key)).map(entry => ({ key: entry.key,
+          label: entry.label, tone: entry.tone, value: entry.values[index] === null ? null :
+            entry.unit === 'cost' ? display.usd(entry.values[index]) : exact(entry.values[index]) }));
+        const missing = !projection.hourly && !dates(bucket.start, bucket.end).some(day => projection.observed.has(day));
+        return { label: projection.hourly ? bucket.start + ' ' + bucket.label : bucket.start === bucket.end ? bucket.start : bucket.start + ' 至 ' + bucket.end,
+          items, partial: bucket.partial, missing };
+      }
+      const recent = !state.trendRange && state.period === 'all' ? { from: shift(today, -29), to: today } :
+        { from: projection.start, to: projection.end };
+      const before = { from: shift(recent.from, -(dayCount(recent.from, recent.to) + 1)), to: shift(recent.from, -1) };
+      const pick = row => state.metric === 'cost' ? row.estimatedCostUsd : row.totalTokens;
+      const valueOf = items => { const values = items.map(pick).filter(known); return values.length ? values.reduce((a, b) => a + b, 0) : null; };
+      const trendFilteredHours = filterRows(hourlyRows, state);
+      const now = projection.hourly ? valueOf(trendFilteredHours.filter(row => row.date === projection.start && row.hour <= (projection.start === today ? currentHour : 23))) : valueOf(within(filtered, recent.from, recent.to));
+      const then = projection.hourly ? input.hourlyReady(shift(projection.start, -1)) ? valueOf(trendFilteredHours.filter(row => row.date === shift(projection.start, -1) && row.hour <= (projection.start === today ? currentHour : 23))) : null :
+        before.from >= coverageStart ? valueOf(within(filtered, before.from, before.to)) : null;
+      const unitRows = projection.hourly ? trendFilteredHours.filter(row => row.date === projection.start) : projection.subset;
+      const units = new Map(), leads = new Map();
+      for (const row of unitRows) if (known(pick(row))) {
+        const key = projection.hourly ? row.hour : row.date;
+        units.set(key, (units.get(key) || 0) + pick(row));
+        leads.set(row.model, (leads.get(row.model) || 0) + pick(row));
+      }
+      const trendPeak = [...units].filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1])[0];
+      const lead = [...leads].sort((a, b) => b[1] - a[1])[0], leadTotal = [...leads.values()].reduce((a, b) => a + b, 0);
+      const perRecord = insights.efficiency(projection.subset, recorded).tokensPerRecord;
+      return { ...projection, observed: undefined, subset: undefined, aggregate: undefined, entries: trendEntries,
+        x: projection.buckets.map(bucket => ({ key: projection.hourly ? String(bucket.hour) : bucket.start,
+          label: projection.hourly ? bucket.label : bucket.start.slice(5), partial: bucket.partial,
+          missing: !projection.hourly && bucket.start >= coverageStart && !dates(bucket.start, bucket.end).some(day => projection.observed.has(day)) })),
+        readout: trendReadout,
+        ticks: { left: axisTicks('left'), right: axisTicks('right') },
+        tip: index => trendTooltip(projection, state, index, chart, display),
+        total: state.metric === 'cost' ? price(projection.aggregate, '区间估算').lower : tokens(projection.aggregate),
+        rangeLabel: state.trendRange ? projection.start === projection.end ? projection.start.slice(5) :
+          projection.start.slice(5) + ' – ' + projection.end.slice(5) : periodLabel,
+        coverage: projection.aggregate.coverage === null ? null : (projection.aggregate.coverage * 100).toFixed(1) + '%',
+        empty: trendEntries.some(entry => entry.values.some(known)) ? '' : state.display === 'average' && projection.subset.length ?
+          '30 日均需要近 30 天里至少 ' + math.AVERAGE_MIN + ' 个有记录的日期，这个区间里还没有。' : '此筛选条件下没有可用数据。',
+        facts: [{ label: projection.hourly ? projection.start === today ? '较昨天同时段' : '较前一天' : !state.trendRange && state.period === 'all' ?
+          '近 30 天较前 30 天' : '较上一区间', value: signed(insights.change(now, then)) },
+          { label: projection.hourly ? '峰值时段' : '峰值日', value: trendPeak ? (state.metric === 'cost' ? display.usd(trendPeak[1]) : short(trendPeak[1])) +
+            ' · ' + (projection.hourly ? pad(trendPeak[0]) + ':00' : trendPeak[0].slice(5)) : null,
+            day: trendPeak ? projection.hourly ? projection.start : trendPeak[0] : null },
+          { label: '主力模型', value: lead && lead[1] > 0 ? displayModel(lead[0]) + ' · ' + (lead[1] / leadTotal * 100).toFixed(0) + '%' : null,
+            title: lead ? displayModel(lead[0]) : '' },
+          { label: '单次调用 Token', value: perRecord === null ? null : short(Math.round(perRecord)),
+            title: '范围内平均每条记录的 Token，一条记录约为一次模型调用' }] };
     }
-    const trendPeak = [...units].filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1])[0];
-    const lead = [...leads].sort((a, b) => b[1] - a[1])[0], leadTotal = [...leads.values()].reduce((a, b) => a + b, 0);
-    const perRecord = insights.efficiency(projection.subset, recorded).tokensPerRecord;
+    let activity, trendResult, todayClients;
     const agentTotals = {};
     for (const row of input.allRows) agentTotals[row.agent] = (agentTotals[row.agent] || 0) + (row.totalTokens ?? 0);
     const agentItems = Object.entries(agents).map(([id, meta], index) => ({ id, name: meta.name, recorded: Boolean(agentTotals[id]), index }))
@@ -389,70 +476,15 @@
         today: daily.length ? '今天 ' + short(current.total) + (change === null ? '' : ' · 较日均 ' + signed(change)) : '今天暂无记录', bars },
       today: { date: today, tokens: tokens(current), records: daily.length ? exact(current.records) : null,
         price: price(current, '今日估算'), sessions: daily.length ? sessionCounts[today + ':' + state.agent] ?? null : null,
-        categories: categories(daily), clients: clients(daily, today),
+        get categories() { return categories(daily); },
+        get clients() { return todayClients ??= clients(daily, today); },
         empty: daily.length ? daily.some(hasUsage) ? '' : '此日只有 0 token 的空记录。' :
           rows.some(row => row.date === today) ? '今天在当前筛选下没有用量记录。' : input.error ? '今天的统计没能读取，已有数据保留不变。' :
             input.collecting ? '正在读取今天的用量…' : !input.enabled ? '采集已暂停，今天的用量暂不更新。' : '今天还没有用量记录。' },
-      calendar: { ...cal, totals: undefined, cells: cal.cells.map(cell => ({ ...cell,
-        label: labelDay(cell.key) + ' · ' + (cell.observed && cell.value !== null ? exact(cell.value) + ' Token' : '未观测到记录'),
-        tip: { title: labelDay(cell.key), aside: !cell.observed ? '未观测到记录' : cell.value === null ? '未知' : exact(cell.value) + ' Token' } })) },
-      activity: { rangeLabel: '星期 × 小时 · ' + (state.heatRange === '365' ? '最近一年' : state.heatRange + ' 年') +
-          (scope === '全部 Agent' ? '' : ' · ' + scope),
-        cells: timeCells, empty: grid.max || slotPartial.size ? '' : '当前范围暂无按小时的用量。',
-        peakSlot: grid.peak ? grid.peak.weekday + ':' + grid.peak.hour : null,
-        stats: [{ label: '活跃', value: String([...cal.totals.values()].filter(value => value > 0).length) + ' 天' },
-          { label: '当前连续', value: runs.current + ' 天' }, { label: '最长连续', value: runs.longest.length + ' 天',
-            title: runs.longest.from ? runs.longest.from + ' 至 ' + runs.longest.to : '' },
-          ...(peak ? [{ label: '高峰三小时', value: pad(peak.start) + '–' + (peak.end ? pad(peak.end) : '24') + ' 点',
-            title: '这三个小时占范围内 ' + (peak.share * 100).toFixed(0) + '% 的 token' }] : [])],
-        facts: [{ label: '最集中的时段', value: grid.peak ? slotName(grid.peak.weekday, grid.peak.hour) : null },
-          { label: '最活跃的星期', value: grid.peakWeekday === null ? null : weekdays[grid.peakWeekday] },
-          { label: '有用量的时段', value: grid.active + ' / 168' }],
-        slot: state.slot ? { key: state.slot.day + ':' + state.slot.hour, label: slotName(state.slot.day, state.slot.hour),
-          tokens: tokens(slotAmount), price: price(slotAmount, '时段估算'),
-          shares: insights.shares(slot, 'agent', 4).map(item => ({ key: item.key ?? 'other', name: item.key ? agents[item.key]?.name ?? item.key :
-            '其他 ' + item.count + ' 个 Agent', tokens: short(item.tokens), share: percentage(item.tokenShare),
-            value: item.tokens, tone: item.key ? 'agent:' + item.key : 'muted' })) } : null,
-        hours: hours ? { ...hours, draw: Boolean(hours.peak) || hours.hours.some(hour => !hour.future && hour.value === null),
-          facts: [{ label: '有用量的小时', value: hours.used + ' / ' + (hours.last + 1) },
-          { label: '峰值', value: hours.peak ? pad(hours.peak.hour) + ':00 · ' + short(hours.peak.value) + ' Token' : null }],
-          ticks: [0, 6, 12, 18, 23].map(value => ({ value, label: pad(value) })),
-          hours: hours.hours.map(hour => {
-            const lead = hour.value ? insights.shares(hour.items, 'agent', 1)[0] : null;
-            const name = lead?.key ? agents[lead.key]?.name : null;
-            return { key: hour.key, value: hour.future ? null : hour.value,
-          state: hour.future ? 'future' : hour.value === null ? 'unpriced' : hour.value === 0 ? 'zero' : 'value',
-          tone: hours.peak?.hour === hour.hour ? 'heat:4' : 'heat:3', mark: hours.peak?.hour === hour.hour ? 'peak' : undefined,
-          label: pad(hour.hour) + ':00–' + pad(hour.hour + 1) + ':00，' + (hour.future ? '尚未到达' : hour.value === null ? '未知' : exact(hour.value) + ' Token'),
-          tip: { title: pad(hour.hour) + ':00–' + pad(hour.hour + 1) + ':00',
-            aside: hour.future ? '尚未到达' : hour.value === null ? '未知' : hour.value ? short(hour.value) + ' Token' : '无用量',
-            note: name ? name + ' ' + percentage(lead.tokenShare) : null } };
-          }) } : null },
-      day: selected ? { date: selected, observed: Boolean(daySeen), tokens: daySeen ? tokens(aggregate(dayRows)) : null,
-        records: daySeen ? exact(aggregate(dayRows).records) : null, price: price(aggregate(dayRows), selected + ' 估算'),
-        categories: categories(dayRows), clients: clients(dayRows, selected) } : null,
-      trend: { ...projection, observed: undefined, subset: undefined, aggregate: undefined, entries: trendEntries,
-        x: projection.buckets.map(bucket => ({ key: projection.hourly ? String(bucket.hour) : bucket.start,
-          label: projection.hourly ? bucket.label : bucket.start.slice(5), partial: bucket.partial,
-          missing: !projection.hourly && bucket.start >= coverageStart && !dates(bucket.start, bucket.end).some(day => projection.observed.has(day)) })),
-        readouts: projection.buckets.map((_, index) => trendReadout(index)),
-        ticks: { left: axisTicks('left'), right: axisTicks('right') },
-        tips: projection.buckets.map((_, index) => trendTooltip(projection, state, index, chart, display)),
-        total: state.metric === 'cost' ? price(projection.aggregate, '区间估算').lower : tokens(projection.aggregate),
-        rangeLabel: state.trendRange ? projection.start === projection.end ? projection.start.slice(5) :
-          projection.start.slice(5) + ' – ' + projection.end.slice(5) : periodLabel,
-        coverage: projection.aggregate.coverage === null ? null : (projection.aggregate.coverage * 100).toFixed(1) + '%',
-        empty: trendEntries.some(entry => entry.values.some(known)) ? '' : state.display === 'average' && projection.subset.length ?
-          '30 日均需要近 30 天里至少 ' + math.AVERAGE_MIN + ' 个有记录的日期，这个区间里还没有。' : '此筛选条件下没有可用数据。',
-        facts: [{ label: projection.hourly ? projection.start === today ? '较昨天同时段' : '较前一天' : !state.trendRange && state.period === 'all' ?
-          '近 30 天较前 30 天' : '较上一区间', value: signed(insights.change(now, then)) },
-          { label: projection.hourly ? '峰值时段' : '峰值日', value: trendPeak ? (state.metric === 'cost' ? display.usd(trendPeak[1]) : short(trendPeak[1])) +
-            ' · ' + (projection.hourly ? pad(trendPeak[0]) + ':00' : trendPeak[0].slice(5)) : null,
-            day: trendPeak ? projection.hourly ? projection.start : trendPeak[0] : null },
-          { label: '主力模型', value: lead && lead[1] > 0 ? displayModel(lead[0]) + ' · ' + (lead[1] / leadTotal * 100).toFixed(0) + '%' : null,
-            title: lead ? displayModel(lead[0]) : '' },
-          { label: '单次调用 Token', value: perRecord === null ? null : short(Math.round(perRecord)),
-            title: '范围内平均每条记录的 Token，一条记录约为一次模型调用' }] },
+      get calendar() { return (activity ??= activityView()).calendar; },
+      get activity() { return (activity ??= activityView()).activity; },
+      get day() { return (activity ??= activityView()).day; },
+      get trend() { return trendResult ??= trendView(); },
       agents: agentItems, sources: [{ value: 'all', label: '全部来源' }, ...sourceOptions.map(value => ({ value,
         label: value === 'unknown' ? '来源未报告' : value }))],
       models: [{ value: 'all', label: '全部模型' }, ...modelOptions.map(value => ({ value, label: displayModel(value) }))],

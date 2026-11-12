@@ -18,7 +18,7 @@ const groupIcon = (group: SessionGroup, open: boolean) => {
 };
 const Row = memo(function Row({ session, group, model, current, elsewhere, canAdd, onOpen, onBeside, onPress, bind }: { session: SessionRow; group: SessionGroup; model: SessionsViewModel; current: boolean; elsewhere: boolean; canAdd: boolean; onOpen: (session: SessionRow) => void; onBeside: (session: SessionRow) => void; onPress: (event: PointerEvent<Element>, session: SessionRow) => void; bind: ReturnType<typeof useHoverCard>["bind"] }) {
   // A session without a name reads as its time under its project, and as its project in a list by time.
-  const host = useSessionsHost(), view = model.sessionView(session, group), name = session.name || (group.kind === "project" ? view.time : session.project || view.time);
+  const host = window.sessionsHost, view = model.sessionView(session, group), name = session.name || (group.kind === "project" ? view.time : session.project || view.time);
   // The row says the time today and the date before that; the card has the rest.
   const when = view.ended.split(" ")[0];
   const card = <TipCard title={name} aside={view.meta.name} note={view.timeTip} rows={[

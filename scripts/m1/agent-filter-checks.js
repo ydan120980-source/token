@@ -1,5 +1,5 @@
 'use strict';
-/* global document, MutationObserver, ResizeObserver */
+/* global document, MutationObserver, ResizeObserver, requestAnimationFrame */
 // Focused geometry/input checks for the production filter, reused by the Today suite.
 const assert = require('node:assert/strict');
 const { showView, until } = require('./ui-settle');
@@ -78,9 +78,33 @@ async function checkAgentFilter(page) {
   await page.mouse.click(usageButton.x + usageButton.width / 2, usageButton.y + usageButton.height / 2);
   await page.mouse.click(costButton.x + costButton.width / 2, costButton.y + costButton.height / 2);
   await page.waitForFunction(() => document.getElementById('main').dataset.currentView === 'cost' && Boolean(document.querySelector('[data-cost-page]')));
-  assert.equal(await page.locator('[data-usage-page]').count(), 0, 'a superseded deferred page never remains mounted');
+  const superseded = await page.evaluate(async () => {
+    const section = document.getElementById('usage');
+    let lateMounts = 0;
+    const observer = new MutationObserver(entries => {
+      lateMounts += entries.reduce((sum, entry) => sum + entry.addedNodes.length, 0);
+    });
+    observer.observe(section, { childList: true, subtree: true });
+    try {
+      for (let frame = 0; frame < 8; frame++) await new Promise(resolve => requestAnimationFrame(resolve));
+      return { hidden: section.hidden, focus: section.contains(document.activeElement), lateMounts };
+    } finally { observer.disconnect(); }
+  });
+  assert(superseded.hidden && !superseded.focus, 'the superseded page is hidden and gives up focus');
+  assert.equal(superseded.lateMounts, 0, 'the superseded page never mounts deferred content after the switch');
   await showView(page, 'usage'); await until(page, aligned);
   assert.equal(await root.locator('[aria-checked=true]').getAttribute('data-agent'), original.agent);
-  return { first, plotFirst, cases, rapidNavigation: true };
+  await page.locator('[data-usage-trend]').waitFor();
+  const position = await page.evaluate(() => {
+    const trend = document.querySelector('[data-usage-trend]');
+    window.scrollTo({ top: window.scrollY + trend.getBoundingClientRect().top, behavior: 'instant' });
+    return window.scrollY;
+  });
+  assert(position > 0, 'history test scrolls past the first screen');
+  await showView(page, 'cost');
+  await page.locator('#windowBack').click();
+  await page.waitForFunction(top => document.getElementById('main').dataset.currentView === 'usage' &&
+    Math.abs(window.scrollY - top) < 2, position);
+  return { first, plotFirst, cases, rapidNavigation: true, scrollRestored: true };
 }
 module.exports = { checkAgentFilter };

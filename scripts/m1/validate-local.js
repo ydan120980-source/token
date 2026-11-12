@@ -45,11 +45,11 @@ if(require.main===module){
   }else{
     const args=process.argv.slice(2),options={};let selectedNames=null;
     for(let i=0;i<args.length;i++){
-      const key=args[i];if(key==='--performance'){options.performance=true;continue;}if(key==='--reader-only'){options.readerOnly=true;continue;}if(key==='--profile'){options.profile=true;continue;}if(key==='--layout-profile'){options.layoutProfile=true;continue;}if(!['--home','--output','--sources'].includes(key)||!args[i+1]||args[i+1].startsWith('--'))throw new Error('VALIDATION_ARGUMENT_INVALID');
+      const key=args[i];if(key==='--performance'){options.performance=true;continue;}if(key==='--reader-only'){options.readerOnly=true;continue;}if(key==='--profile'){options.profile=true;continue;}if(key==='--layout-profile'){options.layoutProfile=true;continue;}if(key==='--collection-overlap'){options.collectionOverlap=true;continue;}if(!['--home','--output','--sources'].includes(key)||!args[i+1]||args[i+1].startsWith('--'))throw new Error('VALIDATION_ARGUMENT_INVALID');
       const value=args[++i];if(key==='--sources'){selectedNames=value.split(',');if(selectedNames.some(name=>!SOURCES.includes(name)))throw new Error('VALIDATION_ARGUMENT_INVALID');}else if(key==='--home')options.selected=roots(path.resolve(value));else options.directory=path.resolve(value);
     }
     if(selectedNames)options.selected=Object.fromEntries(Object.entries(options.selected||roots()).filter(([name])=>selectedNames.includes(name)));
-    if((options.profile||options.layoutProfile||options.readerOnly)&&!options.performance)throw Error('VALIDATION_ARGUMENT_INVALID');
+    if((options.profile||options.layoutProfile||options.readerOnly||options.collectionOverlap)&&!options.performance||options.readerOnly&&options.collectionOverlap)throw Error('VALIDATION_ARGUMENT_INVALID');
     if(options.performance){
       require('./local-performance').run(options).then(report=>console.log(JSON.stringify(report,null,2)),()=>{console.error('LOCAL_PERFORMANCE_FAILED');process.exitCode=1;});
     }else{

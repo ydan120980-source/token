@@ -15,7 +15,7 @@ export function Trend({ host, snapshot }: { host: UsageHost; snapshot: UsageSnap
   const key = [state.agent, state.source, state.model, trend.start, trend.end,
     state.metric, state.mode, state.display, trend.grain].join(":");
   useEffect(() => { setActive(null); setRange(null); }, [key]);
-  const readout = active === null ? null : trend.readouts[active] ?? null;
+  const readout = active === null ? null : trend.readout(active);
   // Source, model, value and grain change rarely, so they sit one step away; what is in force stays written out.
   const [more, setMore] = useState(false), moreId = useId();
   const applied = [
@@ -116,7 +116,7 @@ export function Trend({ host, snapshot }: { host: UsageHost; snapshot: UsageSnap
         onApplyRange={span => host.applyTrendRange(...span)}
         onSelect={host.selectTrend}
         ticks={trend.ticks}
-        tooltip={index => trend.tips[index] ? <TipCard {...trend.tips[index]} /> : null}
+        tooltip={index => { const tip = trend.tip(index); return tip ? <TipCard {...tip} /> : null; }}
         dataKey={key}
         aria-label="用量趋势，可用左右方向键查看日期，回车打开每日明细"
       />

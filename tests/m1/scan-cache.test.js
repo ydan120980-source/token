@@ -1,6 +1,7 @@
 'use strict';
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const {EventEmitter} = require('node:events');
 const {DatabaseSync} = require('node:sqlite');
 const {agentFixtures} = require('./agent-fixtures');
 const {fixtures} = require('./fixtures');
@@ -89,11 +90,50 @@ test('a rescan that reproduces the ledger neither rewrites statistics.json nor a
   assert.equal(store.state.sequence,sequence + 1); assert.notEqual(fs.statSync(file).mtimeMs,0); assert.equal(total(new Store(store.dir,fixture.roots)),fixture.total + 10);
 });
 
+test('a staged collection is invisible through failed native verification and commits once on retry', async t => {
+  const dir = workspace(t), fixture = fixtures(path.join(dir,'home'));
+  const worker = new EventEmitter();
+  const service = new Service(path.join(dir,'app'),fixture.roots,undefined,undefined,() => worker);
+  t.after(() => service.close());
+  worker.terminate = async () => {};
+  const store = service.store, ledger = path.join(store.dir,'statistics.json');
+  const collect = () => scanSources(fixture.roots,store.state.salt,{reads:0});
+  store.ingestCollection(await collect(),{status:'passed'});
+  const before = store.snapshot(), saved = fs.readFileSync(ledger);
+  fs.appendFileSync(path.join(fixture.roots.claude[0],'project','session.jsonl'),'\n' + claudeLine('staged-call'));
+  const scan = await collect();
+  let request;
+  worker.postMessage = value => { request = value; worker.emit('prepare',request.id,scan); };
+  const pending = service.refresh();
+  assert.equal(store.snapshot(),before);
+  assert.deepEqual(fs.readFileSync(ledger),saved);
+  worker.emit('message',{id:request.id,error:'NATIVE_TOTAL_MISMATCH'});
+  await pending;
+  assert.match(service.lastError,/NATIVE_TOTAL_MISMATCH/);
+  assert.equal(store.snapshot(),before);
+  assert.deepEqual(fs.readFileSync(ledger),saved);
+  const retry = service.refresh();
+  assert.equal(store.snapshot(),before);
+  const verifiedAt = new Date().toISOString();
+  worker.emit('message',{id:request.id,scan,native:{status:'passed'},stamp:'retry',stages:{}});
+  await retry;
+  assert(Number.isFinite(service.collectionStages.preparedDuringVerification));
+  assert.equal(store.state.sequence,before.sequence + 1);
+  assert.equal(total(store),fixture.total + 10);
+  assert.equal(total(new Store(store.dir,fixture.roots)),fixture.total + 10);
+  assert(store.snapshot().collectedAt >= verifiedAt);
+  assert.equal(store.state.statuses.claude.lastSuccess,store.snapshot().collectedAt);
+});
+
 test('service skips unchanged sources without reading them and still collects changes and external ledger resets', async t => {
   const dir = workspace(t), fixture = fixtures(path.join(dir,'home')), service = new Service(path.join(dir,'app'),fixture.roots);
   t.after(() => service.close());
+  const freshAudit = { reads: 0 };
+  await scanSources(fixture.roots, service.store.state.salt, freshAudit);
   await service.refresh(); const sequence = service.store.state.sequence, file = path.join(service.store.dir,'statistics.json');
   assert.equal(total(service.store),fixture.total); assert(service.audit.reads > 0);
+  assert.equal(service.audit.reads, freshAudit.reads, 'the initial collection reads the same inputs once');
+  assert(!Object.hasOwn(service.collectionStages, 'source-refresh'), 'the preflight needs an already committed scan');
   fs.utimesSync(file,new Date(0),new Date(0));
   const first = service.checkedAt; await new Promise(resolve => setTimeout(resolve,5));
   // With NTFS last-access updates on, the first scan's own reads raise change events,

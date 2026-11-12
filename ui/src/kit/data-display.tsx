@@ -15,12 +15,11 @@ const figureSize = { xl: "text-figure-xl", lg: "text-figure-lg", md: "text-figur
 interface FigureProps {
   text: string | null; unit?: string; size: keyof typeof figureSize; unknown?: UnknownLabel; animated?: boolean;
 }
+const digitStrip = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9";
 function RollingDigit({ character, index, initial, tier }: { character: string; index: number; initial: boolean; tier: typeof data.enter | typeof data.update }) {
   const transition = { ...tier, delay: staggerDelay(index) };
   return <span className="relative inline-flex h-lh overflow-hidden" aria-hidden="true"><span className="invisible">{character}</span>
-    <motion.span className="absolute left-0 top-0 flex flex-col" initial={{ y: initial ? "0%" : `${-Number(character) * 10}%` }} animate={{ y: `${-Number(character) * 10}%` }} transition={transition}>
-      {[..."0123456789"].map(digit => <span className="h-lh shrink-0" key={digit}>{digit}</span>)}
-    </motion.span>
+    <motion.span data-digit-strip className="absolute left-0 top-0 whitespace-pre" initial={{ y: initial ? "0%" : `${-Number(character) * 10}%` }} animate={{ y: `${-Number(character) * 10}%` }} transition={transition}>{digitStrip}</motion.span>
   </span>;
 }
 export function Figure({ text, unit, size, unknown = "未知", animated = true }: FigureProps) {
@@ -31,13 +30,16 @@ export function Figure({ text, unit, size, unknown = "未知", animated = true }
   const transition = initial ? data.enter : data.update;
   useEffect(() => { previous.current = text; }, [text]);
   const direct = !animated || mode !== "full" || reduced, fade = animated && (mode === "reduced" || mode === "full" && Boolean(reduced));
+  let value: ReactNode;
+  if (text === null) value = <Value value={null} unknown={unknown} />;
+  else if (!direct) value = <span key={signature} className="inline-flex" aria-label={text}>
+    {[...text].map((character, index) => /\d/.test(character) ? <RollingDigit key={index} character={character} index={text.length - 1 - index} initial={initial} tier={transition} /> : <span key={index} aria-hidden="true">{character}</span>)}
+  </span>;
+  else if (fade && !initial) value = <motion.span key={text} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={reducedFade}>{text}</motion.span>;
+  else value = <span>{text}</span>;
   return <span className="inline-flex items-baseline gap-2 text-foreground">
-    <span className={figureSize[size] + " font-semibold tabular-nums"}>
-      {text === null ? <Value value={null} unknown={unknown} /> : direct ? fade && !initial ? <motion.span key={text} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={reducedFade}>{text}</motion.span> : <span>{text}</span> : <motion.span key={signature} className="inline-flex" aria-label={text}
-        initial={false} animate={{ opacity: 1 }} transition={transition}>
-        {[...text].map((character, index) => /\d/.test(character) ? <RollingDigit key={index} character={character} index={text.length - 1 - index} initial={initial} tier={transition} /> : <span key={index} aria-hidden="true">{character}</span>)}
-      </motion.span>}
-    </span>{unit ? <span className="text-caption text-muted-foreground">{unit}</span> : null}
+    <span className={figureSize[size] + " font-semibold tabular-nums"}>{value}</span>
+    {unit ? <span className="text-caption text-muted-foreground">{unit}</span> : null}
   </span>;
 }
 

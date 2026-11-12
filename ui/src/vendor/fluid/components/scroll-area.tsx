@@ -152,6 +152,8 @@ const ScrollBar = forwardRef<
   const isTouch = useContext(ScrollAreaContext);
   const visible = useContext(ScrollbarVisibleContext);
   const shape = useShape();
+  const [revealed, setRevealed] = useState(visible);
+  if (visible && !revealed) setRevealed(true);
 
   if (isTouch) return null;
 
@@ -188,7 +190,10 @@ const ScrollBar = forwardRef<
       )}
       {...props}
     >
-      <ScrollAreaPrimitive.ScrollAreaThumb
+      {/* The track enables native scrolling from the start. The thumb
+          reads scroll geometry only once the person can see it, then
+          stays mounted so the existing fade and dragging keep their state. */}
+      {revealed ? <ScrollAreaPrimitive.ScrollAreaThumb
         data-slot="scroll-area-thumb"
         className={cn(
           // Fixed surface-relative overlay ramp (8 → 12 → 16%) — same tint
@@ -203,7 +208,7 @@ const ScrollBar = forwardRef<
           orientation === "horizontal" &&
             "my-auto mx-1 h-1 -translate-y-0.5 group-hover/scrollbar:h-1.5"
         )}
-      />
+      /> : null}
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   );
 });

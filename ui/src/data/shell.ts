@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { appShell } from "../app-store";
 import type { ViewName } from "./types";
 
 const listeners = new Set<() => void>();
@@ -7,15 +8,14 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   if (!stop) {
     const changed = () => { for (const callback of listeners) callback(); };
-    window.addEventListener("ui-view-change", changed);
     const observer = new MutationObserver(changed);
     observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    stop = () => { window.removeEventListener("ui-view-change", changed); observer.disconnect(); };
+    stop = () => observer.disconnect();
   }
   return () => { listeners.delete(listener); if (!listeners.size) { stop?.(); stop = undefined; } };
 }
 export function useViewActive(view: ViewName): boolean {
-  return useSyncExternalStore(subscribe, () => document.getElementById("main")?.dataset.currentView === view);
+  return useSyncExternalStore(appShell.subscribe, () => appShell.get().view === view);
 }
 /** Whether the shell docks the page's summary column (window-shell.js, UI-LAYOUT-SPEC-20261027.md). */
 export function useSummaryDocked(): boolean {

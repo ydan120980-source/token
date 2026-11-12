@@ -46,8 +46,8 @@ function ended(session) {
   return format(session.end, window.usageMath.localDay(timezone(), Date.parse(session.end)) !== today());
 }
 function span(session) {
-    const sameDay = window.usageMath.localDay(timezone(), Date.parse(session.start)) === window.usageMath.localDay(timezone(), Date.parse(session.end));
-    const startDay = window.usageMath.localDay(timezone(), Date.parse(session.start));
+    const zone = timezone(), startDay = window.usageMath.localDay(zone, Date.parse(session.start));
+    const sameDay = startDay === window.usageMath.localDay(zone, Date.parse(session.end));
     return sameDay ? (startDay === today() ? '' : startDay.slice(5) + ' ') + format(session.start, false) + '–' + format(session.end, false) : format(session.start, true) + ' – ' + format(session.end, true);
   }
 function durationParts(ms) {
@@ -166,7 +166,11 @@ function groupModelsSummary(sessions) {
     return agentNames.join(' · ') + ' · ' + models[0] + ' +' + (models.length - 1);
   }
 
-function recent(session){return Boolean(session.end&&(now()-Date.parse(session.end)<3600000)&&(window.usageMath.localDay(timezone(),Date.parse(session.end))===today()));}
+function recent(session){
+ if (!session.end) return false;
+ const end = Date.parse(session.end);
+ return now()-end<3600000 && window.usageMath.localDay(timezone(),end)===today();
+}
 function dateTime(value){
  const key='local-full';
  if(!clock.has(key))clock.set(key,new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric',hour12:false}));
@@ -176,11 +180,25 @@ function costValue(lower,upper,coverage){return window.displayValues.cost(lower,
 function sessionView(session,group){
  const unknown=session.totals.records===0,meta=agents[session.agent]||{name:session.agent,icon:'ui/layout-grid'},models=(session.models||[]).map(displayModel),coverage=session.totals.total?session.totals.priced/session.totals.total:null;
  const reason=!session.cwd&&!session.id?'该来源的会话标识与工作目录尚未确认，无法恢复':'该来源的恢复方式尚未确认',isRecent=recent(session),ratio=(group?.total>0&&session.totals?.total)?Math.min(100,Math.max(0,session.totals.total/group.total*100)):0,badge=durationBadge(session.start,session.end);
- const timeTip='开始: '+dateTime(session.start)+'\n结束: '+dateTime(session.end)+'\n'+durationText(session.start,session.end)+(isRecent?'\n• 活跃中（最近 1 小时内活动）':'');
+ const time=span(session),duration=durationText(session.start,session.end);
+ const timeTip='开始: '+dateTime(session.start)+'\n结束: '+dateTime(session.end)+'\n'+duration+(isRecent?'\n• 活跃中（最近 1 小时内活动）':'');
  const costTip=session.totals.cost!==null?'API 等价估算: $'+session.totals.cost.toFixed(4)+(session.totals.savings?'\n缓存节省: $'+session.totals.savings.toFixed(4):'')+(coverage!==null?'\n定价覆盖: '+(coverage*100).toFixed(1)+'%':''):'未计入估算：模型没有价格，或来源没有报告完整用量';
- return {meta,models,coverage,reason,isRecent,ratio,fraction:Number(ratio.toFixed(0))/100,badge,timeTip,costTip,time:span(session),ended:ended(session),timeLabel:meta.name+' 会话 '+span(session),duration:durationText(session.start,session.end),tokens:unknown?null:short(session.totals.total),tokenTitle:unknown?'这个 Agent 的用量没有记到会话上':tokenTip(session),proportionTitle:'占项目消耗 '+ratio.toFixed(1)+'%',estimate:costValue(session.totals.cost,session.totals.upper,coverage)};
+ return {meta,models,coverage,reason,isRecent,ratio,fraction:Number(ratio.toFixed(0))/100,badge,timeTip,costTip,time,ended:ended(session),timeLabel:meta.name+' 会话 '+time,duration,tokens:unknown?null:short(session.totals.total),tokenTitle:unknown?'这个 Agent 的用量没有记到会话上':tokenTip(session),proportionTitle:'占项目消耗 '+ratio.toFixed(1)+'%',estimate:costValue(session.totals.cost,session.totals.upper,coverage)};
 }
-function groupView(group){const modelsSummary=groupModelsSummary(group.sessions),agentsText=agentSummary(group.sessions),firstKey=group.sessions.find(s=>s.cwd)?.key,activeCount=group.sessions.filter(recent).length,projects=[...new Set(group.sessions.map(s=>s.project||'未知项目'))],pathText=group.kind==='project'?group.cwd||'工作目录未记录或来源未确认':projects.slice(0,3).join('、')+(projects.length>3?' 等 '+projects.length+' 个项目':''),whoTip=agentsText+(group.sessions.some(s=>s.models?.length)?'\n模型: '+[...new Set(group.sessions.flatMap(s=>s.models).filter(Boolean).map(displayModel))].join('、'):'');return {modelsSummary,agentsText,firstKey,activeCount,pathText,whoTip,agentIds:[...new Set(group.sessions.map(s=>s.agent))],tokens:group.sessions.every(session=>session.totals.records===0)?null:short(group.total),estimate:costValue(group.cost,group.upper,group.coverage)};}
+function groupView(group) {
+ const projects = group.kind === 'project' ? null : new Set();
+ let firstKey, activeCount = 0, hasUsage = false;
+ for (const session of group.sessions) {
+  if (firstKey === undefined && session.cwd) firstKey = session.key;
+  if (recent(session)) activeCount++;
+  if (session.totals.records !== 0) hasUsage = true;
+  projects?.add(session.project || '未知项目');
+ }
+ const pathText = projects
+  ? [...projects].slice(0, 3).join('、') + (projects.size > 3 ? ' 等 ' + projects.size + ' 个项目' : '')
+  : group.cwd || '工作目录未记录或来源未确认';
+ return { firstKey, activeCount, pathText, tokens: hasUsage ? short(group.total) : null, estimate: costValue(group.cost, group.upper, group.coverage) };
+}
 function inspectorView(session,group){const row=sessionView(session,group),parts=breakdown(session),rate=cacheRate(parts),totals=session.totals,rangeLabel={today:'今天',7:'近 7 天',30:'近 30 天',all:'全部时间'}[state.range]||'',reason=!session.cwd&&!session.id?'这个来源的会话标识与工作目录尚未确认，不能生成恢复命令。':'这个来源的恢复方式尚未确认，不能生成恢复命令。';return {...row,parts,rate,totals,rangeLabel,reason,project:group?.name||'未知项目',metadata:span(session)+' · '+durationText(session.start,session.end),coverageText:row.coverage===null?'':row.coverage<1?'已计入 '+(row.coverage*100).toFixed(1)+'%':'全部计入',rateText:rate===null?null:(rate*100).toFixed(1)+'%',partsRows:[['inputUncached','输入','未缓存'],['output','输出',parts.reasoning.value?'含推理 '+parts.reasoning.value.toLocaleString('zh-CN'):''],['cacheRead','缓存读取',''],['cacheWrite','缓存写入','']].map(([key,label,note])=>({key,label,note,part:parts[key],text:fieldText(parts[key],value=>value.toLocaleString('zh-CN'))})),days:parts.days.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(day=>({...day,tokens:short(day.totalTokens),estimate:costValue(day.estimatedCostUsd,day.estimatedCostUpperUsd,day.totalTokens?day.pricedTokens/day.totalTokens:null)}))};}
 function pageSummary(){const list=groups(),sessions=list.reduce((n,g)=>n+g.sessions.length,0),priced=list.filter(g=>g.cost!==null),cost=priced.length?priced.reduce((n,g)=>n+g.cost,0):null,upper=priced.length?priced.reduce((n,g)=>n+g.upper,0):null,total=list.reduce((n,g)=>n+g.total,0),label={today:'今天',7:'最近 7 天',30:'最近 30 天',all:'全部时间'}[state.range],start=rangeStart(),end=today(),missing=Object.entries(state.list?.unattributed||{}).filter(([agent])=>state.agent==='all'||agent===state.agent).reduce((n,[,days])=>n+Object.entries(days).reduce((m,[date,v])=>date>=start&&date<=end?m+v:m,0),0),coverage=total?list.reduce((n,g)=>n+(g.coverage??0)*g.total,0)/total:null;return {list,sessions,cost,upper,total,label,start,end,missing,coverage,tokens:short(total),agent:state.agent==='all'?'全部 Agent':agents[state.agent].name,estimate:costValue(cost,upper,coverage)};}
 

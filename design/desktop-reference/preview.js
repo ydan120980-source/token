@@ -12,7 +12,7 @@ let coverageStart = realData ? localSnapshot.coverageStart || today : window.usa
 const agents = window.agentCatalog.agents;
 let templates = [];
 let enabled = true, sequence = realData ? localSnapshot.sequence : 1;
-let usageStatus = { collecting: false, error: null }, usageRevision = null, lastCollectionKey = '', usageRenderDirty = false;
+let usageStatus = { collecting: false, error: null }, usageRevision = null, lastCollectionKey = '';
 let refreshing = false, hostReadError = null, revision = 0, hostSnapshot = null;
 const hiddenKey = 'agentusage.trendHidden.v1';
 const state = { period: 'all', metric: 'tokens', agent: 'all', source: 'all', model: 'all', mode: 'flow',
@@ -46,9 +46,15 @@ for (let offset = 0; !realData && !bootstrapFailed && offset < 181; offset++) {
   }
 }
 if (realData) templates = localSnapshot.daily;
-let hourlyTemplates = [];
-function currentHour() { return Number(new Intl.DateTimeFormat('en-GB', { timeZone: realData ? localSnapshot.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone, hour: '2-digit', hourCycle: 'h23' }).format(new Date())); }
-function hourlyReady(date) { return date <= today && (!realData || Array.isArray(localSnapshot.hourly)); }
+let hourlyTemplates = [], hourFormatter, hourTimezone;
+function currentHour() {
+  const timeZone = realData ? localSnapshot.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!hourFormatter || timeZone !== hourTimezone) {
+    hourTimezone = timeZone;
+    hourFormatter = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', hourCycle: 'h23' });
+  }
+  return Number(hourFormatter.format(new Date()));
+}
 function loadHourly() {
   if (realData) { hourlyTemplates=localSnapshot.hourly||[];return; }
   hourlyTemplates=[];
@@ -85,9 +91,9 @@ function rangeRows(rows) {
 }
 function normalizeFilters() {
   if (state.agent !== 'all' && !Object.hasOwn(agents, state.agent)) state.agent = 'all';
-  const available = templates.filter(row => state.agent === 'all' || row.agent === state.agent);
-  if (state.source !== 'all' && !available.some(row => (row.provider || 'unknown') === state.source)) state.source = 'all';
-  if (state.model !== 'all' && !available.some(row => row.model === state.model &&
+  const available = row => state.agent === 'all' || row.agent === state.agent;
+  if (state.source !== 'all' && !templates.some(row => available(row) && (row.provider || 'unknown') === state.source)) state.source = 'all';
+  if (state.model !== 'all' && !templates.some(row => available(row) && row.model === state.model &&
       (state.source === 'all' || (row.provider || 'unknown') === state.source))) state.model = 'all';
 }
 function invalidate() {
@@ -131,8 +137,9 @@ function setUsage(patch) {
     try { localStorage.setItem(hiddenKey, JSON.stringify(state.hidden)); } catch { /* Session only. */ }
   }
   if (previous === JSON.stringify(state)) return;
-  if (oldFilters !== JSON.stringify(filters())) window.dispatchEvent(new Event('usage-filter-change'));
-  render(true);
+  const filtersChanged = oldFilters !== JSON.stringify(filters());
+  if (!checkCalendar()) { if (filtersChanged) updateCalendar(); invalidate(); }
+  if (filtersChanged) window.dispatchEvent(new Event('usage-filter-change'));
 }
 let projectedUsage = null;
 function getUsage() {
@@ -146,12 +153,14 @@ function getUsage() {
     for (const agent of ['all', ...Object.keys(agents)]) sessionCounts[date + ':' + agent] =
       window.sessionsUi?.count({ agent, date, model: state.model }) ?? null;
   }
-  const basis = [templates, hourlyRows, localSnapshot?.sources, today, coverageStart, JSON.stringify(state), currentHour(), JSON.stringify(sessionCounts), demoState];
+  const hour = currentHour();
+  const currentDate = today, hasHourly = !realData || Array.isArray(localSnapshot.hourly);
+  const basis = [templates, hourlyRows, localSnapshot?.sources, today, coverageStart, JSON.stringify(state), hour, JSON.stringify(sessionCounts), demoState];
   const statusKey = () => JSON.stringify([enabled, Boolean(usageStatus.collecting) || refreshing, Boolean(usageStatus.error || localSnapshot?.previewReadError || demoState === 'error')]);
   if (!projectedUsage || !basis.every((value, index) => value === projectedUsage.basis[index]) || projectedUsage.status !== null && projectedUsage.status !== statusKey()) {
   const projectStart = performance.now();
   const view = window.usageModel.project({ rows, hourlyRows, allRows: templates, today, coverageStart,
-    realData, recorded, currentHour: currentHour(), hourlyReady, sessionCounts,
+    realData, recorded, currentHour: hour, hourlyReady: date => date <= currentDate && hasHourly, sessionCounts,
     sources: realData ? localSnapshot.sources || [] : null, collecting: Boolean(usageStatus.collecting) || refreshing,
     enabled, error: Boolean(usageStatus.error || localSnapshot?.previewReadError || demoState === 'error')
   }, state, { usageMath: window.usageMath, insightsMath: window.insightsMath,
@@ -220,29 +229,29 @@ window.usageData = { ready: () => !localSnapshot?.loading, rows: () => data(), h
     setUsage({ agent, source: 'all', model }); view('usage'); },
   showAgent(agent) { setUsage({ agent, model: 'all' }); view('usage'); }
 };
-function render() {
-  usageRenderDirty = false; syncCalendar();
+function updateCalendar(rows = data()) {
+  window.usageCalendar = { today, min: coverageStart, recorded: new Set(filterRows(rows).map(row => row.date)) };
+}
+function publishFacts() {
   recorded = window.insightsMath.recordedFields(templates);
-  const rows = data(), filtered = filterRows(rows);
-  window.usageCalendar = { today, min: coverageStart, recorded: new Set(filtered.map(row => row.date)) };
+  const rows = data();
+  updateCalendar(rows);
   window.appShell.facts(rows.length ? coverageStart : '暂无', localSnapshot?.previewReadError ? '读取失败 · 保留最后有效快照' : demoState === 'error' ?
     '演示读取失败 · 历史保留' : realData ? '快照采集 ' + (localSnapshot.collectedAt ? new Date(localSnapshot.collectedAt).toLocaleString('zh-CN') : '时间未记录') :
       enabled ? '合成数据 · 演示快照 ' + sequence : '演示已暂停 · 历史仍可查看');
-  updateCollection(); invalidate();
+  invalidate();
   window.dispatchEvent(new Event('usage-data-change'));
 }
 function view(name) {
   if (name === 'workbench') name = 'cost';
-  if (window.appShell.get().view === name) return;
   window.appShell.navigate(name);
-  if (name === 'usage') render();
 }
 const themeKey = 'agentusage.theme.v1', darkScheme = matchMedia('(prefers-color-scheme: dark)');
 let themePreference = 'system';
 function applyTheme() { window.appShell.theme(themePreference === 'dark' || themePreference === 'system' && darkScheme.matches); }
-function setTheme(value) { themePreference = value; try { localStorage.setItem(themeKey, value); } catch { /* Kept for this session. */ } applyTheme(); applyHeatPalette(); render(); settingsChanged(); }
+function setTheme(value) { themePreference = value; try { localStorage.setItem(themeKey, value); } catch { /* Kept for this session. */ } applyTheme(); applyHeatPalette(); checkCalendar(); settingsChanged(); }
 applyTheme();
-darkScheme.addEventListener('change', () => { if (themePreference === 'system') { applyTheme(); applyHeatPalette(); render(); } });
+darkScheme.addEventListener('change', () => { if (themePreference === 'system') { applyTheme(); applyHeatPalette(); checkCalendar(); } });
 function applyHeatPalette() { const palette = { orange: ['#f3c29e', '#e8955d', '#ce713b', '#914b28'], blue: ['#afc8e5', '#789cc9', '#506fa7', '#304d80'],
  green: ['#bcd5c3', '#8cb498', '#5c8e6c', '#386349'], mono: ['#dadcde', '#a8adb2', '#6d747d', '#333a43'] }[state.palette];
   // Higher usage always reads as more contrast: dark on light, bright on dark.
@@ -287,7 +296,7 @@ async function refreshPreview() {
     location.reload(); return;
   }
   refreshing = true; invalidate();
-  try { await new Promise(resolve => setTimeout(resolve, 650)); sequence++; render(); toast('合成快照已刷新；没有扫描源文件。'); }
+  try { await new Promise(resolve => setTimeout(resolve, 650)); sequence++; syncCalendar(); publishFacts(); toast('合成快照已刷新；没有扫描源文件。'); }
   finally { refreshing = false; invalidate(); }
 }
 async function refreshUsage() {
@@ -300,7 +309,7 @@ async function refreshUsage() {
   finally { refreshing = false; invalidate(); }
 }
 // The demo directory sheet moved into the React sources page (M4).
-window.addEventListener('source-catalog', () => { normalizeFilters(); invalidate(); window.dispatchEvent(new Event('agent-options')); });
+window.addEventListener('source-catalog', () => { window.dispatchEvent(new Event('agent-options')); });
 async function exportStatistics({ range, sources }) {
   const daily = range === 'all' ? data() : rangeRows(data());
   if (usageBridge) {
@@ -320,14 +329,14 @@ window.settingsHost = Object.freeze({
   theme: Object.freeze({ get: () => themePreference, set: value => setTheme(['system', 'light', 'dark'].includes(value) ? value : 'system') }),
   collection: Object.freeze({
     get: () => ({ mode: usageBridge ? 'desktop' : realData ? 'snapshot' : 'demo', enabled: Boolean(enabled), intervalMs: usageStatus.refreshIntervalMs ?? 15000 }),
-    async setEnabled(value) { if (usageBridge) { try { applyUsageState(await usageBridge.setEnabled(Boolean(value))); } catch { toast('采集状态更新失败。'); settingsChanged(); } return; } if (realData) return; enabled = Boolean(value); render(); toast(enabled ? '演示采集状态已恢复。' : '演示采集状态已暂停；历史仍可查看。'); settingsChanged(); },
+    async setEnabled(value) { if (usageBridge) { try { applyUsageState(await usageBridge.setEnabled(Boolean(value))); } catch { toast('采集状态更新失败。'); settingsChanged(); } return; } if (realData) return; enabled = Boolean(value); updateCollection(); if (!checkCalendar()) invalidate(); toast(enabled ? '演示采集状态已恢复。' : '演示采集状态已暂停；历史仍可查看。'); },
     async setInterval(value) { if (!usageBridge) return; try { applyUsageState(await usageBridge.setRefreshInterval(Number(value))); toast(enabled ? '自动刷新设置已保存。' : '频率已保存；采集暂停中，恢复采集后生效。'); } catch { toast('刷新设置未保存。'); updateCollection(); } }
   }),
   profile: Object.freeze({ get: () => ({ ...profile }), save(value) { try { localStorage.setItem(profileKey, JSON.stringify(value)); } catch { return { ok: false, error: 'storage' }; } profile = { ...value }; showProfile(); settingsChanged(); toast('名称和头像已保存到本机。'); return { ok: true }; } }),
-  demo: Object.freeze({ available: !realData, get: () => demoState, set(value) { demoState = ['normal', 'partial', 'empty', 'error'].includes(value) ? value : 'normal'; render(true); settingsChanged(); window.dispatchEvent(new Event('demo-state-change')); } }),
+  demo: Object.freeze({ available: !realData, get: () => demoState, set(value) { demoState = ['normal', 'partial', 'empty', 'error'].includes(value) ? value : 'normal'; syncCalendar(); publishFacts(); settingsChanged(); window.dispatchEvent(new Event('demo-state-change')); } }),
   exportHelp, exportStatistics, toast
 });
-applyHeatPalette(); render(); if (restoredView !== 'usage') view(restoredView);
+applyHeatPalette(); updateCollection(); publishFacts(); if (restoredView !== 'usage') view(restoredView);
 function publishAgentUsage() {
   const totals = {}, models = {};
   for (const row of templates) {
@@ -348,17 +357,23 @@ function applyUsageState(next) {
   if(Number.isSafeInteger(next.snapshotRevision)&&Number.isSafeInteger(usageRevision)&&next.snapshotRevision<usageRevision)return;
   const hydrationStart = performance.now();
   if (!next.snapshot) next = { ...next, snapshot: localSnapshot };
-  const changed = sequence !== next.snapshot.sequence, previousDay = today;
+  const previousDay = today;
+  const hadReadError = Boolean(hostReadError);
+  const collectionSettingsChanged = next.enabled !== usageStatus.enabled || next.refreshIntervalMs !== usageStatus.refreshIntervalMs;
+  const feesChanged = JSON.stringify(next.subscriptions || {}) !== JSON.stringify(usageStatus.subscriptions || {});
   const snapshotChanged = !Number.isSafeInteger(next.snapshotRevision) || usageRevision !== next.snapshotRevision;
   if (!snapshotChanged && localSnapshot) next = { ...next, snapshot: localSnapshot };
   usageRevision = next.snapshotRevision;
-  window.agentCatalog.install(next.snapshot.sourceCatalog);
   localSnapshot = next.snapshot; syncCalendar(); usageStatus = next; sequence = localSnapshot.sequence;
   enabled = next.enabled; coverageStart = localSnapshot.coverageStart || today; hostReadError = null;
-  if (snapshotChanged) { templates = localSnapshot.daily; loadHourly(); normalizeFilters(); renderSources(); publishAgentUsage(); }
-  updateCollection();
+  if (snapshotChanged) {
+    window.agentCatalog.install(localSnapshot.sourceCatalog);
+    templates = localSnapshot.daily; loadHourly(); normalizeFilters(); renderSources(); publishAgentUsage();
+  }
+  if (collectionSettingsChanged) updateCollection();
   const collectionKey = JSON.stringify([next.error || null, next.diagnostic || null, Boolean(next.collecting), next.enabled !== false, next.checkedAt || null]);
-  if (collectionKey !== lastCollectionKey) { lastCollectionKey = collectionKey; window.dispatchEvent(new Event('usage-collection')); }
+  const collectionChanged = collectionKey !== lastCollectionKey;
+  if (collectionChanged) { lastCollectionKey = collectionKey; window.dispatchEvent(new Event('usage-collection')); }
   const recovery = recoveryNotice(next.snapshot);
   // The worker reports an internal code (COLLECTION_FAILED and the like); show what it means
   // and keep the code in the tooltip for diagnosis.
@@ -371,16 +386,11 @@ function applyUsageState(next) {
     title: errorCode ? '错误代码 ' + errorCode : '', hidden: !next.error && !recovery, attention: Boolean(badge)
   });
 
-  window.sourcesHost?.collection(next);
-  if (snapshotChanged || previousDay !== today) usageRenderDirty = true;
-  if ($('main').dataset.currentView === 'usage' && !document.hidden) {
-    if (usageRenderDirty) render(changed); else invalidate();
-  } else {
-    invalidate();
-    if (snapshotChanged || previousDay !== today) {
-      recorded = window.insightsMath.recordedFields(templates);
-      window.dispatchEvent(new Event('usage-data-change'));
-    }
+  if (collectionChanged || snapshotChanged || collectionSettingsChanged) window.sourcesHost?.collection(next);
+  if (snapshotChanged || previousDay !== today) publishFacts();
+  else {
+    if (collectionChanged || hadReadError) invalidate();
+    if (feesChanged) window.dispatchEvent(new Event('usage-subscriptions-change'));
   }
   performance.clearMeasures('usage:hydrate');
   performance.measure('usage:hydrate', { start: hydrationStart, end: performance.now() });
@@ -389,12 +399,13 @@ function syncCalendar() {
   const previousYear = today.slice(0, 4); today = currentDay();
   if (previousYear !== today.slice(0, 4) && state.heatRange !== '365') state.heatRange = today.slice(0, 4);
 }
-function checkCalendar() { if (document.visibilityState !== 'hidden' && today !== currentDay()) render(); }
+function checkCalendar() {
+  if (document.visibilityState === 'hidden' || today === currentDay()) return false;
+  syncCalendar(); publishFacts(); return true;
+}
 const calendarTimer = setInterval(checkCalendar, 30000);
 window.addEventListener('focus', checkCalendar);
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'hidden') { checkCalendar(); if (usageRenderDirty && $('main').dataset.currentView === 'usage') render(); }
-});
+document.addEventListener('visibilitychange', checkCalendar);
 window.addEventListener('unload', () => clearInterval(calendarTimer));
 if (usageBridge) {
   let reading = false, again = false;

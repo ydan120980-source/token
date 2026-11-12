@@ -148,7 +148,7 @@ class StatisticsService {
   transcriptFileHistory(request) { return this.call('transcriptFileHistory', request); }
   agentUse(request) { return this.call('agentUse', request); }
   transcriptMarkdown(key, request) { return this.call('transcriptMarkdown', key, request); }
-  pricing() { return this.call('pricing'); }
+  pricing(view) { return this.call('pricing', view); }
   setBilling(value) { return this.call('setBilling', value); }
   setPrice(value, reset = false) { return this.call('setPrice', value, reset); }
   probe(value) { return this.call('probe', value); }

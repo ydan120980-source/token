@@ -135,8 +135,14 @@
   // number of distinct dates that contributed, so averages are honest.
   function weekHour(hourlyRows) {
     const cells = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({ tokens: 0, records: 0, dates: new Set() })));
+    const weekdays = new Map();
     for (const row of hourlyRows) {
-      const weekday = (new Date(row.date + 'T12:00:00Z').getUTCDay() + 6) % 7, cell = cells[weekday][row.hour];
+      let weekday = weekdays.get(row.date);
+      if (weekday === undefined) {
+        weekday = (new Date(row.date + 'T12:00:00Z').getUTCDay() + 6) % 7;
+        weekdays.set(row.date, weekday);
+      }
+      const cell = cells[weekday][row.hour];
       cell.tokens += row.totalTokens; cell.records += row.records || 0; if (row.totalTokens > 0) cell.dates.add(row.date);
     }
     let max = 0, peak = null, active = 0;

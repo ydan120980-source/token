@@ -26,6 +26,21 @@ try{await page.emulateMedia({reducedMotion:'no-preference'});await showView(page
   return {sameView,unknown,zero};
  });assert(sessions.sameView,'unrelated session events preserve the statistical view identity');assert.equal(sessions.unknown,null,'unknown session count remains unknown');assert.equal(sessions.zero,0,'a real known-zero response must replace unknown');
  const changed=await page.evaluate(async()=>{const root=document.querySelector('[data-usage-today]'),before=root.textContent;window.usageHost.set({agent:'codex'});await new Promise(resolve=>requestAnimationFrame(resolve));const after=root.textContent,moving=root.getAnimations({subtree:true}).filter(a=>a.playState==='running').length;return{before,after,moving};});assert.notEqual(changed.before,changed.after,'a real filter change updates Today');assert.equal(changed.moving,0,'changed Today readings update without a replay');
- await page.evaluate(()=>window.usageBridge.setEnabled(false));const agentFilter=await checkAgentFilter(page);
+ await page.evaluate(()=>window.usageBridge.setEnabled(false));
+ await until(page,()=>!window.usageData.collection().enabled);
+ const dataChanges=await page.evaluate(async()=>{
+  let changes=0;
+  const count=()=>changes++,paint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  window.addEventListener('usage-data-change',count);
+  try{
+   window.usageData.view('cost');await paint();
+   window.usageData.view('usage');await paint();
+   window.usageHost.set({period:'7'});await paint();
+   window.usageHost.set({period:'all'});await paint();
+   return changes;
+  }finally{window.removeEventListener('usage-data-change',count);}
+ });
+ assert.equal(dataChanges,0,'navigation and usage filters do not publish new statistics to other pages');
+ const agentFilter=await checkAgentFilter(page);
  await page.screenshot({path:path.join(output,'today-stable.png')});assert.deepEqual(run.errors,[]);fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({packaged:Boolean(process.env.QUOTA_PACKAGED_EXE),trace,sessions,changed,agentFilter,errors:run.errors,syntheticOnly:true},null,2));console.log('PASS Today: stable periodic facts, real changes and AgentFilter pre-paint geometry / keyboard / motion modes');
 }finally{await run.close();}})().catch(e=>{console.error(e);process.exitCode=1});

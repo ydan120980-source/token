@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useDeferredValue, useEffect, useState } from "react";
 import { useShell, viewNames } from "./app-store";
 import { Navigation, QuotaFilters } from "./app-navigation";
 import { ago, useCollection, useShellBehavior } from "./app-shell";
@@ -33,6 +33,14 @@ function Brand() {
  * and directly composes the pages. data-ui-root below is a CSS scope only. */
 export function App() {
   const state = useShell(), shell = useShellBehavior(state.view, state.ready, state.dark), collection = useCollection(state.ready);
+  // The sidebar and page commit immediately. The secondary card can prepare
+  // its facts in a transition without keeping the previous page's card visible.
+  const summaryView = useDeferredValue(state.view);
+  useEffect(() => {
+    if (shell.float && summaryView === state.view) {
+      document.querySelector<HTMLElement>('#summaryPanel button, #summaryPanel [href], #summaryPanel [tabindex]:not([tabindex="-1"])')?.focus();
+    }
+  }, [shell.float, state.view, summaryView]);
   const [scrolled, setScrolled] = useState(false), github = useGithub().state.connection, bound = github.status === "connected" || github.status === "expired";
   const profile = bound ? { ...state.profile, name: github.name || github.login || state.profile.name, photo: github.avatar ?? state.profile.photo } : state.profile;
   const status = !collection ? null : !collection.enabled ? ["paused", "采集已暂停", "历史统计保留；在Agent 管理或设置中恢复采集"] : collection.collecting ?
@@ -100,7 +108,7 @@ export function App() {
       <footer hidden><span>Agent Usage · 本地用量与账号额度</span><span id="collectionState">{state.collectionState}</span></footer>
     </main>
     <div id="panelFrame" className="panel-frame" aria-hidden="true" />
-    <aside id="summaryPanel" className={"summary-panel" + (scrolled ? " is-scrolled" : "")} aria-label="概要" data-summary-views="quota usage cost sessions sources" hidden={!shell.dock && !shell.float} onScroll={event => setScrolled(event.currentTarget.scrollTop > 0)}><div data-ui-root="" data-page-root="widgets">{state.ready ? <Summary view={state.view} /> : null}</div></aside>
+    <aside id="summaryPanel" className={"summary-panel" + (scrolled ? " is-scrolled" : "")} aria-label="概要" data-summary-views="quota usage cost sessions sources" hidden={!shell.dock && !shell.float} onScroll={event => setScrolled(event.currentTarget.scrollTop > 0)}><div data-ui-root="" data-page-root="widgets">{state.ready && summaryView === state.view ? <Summary view={summaryView} /> : null}</div></aside>
     <div id="toast" role="status" hidden={!state.toast}>{state.toast}</div>
   </>;
 }

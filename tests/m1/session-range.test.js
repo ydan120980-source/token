@@ -9,7 +9,14 @@ test('bounded session reads preserve full facts, null pricing, metadata and rece
  assert.deepEqual(store._sessionReferences(),all.sessions.map(({key,agent,end})=>({key,agent,end})),'scan candidates preserve membership, first ownership, insertion order and newest time');
  for(const session of narrow.sessions){const original=all.sessions.find(s=>s.key===session.key);assert.deepEqual(session,{...original,days:original.days.filter(d=>d.date===today)});assert.equal(session.days[0].estimatedCostUsd,null);}
  assert.equal(store.sessionList({range:'today'}),narrow);assert.equal(store.sessionList({range:'7'}).sessions.flatMap(s=>s.days).length,24);assert.equal(store.sessionList({range:'30'}).sessions.flatMap(s=>s.days).length,24);
- const packed=store.sessionListPacked({range:'today'});assert.deepEqual(unpack(packed),selectSessions(narrow));
+ const packed=store.sessionListPacked({range:'today'}),decoded=unpack(packed);assert.deepEqual(decoded,selectSessions(narrow));
+ assert.equal(decoded.sessions[0].models,decoded.sessions[1].models,'repeated models share the validated array');
+ assert(Object.isFrozen(decoded.sessions[0].models));
+ const frame=JSON.parse(new TextDecoder().decode(packed.sessionBytes));
+ for(const row of frame.rows)row[2]=row[3];
+ const reused=unpack({...packed,sessionBytes:new TextEncoder().encode(JSON.stringify(frame)).buffer});
+ assert.deepEqual(reused.sessions[0].entries,['unknown'],'entry validation still applies to a shared wire index');
+ assert.deepEqual(reused.sessions[0].models,['synthetic-unpriced'],'the same index uses its own model validation');
  structuredClone(packed,{transfer:[packed.sessionBytes]});assert.equal(packed.sessionBytes.byteLength,0);
  const next=store.sessionListPacked({range:'today'});assert.deepEqual(unpack(next),selectSessions(narrow),'a transferred response cannot detach the retained bytes');
  new Uint8Array(next.sessionBytes).fill(0);assert.deepEqual(unpack(store.sessionListPacked({range:'today'})),selectSessions(narrow),'a changed response cannot corrupt the retained bytes');

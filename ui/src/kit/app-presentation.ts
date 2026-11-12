@@ -34,8 +34,10 @@ function rove(event: KeyboardEvent, buttons: Iterable<HTMLButtonElement>, vertic
 let scrollJob: ReturnType<typeof animate> | null = null, placeFrame = 0, epoch = 0;
 function cancelScroll() { scrollJob?.stop(); scrollJob = null; epoch++; cancelAnimationFrame(placeFrame); placeFrame = 0; }
 function scrollTo(top: number) {
-  const from = scrollY, to = Math.max(0, Math.min(document.documentElement.scrollHeight - innerHeight, top));
+  const from = scrollY;
   cancelScroll();
+  if (top <= 0 && from === 0) return;
+  const to = top <= 0 ? 0 : Math.max(0, Math.min(document.documentElement.scrollHeight - innerHeight, top));
   if (mode() !== "full" || document.hidden || Math.abs(to - from) < 2) { window.scrollTo({ top: to, behavior: "instant" }); return; }
   const control = animate(from, to, { ...spring.slow, onUpdate: value => window.scrollTo({ top: value, behavior: "instant" }) });
   scrollJob = control;

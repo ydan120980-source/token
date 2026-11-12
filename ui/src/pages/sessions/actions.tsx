@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 import { IconCopy, IconFolder, IconInfoCircle, IconMessages } from "@tabler/icons-react";
 import { Button, CopyButton, IconButton } from "@ui/kit";
-import { useSessionsHost, type SessionRow } from "@ui/data";
+import type { SessionRow } from "@ui/data";
 
 // Opens a session's or project's working directory in Explorer through the host (one request at a time).
 export function FolderAction({ sessionKey, enabled, kind = "row", title }: { sessionKey?: string; enabled: boolean; kind?: "row" | "project" | "inspector"; title: string }) {
-  const host = useSessionsHost(), [busy, setBusy] = useState(false), pending = useRef(false);
+  const host = window.sessionsHost, [busy, setBusy] = useState(false), pending = useRef(false);
   const open = async () => {
     if (pending.current) return;
     pending.current = true; setBusy(true);
@@ -18,7 +18,7 @@ export function FolderAction({ sessionKey, enabled, kind = "row", title }: { ses
 
 // Opens the session's conversation in the reading view (Agents with a reader only).
 export function ReadAction({ session }: { session: SessionRow }) {
-  const host = useSessionsHost();
+  const host = window.sessionsHost;
   return host.readable(session.agent) ? <span data-session-read><Button variant="secondary" size="compact" leadingIcon={IconMessages} onClick={() => host.read(session)}>{"阅读对话"}</Button></span> : null;
 }
 // A row itself opens the conversation; its figures, name and identifiers are one step aside.
@@ -27,7 +27,7 @@ export function DetailAction({ onClick }: { onClick: () => void }) {
 }
 // Copies the official resume command; the person runs it in PowerShell themselves.
 export function ResumeAction({ session, button = false, title }: { session: SessionRow; button?: boolean; title: string }) {
-  const host = useSessionsHost(), [busy, setBusy] = useState(false), pending = useRef(false);
+  const host = window.sessionsHost, [busy, setBusy] = useState(false), pending = useRef(false);
   const copy = async () => {
     if (pending.current) return false;
     pending.current = true; setBusy(true);
@@ -44,7 +44,7 @@ export function ResumeAction({ session, button = false, title }: { session: Sess
 
 // Copies a project's full path.
 export function ProjectCopy({ cwd }: { cwd: string | null }) {
-  const host = useSessionsHost();
+  const host = window.sessionsHost;
   return <span title={cwd ? "复制项目完整路径" : "工作目录未记录或来源未确认"} data-session-project-copy>
     {cwd ?
       <CopyButton size="compact" label="复制项目完整路径" onCopy={() => host.copyText(cwd, "project")} /> :

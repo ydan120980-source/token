@@ -1,10 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { currentView, getGlobals, type Billing, type PriceCoverage, type PriceEntry, type PricePlan, type PriceTry, type PriceRow, type PriceSuggestion, type Pricing, type PricingGap, type UsedModel } from "@ui/data";
 
-// The pricing panel's state, shared by the settings section, the price sheet and the cost page
-// (window.uiPricingEditor). Timing follows the retired pricing-controller.js: the large catalog is
-// read only when settings or cost is shown or a sheet is asked for, reads are serialized with one
-// queued follow-up, and a save reports its own result apart from a failed reload.
+// Settings and the model detail sheets share the pricing catalog. Reads are
+// serialized with one queued follow-up. A save keeps its own result if reloading fails.
 export type Gap = PricingGap & { suggestions?: PriceSuggestion };
 export interface EditorState { open: boolean; key: string | null; serial: number; probe: boolean }
 export interface PricingState {
@@ -22,7 +20,7 @@ const listeners = new Set<() => void>();
 function set(patch: Partial<PricingState>) { state = { ...state, ...patch }; for (const listener of listeners) listener(); }
 function bridge() { return window.usageBridge!; }
 
-let loading = false, reloadQueued = false, loadPromise: Promise<void> | null = null, editorRequest = 0, savedNotice = "";
+let loading = false, stale = true, reloadQueued = false, loadPromise: Promise<void> | null = null, editorRequest = 0, savedNotice = "";
 function saved(text: string) { savedNotice = text; set({ result: text }); }
 function rebuild(from: Partial<PricingState> = {}) {
   const next = { ...state, ...from };
@@ -37,16 +35,20 @@ export function load(): Promise<void> {
   if (loading) { reloadQueued = true; return loadPromise!; }
   loadPromise = read(); return loadPromise;
 }
+export function ensurePricing(): Promise<void> {
+  return loading ? loadPromise! : stale ? load() : Promise.resolve();
+}
 async function read() {
-  loading = true;
+  loading = true; stale = false;
   try {
     const data = await bridge().pricing();
     rebuild({ data, rows: data.models || [], billing: data.billing || state.billing });
     // Only a person who turned the fallback or the floor on pays for working out what they contribute.
     const billing = data.billing || state.billing;
-    set({ active: billing.fallback || billing.partialLowerBound ? (await bridge().pricePlan({ auto: false, fallback: billing.fallback ?? null, partial: Boolean(billing.partialLowerBound) })).after : null });
+    set({ active: billing.fallback || billing.partialLowerBound ? await bridge().pricingCoverage() : null });
     window.dispatchEvent(new Event("pricing-change"));
   } catch {
+    stale = true;
     set({ result: savedNotice ? savedNotice + " 价格显示暂未刷新，请重新进入设置重试。" : "价格读取失败，已保存的规则保留；请重新进入设置重试。" });
   } finally { loading = false; if (reloadQueued) { reloadQueued = false; void load(); } }
 }
@@ -54,7 +56,7 @@ async function read() {
 /** Opens the sheet for a used model (key) or a custom identifier (null) once prices are read. */
 export async function openEditor(key: string | null, withProbe = false) {
   const request = ++editorRequest;
-  if (loading) await loadPromise; else if (!state.data) await load();
+  await ensurePricing();
   if (request !== editorRequest) return;
   if (!state.data) { window.usageData?.toast("价格暂不可用，请稍后重试。"); return; }
   if (key === null || state.models.some(model => model.key === key)) set({ editor: { open: true, key, serial: state.editor.serial + 1, probe: withProbe } });
@@ -123,11 +125,22 @@ export function startPricing() {
       return { basis: uiPricing.origin(item.row).label, priced: uiPricing.priced(item.row), rates: item.row?.rates || null, mapped: item.mapped, target: item.target };
     }
   });
-  const shown = () => currentView() === "settings" || currentView() === "cost";
-  window.addEventListener("ui-view-change", event => { ++editorRequest; const view = (event as CustomEvent<string>).detail; if (view === "settings" || view === "cost") void load(); });
-  window.addEventListener("usage-models", () => rebuild());
-  window.addEventListener("source-catalog", () => { rebuild({ names: names() }); if (shown()) void load(); });
-  const stop = bridge().onUpdate(() => { if (currentView() === "settings") void load(); });
+  const shown = () => {
+    if (currentView() === "settings") return true;
+    const cost = currentView() === "cost" ? window.costUi?.state() : null;
+    return cost?.by === "model" && Boolean(cost.open) || state.editor.open;
+  };
+  window.addEventListener("ui-view-change", event => {
+    ++editorRequest;
+    if ((event as CustomEvent<string>).detail === "settings") void load();
+  });
+  window.addEventListener("usage-models", () => { stale = true; if (shown()) rebuild(); });
+  window.addEventListener("source-catalog", () => {
+    stale = true;
+    if (shown()) { rebuild({ names: names() }); void load(); }
+    else set({ names: names() });
+  });
+  const stop = bridge().onUpdate(() => { stale = true; if (shown()) void load(); });
   window.addEventListener("unload", stop);
   if (shown()) void load();
 }

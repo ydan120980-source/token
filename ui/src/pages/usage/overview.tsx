@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Activity as ReactActivity, type ReactNode } from "react";
 import { BarChart, Button, Card, EmptyState, Figure, SectionHeader, Value, ValueButton } from "@ui/kit";
 import type { UsageHost, UsageSnapshot } from "@ui/data/usage-host";
 import { Clients, Hovered, Price } from "./shared";
@@ -11,7 +11,7 @@ function TodayFigure({ label, data, children }: { label: string; data: string; c
   </div>;
 }
 
-export function Overview({ host, snapshot }: { host: UsageHost; snapshot: UsageSnapshot }) {
+export function Overview({ host, snapshot, showClients, mountClients }: { host: UsageHost; snapshot: UsageSnapshot; showClients: boolean; mountClients: boolean }) {
   const { hero, today } = snapshot.view;
   return <div className="flex min-w-0 flex-col gap-6">
     <section data-usage-hero>
@@ -93,7 +93,7 @@ export function Overview({ host, snapshot }: { host: UsageHost; snapshot: UsageS
           <EmptyState message={today.empty} action={
             <Button variant="ghost" disabled={snapshot.busy} onClick={() => void host.refresh()}>{"刷新今日"}</Button>
           } /> :
-          <div className="mt-2"><Clients items={today.clients} host={host} today /></div>}
+          mountClients ? <ReactActivity mode={showClients ? "visible" : "hidden"}><div className="mt-2"><Clients items={today.clients} host={host} today /></div></ReactActivity> : null}
       </Card>
     </section>
   </div>;

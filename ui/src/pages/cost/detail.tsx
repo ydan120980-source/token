@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AgentMark, Badge, Breakdown, Button, LabelRow, LineChart, Sheet, Value, type BreakdownPart, type ChartTone, Segmented } from "@ui/kit";
 import type { CostDetail, CostHost } from "@ui/data/cost-host";
 import type { Rates } from "@ui/data";
 import { CostAmount } from "./amount";
+import { ensurePricing, usePricing } from "../settings/pricing/store";
 
 // The detail is a floating card (owner 2026-10-28): figures in tiles, the usage composition as a
 // breakdown whose parts open a detail card beside the sheet, then the daily line, the users and pricing.
@@ -38,9 +39,11 @@ function DetailTrend({ detail }: { detail: CostDetail }) {
   </Part>;
 }
 function Pricing({ detail, host }: { detail: CostDetail; host: CostHost }) {
+  const { available, data, result } = usePricing();
   const priced = window.uiPricingEditor?.model(detail.key), rates = priced?.rates as Partial<Rates> | null;
   const fixable = detail.item.gaps.some(gap => gap.fixable), incomplete = detail.item.gaps.some(gap => !gap.fixable);
   const byModel = host.state().by === "model";
+  useEffect(() => { if (byModel) void ensurePricing(); }, [byModel]);
   return <Part title={byModel ? "计价" : "计价覆盖"} aside={byModel && priced?.priced ? priced.basis : undefined} pricing>
     {!byModel ?
       <p className="text-caption text-muted-foreground">{"已计入 "}
@@ -56,8 +59,10 @@ function Pricing({ detail, host }: { detail: CostDetail; host: CostHost }) {
             </dd>
           </div>)}
         </dl>
-      </> : !priced && !detail.unknown ?
-        <p className="text-caption text-muted-foreground">{"计价信息在桌面应用中显示。"}</p> : null}
+      </> : available && !data ?
+        <p className="text-caption text-muted-foreground">{result || "正在读取计价信息…"}</p> :
+        !priced && !detail.unknown ?
+          <p className="text-caption text-muted-foreground">{"计价信息在桌面应用中显示。"}</p> : null}
     {detail.item.gaps.length ?
       <ul className="flex flex-col gap-1" data-cost-detail-gaps>
         {detail.item.gaps.map(gap => <li key={gap.code} className="flex justify-between gap-3 text-caption">

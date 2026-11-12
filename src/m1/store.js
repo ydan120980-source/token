@@ -113,7 +113,11 @@ class Store {
   workbench(selection) {
     const value=workbench.request(selection),snapshot=this.snapshot(),key=JSON.stringify(value);
     if(this._workbench?.snapshot!==snapshot||this._workbench.settings!==this.workbenchSettings||this._workbench.scope!==this.settings.sources)this._workbench={snapshot,settings:this.workbenchSettings,scope:this.settings.sources,views:new Map()};
-    if(!this._workbench.views.has(key)){if(this._workbench.views.size>=8)this._workbench.views.clear();this._workbench.views.set(key,workbench.build(this,value));}
+    if(!this._workbench.views.has(key)){
+      if(this._workbench.views.size>=8)this._workbench.views.clear();
+      const calendar=this._projectionCalendar;
+      this._workbench.views.set(key,workbench.build(this,value,{snapshot,cachedDate:calendar?.timezone===snapshot.timezone?calendar.at.cachedDate:undefined}));
+    }
     return this._workbench.views.get(key);
   }
   saveWorkbench(value) {
@@ -140,12 +144,15 @@ class Store {
     return {...this.state,records:{...this.state.records},duplicateIds:{...this.state.duplicateIds},sessions:{...this.state.sessions},statuses:structuredClone(this.state.statuses)};
   }
   ingestCollection(scan,native,custom) {
+    return this.commitCollection(this.prepareCollection(scan,native,custom));
+  }
+  prepareCollection(scan,native,custom) {
     // Build the complete fact batch off to the side. Existing per-source drafts
     // retain missing observations; only the final ledger is made visible/durable.
     if(!scan&&!Object.entries(custom||{}).some(([id,result])=>{
       const source=this.state.customSources?.[id];
       return source?.enabled&&!source.archived&&JSON.stringify(source)!==JSON.stringify({...source,files:result.files,diagnostics:result.diagnostics,fileCount:result.fileCount});
-    }))return this.snapshot();
+    }))return null;
     const draft=Object.create(this),writes=[],ledger=path.join(this.dir,'statistics.json');
     draft.state=this._metrics.measure('clone',()=>this.collectionState());draft._snapshot=null;draft._sessions=null;draft._collectionStaging=true;
     draft._collectionPrevious={state:this.state,snapshot:this._snapshot};
@@ -157,14 +164,36 @@ class Store {
     // staged digest avoids serializing the entire unchanged ledger twice.
     const digest=draft.persistedDigest ?? draft.digest(),changed=writes.some(row=>row.file===ledger)&&digest!==this.persistedDigest;
     draft.state.sequence=this.state.sequence+(changed?1:0);
+    let snapshot;
     if(changed){
       // Calculate before persistence: a failed projection must not leave disk and
       // memory disagreeing after an otherwise successful atomic rename.
       draft.state.updatedAt=new Date().toISOString();draft._snapshot=null;
-      const snapshot=draft.snapshot();
+      snapshot=draft.snapshot();
+    }
+    return { draft, writes, ledger, digest, changed, scan, snapshot };
+  }
+  commitCollection(batch, verifiedAt = null) {
+    if (!batch) return this.snapshot();
+    const { draft, writes, ledger, digest, changed, scan, snapshot } = batch;
+    if (verifiedAt) {
+      // A draft built alongside the native check becomes current only when
+      // the check succeeds. Attempt timestamps do not participate in digest().
+      for (const agent of SOURCES) {
+        const status = draft.state.statuses[agent];
+        status.lastAttempt = verifiedAt;
+        if (!status.errors.length && !scan[agent].partial) status.lastSuccess = verifiedAt;
+      }
+      if (changed) {
+        draft.state.updatedAt = verifiedAt;
+        snapshot.collectedAt = verifiedAt;
+        snapshot.generatedAt = verifiedAt;
+      }
+    }
+    if(changed){
       for(const row of writes)if(row.file!==ledger)atomic(row.file,row.value,true);
       this.collectionWrite(ledger,draft.state);
-      this.state=draft.state;this._snapshot=snapshot;this._projectionBasis=draft._projectionBasis;this._sessions=null;this._workbench=null;this.persistedDigest=digest;
+      this.state=draft.state;this._snapshot=snapshot;this._projectionBasis=draft._projectionBasis;this._projectionCalendar=draft._projectionCalendar;this._sessions=null;this._workbench=null;this.persistedDigest=digest;
     }else if(scan){this.state=draft.state;}
     return this.snapshot();
   }
@@ -337,7 +366,11 @@ class Store {
     const reason = !previous ? 'initial' : previous.sequence !== this.state.sequence ? 'ledger' : previous.timezone !== timezone ? 'timezone' : previous.today !== today ? 'day' : 'invalidated';
     this._metrics.count(reason);
     const snapshot = this._metrics.measure('projection', () => {
-      const options={records:this.records(),estimate:record=>this.estimate(record),sequence:this.state.sequence,updatedAt:this.state.updatedAt,deviceId:this.state.deviceId,sourceCatalog:this.catalog(),priceCatalog:valuation.priceBasis(this.priceContext()),statuses:this.state.statuses,recovered:this.recovered,timezone,now};
+      if (this._projectionCalendar?.timezone !== timezone) {
+        const { projectionCalendar } = require('./usage-projection');
+        this._projectionCalendar = { timezone, at: projectionCalendar(timezone, 65536) };
+      }
+      const options={records:this.records(),estimate:record=>this.estimate(record),sequence:this.state.sequence,updatedAt:this.state.updatedAt,deviceId:this.state.deviceId,sourceCatalog:this.catalog(),priceCatalog:valuation.priceBasis(this.priceContext()),statuses:this.state.statuses,recovered:this.recovered,timezone,now,calendar:this._projectionCalendar.at};
       const incremental=this._collectionPrevious?require('./usage-projection-incremental').projectIncremental(options,{...this._collectionPrevious,currentRecords:this.state.records,currentDuplicates:this.state.duplicateIds}):null;
       this._collectionPrevious=null;return incremental||projectUsage(options);
     });
@@ -361,7 +394,14 @@ class Store {
   }
   _sessionProjection({range,recent},snapshot) {
     const groups = new Map(), unattributed = {}, records = this.records(), dates = new Map();
-    const dateOf = timestamp => { if (dates.has(timestamp)) return dates.get(timestamp); const date = day(timestamp,snapshot.timezone); if(dates.size<4096)dates.set(timestamp,date); return date; };
+    const calendar = this._projectionCalendar?.timezone === snapshot.timezone ? this._projectionCalendar.at : null;
+    const dateOf = timestamp => {
+      const saved = calendar?.cachedDate(timestamp) ?? dates.get(timestamp);
+      if (saved !== undefined) return saved;
+      const date = day(timestamp,snapshot.timezone);
+      if (dates.size < 4096) dates.set(timestamp,date);
+      return date;
+    };
     const start = range === 'all' ? '0000-01-01' : require('./usage-math').startFor(snapshot.today,range,null);
     for (const record of records) {
       if (!record.sessionKey) { const date = dateOf(record.timestamp); if(range==='all'||date>=start&&date<=snapshot.today){const counts = unattributed[record.agent] ||= {}; counts[date] = (counts[date] || 0) + 1;} continue; }
@@ -369,6 +409,7 @@ class Store {
       if (!session) groups.set(record.sessionKey, session = { agent: record.agent, start: record.timestamp, end: record.timestamp });
       if (record.timestamp < session.start) session.start = record.timestamp;
       if (record.timestamp > session.end) session.end = record.timestamp;
+      if (!recent) (session.records ??= []).push(record);
     }
     // A session its Agent lists with no usage tied to it (Continue): a row with no records, which reads as unknown, never 0.
     if (!recent) for (const [key, meta] of Object.entries(this.state.sessions)) {
@@ -381,7 +422,10 @@ class Store {
     if(recent){selected=new Map();const agents=new Map();for(const [id,session] of [...groups].sort((a,b)=>b[1].end.localeCompare(a[1].end))){const count=agents.get(session.agent)||0;if(count<5){selected.set(id,session);agents.set(session.agent,count+1);}}}
     // Group only references to existing observations. Aggregate and encode one
     // session at a time, instead of retaining Sets/Maps and full rows for all.
-    for(const record of records){const session=selected.get(record.sessionKey);if(session)(session.records??=[]).push(record);}
+    if (recent) for (const record of records) {
+      const session = selected.get(record.sessionKey);
+      if (session) (session.records ??= []).push(record);
+    }
     const store=this;
     function* sessions(){
       for(const [key,session]of selected){
@@ -526,7 +570,11 @@ class Store {
   }
   catalogHash() { return this.modelCatalogHash; }
   overrideHash() { return crypto.createHash('sha256').update(JSON.stringify(this.overrides || {})).digest('hex'); }
-  pricing() {
+  pricing(view) {
+    if (view === 'coverage') {
+      return this.billing.fallback || this.billing.partialLowerBound ? valuation.coverageOf(this.pricingCore(), this.records()) : null;
+    }
+    if (view !== undefined) throw Error('PRICE_SETTING_INVALID');
     const models = new Map(Object.entries(this.modelCatalog).map(([key, rates]) => [key, { provider: key.slice(0, key.indexOf('/')), model: key.slice(key.indexOf('/') + 1), rates, origin: rates.provenance || 'reference-unverified', source: rates.source || catalog.source }]));
     // Models that only ever appear in collected records: listed so a gap is visible
     // instead of silently absent. Their identifier is data, so it can be anything

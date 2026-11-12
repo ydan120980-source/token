@@ -17,7 +17,7 @@ function Step({ mark, title, note, details, action, code }: {
     {action}
   </li>;
 }
-export function Checks({ host, snapshot, narrow }: { host: CostHost; snapshot: CostSnapshot; narrow: boolean }) {
+export function Checks({ host, snapshot }: { host: CostHost; snapshot: CostSnapshot }) {
   const { view } = snapshot, cov = view.coverage, cache = view.cache;
   const modelName = (key: string) => host.displayModel(view.models.find(item => item.key === key)?.model ?? key);
   const names = (models: { key: string }[]) => models.slice(0, 3).map(model => modelName(model.key)).join(" · ") +
@@ -26,7 +26,7 @@ export function Checks({ host, snapshot, narrow }: { host: CostHost; snapshot: C
   const involved = (text: ReactNode) => <Disclosure summary="涉及模型">
     <p className="text-caption text-muted-foreground">{text}</p>
   </Disclosure>;
-  return <section data-cost-section="coverage" className={narrow ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4"}>
+  return <section data-cost-section="coverage" className="grid gap-4">
     <section data-cost-coverage>
       <Card title="计价覆盖" fill>{!cov.tokens ?
         <EmptyState message="当前范围暂无用量。" /> :

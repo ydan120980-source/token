@@ -67,6 +67,7 @@
   });
   document.addEventListener('click',event=>{if(event.target.closest('[data-open-cost]'))data.view('cost');});
   window.addEventListener('usage-data-change',()=>{if(bridge?.setSubscription)fees=null;publish();});
+  window.addEventListener('usage-subscriptions-change',()=>{fees=null;publish();});
   window.addEventListener('pricing-change',publish);
   // Quota captions are read live by Subscriptions. Notify those consumers,
   // without rebuilding unchanged usage/prices/charts for an account update.

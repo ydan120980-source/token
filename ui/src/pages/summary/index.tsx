@@ -1,11 +1,10 @@
 import { useMemo, type ReactNode } from "react";
 import { AgentMark, BarChart, Figure, StackBar, widgetTone, type ChartTone } from "@ui/kit";
-import type { UsageRow } from "@ui/data";
+import { getUsageBridge, useBridge, type UsageRow } from "@ui/data";
 import { useSessions, useUsage, useWidgetQuota } from "@ui/data/widget-data";
 import { ago } from "../../app-shell";
 import { agentName, money, short } from "../widgets/shared";
 import { nextReset } from "../widgets/quota";
-import { usePricing } from "../settings/pricing/store";
 
 // The right column (owner 2026-10-29, docs/m2/UI-POLISH-M10-20261029.md): one large card per page with that
 // page's essentials, read-only, drawn directly from the saved facts the page reads. It does not reuse the
@@ -103,7 +102,8 @@ function UsageSummary() {
 }
 
 function CostSummary() {
-  const usage = useUsage(), { active } = usePricing();
+  const usage = useUsage(), bridge = window.usageBridge;
+  const { data: active } = useBridge(() => getUsageBridge().pricingCoverage(), { enabled: Boolean(bridge), subscribe: bridge?.onUpdate });
   const view = useMemo(() => {
     if (!usage?.today) return null;
     const month = usage.rows.filter(row => row.date.slice(0, 7) === usage.today!.slice(0, 7) && row.date <= usage.today!);

@@ -8,17 +8,29 @@ const hourFormatters = new Map();
 const semantics=Object.freeze({inputUncached:'excludes-cache',reasoning:'subset-of-output',totalTokens:'non-overlapping-source-total'});
 const mapFields=['pricingReasons','unpricedTokens','incompleteTokens','knownUsage','knownRecords','costParts'];
 function hourOf(time, timezone) { if (!hourFormatters.has(timezone)) { const formatter=new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', hourCycle: 'h23' }); if(hourFormatters.size>=8)hourFormatters.delete(hourFormatters.keys().next().value);hourFormatters.set(timezone,formatter); } return Number(hourFormatters.get(timezone).format(new Date(time))); }
-function projectUsage({records,estimate:estimateRecord,sequence,updatedAt,deviceId,sourceCatalog,priceCatalog,statuses={},recovered=[],timezone,now}) {
+// Keep only exact timestamps and their calendar coordinates. A change of
+// timezone replaces this cache, including daylight-saving and offset rules.
+function projectionCalendar(timezone, limit = 4096) {
+  const timestamps = new Map();
+  const at = time => {
+    const cached = timestamps.get(time);
+    if (cached) return cached;
+    const stamp = { date: day(time, timezone), hour: hourOf(time, timezone) };
+    if (timestamps.size < limit) timestamps.set(time, stamp);
+    return stamp;
+  };
+  at.cachedDate = time => timestamps.get(time)?.date;
+  return at;
+}
+function projectUsage({records,estimate:estimateRecord,sequence,updatedAt,deviceId,sourceCatalog,priceCatalog,statuses={},recovered=[],timezone,now,calendar=projectionCalendar(timezone)}) {
   const today=day(now,timezone);
     // Hourly rows cover the whole history: single-day trends and the weekday x hour view.
-    const groups = new Map(), hourGroups = new Map(), singleHours = new Map(), calendar = new Map();
+    const groups = new Map(), hourGroups = new Map(), singleHours = new Map();
     for (const record of records) {
       // Several messages commonly share an exact source timestamp. Reuse only
       // that exact conversion: no hour/day bucketing that could cross DST or a
       // half-hour timezone boundary. The per-projection cache is bounded.
-      let stamp = calendar.get(record.timestamp);
-      if(!stamp){stamp={date:day(record.timestamp,timezone),hour:hourOf(record.timestamp,timezone)};if(calendar.size<4096)calendar.set(record.timestamp,stamp);}
-      const {date,hour} = stamp;
+      const {date,hour} = calendar(record.timestamp);
       const estimate = estimateRecord(record);
       const identity = [record.agent, record.entry, record.provider, record.model];
       const dailyKey=JSON.stringify([date,...identity]),hourKey=JSON.stringify([date,hour,...identity]);
@@ -55,4 +67,4 @@ function projectUsage({records,estimate:estimateRecord,sequence,updatedAt,device
       recovered: (recovered || []).map(entry => ({ ...entry }))
     };
 }
-module.exports={projectUsage,day};
+module.exports={projectUsage,day,projectionCalendar};

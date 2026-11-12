@@ -1,9 +1,10 @@
-import { Activity as ReactActivity, useCallback, useEffect, useRef, useState } from "react";
+import { Activity as ReactActivity, memo, useCallback, useEffect, useRef, useState } from "react";
 import { IconDownload } from "@tabler/icons-react";
 import {
   AgentFilter, IconButton, PageHeader, PaneGroup, ScrollArea, Segmented, SubTabs,
 } from "@ui/kit";
-import { motionAllowed, useViewActive } from "@ui/data";
+import { motionAllowed } from "@ui/data";
+import { usePageStages } from "@ui/data/page-stages";
 import { useCostHost, type CostUi } from "@ui/data/cost-host";
 import { CostHeroView } from "./hero";
 import { Composition, Months, Trend } from "./charts";
@@ -12,46 +13,40 @@ import { CostTableView } from "./table";
 import { Checks } from "./checks";
 import { DetailSheet } from "./detail";
 import { AttentionNotice, Projects } from "./projects";
-import { useCostNarrow } from "./layout";
+
+const Hero = memo(CostHeroView), TrendPanel = memo(Trend);
+const showCoverage = () => window.costUi?.locate("coverage");
 
 // 费用 on the shared kit (owner 2026-10-27: one kit for every page; the cost page's own
 // reference styling retired 2026-10-28, UI-COST-KIT-20261028.md).
 export function CostPage() {
-  const active = useViewActive("cost"), host = useCostHost(), { ref, narrow } = useCostNarrow(active);
+  const { active, visible, mounted, reveal: revealSections } = usePageStages("cost", 3);
+  const host = useCostHost(), ref = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState(0), scheduled = useRef(0);
-  // Let the first screen paint before mounting the remaining sections. A single
-  // rAF can run before that same paint, putting the entire page back in its way.
-  // Once visited, keep the aggregate page under the shell's hidden section;
-  // revisiting does not create every chart and measurement again.
-  const [below, setBelow] = useState(0), [waiting, setWaiting] = useState<string | null>(null);
-  const mounted = useRef(false);
-  mounted.current = below === 3;
-  useEffect(() => {
-    if (!active) return undefined;
-    if (below >= 3) return undefined;
-    let next = 0;
-    const frame = requestAnimationFrame(() => { next = requestAnimationFrame(() => setBelow(previous => Math.min(3, previous + 1))); });
-    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(next); };
-  }, [active, below]);
+  const [waiting, setWaiting] = useState<string | null>(null);
+  const visibleStage = useRef(visible);
+  visibleStage.current = visible;
   const reveal = useCallback((target: string) => {
+    if (window.appShell.get().view !== "cost") return;
+    if (target !== "analysis" && target !== "month" && visibleStage.current < 3) { setWaiting(target); return; }
     const element = target === "analysis" ? ref.current :
       ref.current?.querySelector<HTMLElement>('[data-cost-section="' + target + '"]');
     // A target below the first screen is not there yet on the frame it is asked for; it is placed
     // as soon as that frame's mount lands rather than being scrolled to nowhere.
-    if (!element && !mounted.current) { setWaiting(target); return; }
     setWaiting(null);
     element?.scrollIntoView({ block: "start", behavior: motionAllowed() ? "smooth" : "auto" });
   }, [ref]);
   useEffect(() => {
-    if (waiting === null) return undefined;
+    if (!active || waiting === null) return undefined;
     const frame = requestAnimationFrame(() => reveal(waiting));
     return () => cancelAnimationFrame(frame);
-  }, [waiting, below, reveal]);
+  }, [active, waiting, visible, reveal]);
   useEffect(() => {
     const locate: CostUi["locate"] = target => {
       setSection(0);
       if (target === "month") host.set({ heroSlide: "month" });
       if (target === "composition") host.set({ panelTab: "composition", panel: "both" });
+      if (target !== "analysis" && target !== "month") revealSections(3);
       cancelAnimationFrame(scheduled.current);
       scheduled.current = requestAnimationFrame(() => reveal(target));
     };
@@ -61,8 +56,15 @@ export function CostPage() {
     });
     window.costUi = ui;
     window.costPage = Object.freeze({ render: ui.render, state: ui.state });
-    return () => { cancelAnimationFrame(scheduled.current); delete window.costUi; delete window.costPage; };
-  }, [host, ref, reveal]);
+    const leave = () => { cancelAnimationFrame(scheduled.current); setWaiting(null); };
+    window.addEventListener("ui-view-leave", leave);
+    return () => {
+      cancelAnimationFrame(scheduled.current);
+      window.removeEventListener("ui-view-leave", leave);
+      delete window.costUi;
+      delete window.costPage;
+    };
+  }, [host, reveal, revealSections]);
   const snapshot = host.get(), { state, folds, view } = snapshot;
   return <ReactActivity mode={active ? "visible" : "hidden"}><div ref={ref} className="flex flex-col gap-6" data-cost-page>
     <PageHeader
@@ -72,8 +74,7 @@ export function CostPage() {
         <IconButton icon={IconDownload} label="导出费用 CSV" disabled={snapshot.exporting} onClick={() => void host.export()} /> : null} />
     {section === 0 ?
       <div className="flex flex-col gap-6" data-cost-analysis data-range-open={folds.rail ? "" : undefined}>
-        <CostHeroView hero={view.hero} host={host} agents={view.agents} narrow={narrow}
-          onCoverage={() => window.costUi?.locate("coverage")} />
+        <Hero host={host} snapshot={snapshot} onCoverage={showCoverage} />
         <div className="flex items-center justify-between gap-3" data-cost-agents>
           <AgentFilter agents={view.agents} value={state.agents ? [...state.agents][0] : "all"}
             onChange={host.chooseAgent} display="icon" aria-label="费用 Agent 筛选" />
@@ -81,9 +82,8 @@ export function CostPage() {
             {state.agents ? [...state.agents].map(host.model.agentName).join("、") : "全部 Agent"}
           </span>
         </div>
-        {below > 0 ? <>
-        <Trend host={host} snapshot={snapshot} />
-        {below > 1 ? <div data-cost-duo>
+        {mounted > 0 ? <ReactActivity mode={visible > 0 ? "visible" : "hidden"}><TrendPanel host={host} snapshot={snapshot} /></ReactActivity> : null}
+        {mounted > 1 ? <ReactActivity mode={visible > 1 ? "visible" : "hidden"}><div data-cost-duo>
           <PaneGroup
             collapsed={state.panel === "both" ? null : state.panel === "where" ? "months" : "where"}
             onCollapsedChange={key => host.set({ panel: key === null ? "both" : key === "months" ? "where" : "months" })}
@@ -103,11 +103,10 @@ export function CostPage() {
               },
               { key: "months", title: "按月", node: <Months host={host} snapshot={snapshot} /> },
             ]} />
-        </div> : null}
-        {below > 2 ? <><CostTableView host={host} snapshot={snapshot} />
-        <Checks host={host} snapshot={snapshot} narrow={narrow} />
-        <AttentionNotice kind="cost" /></> : null}
-        </> : null}
+        </div></ReactActivity> : null}
+        {mounted > 2 ? <ReactActivity mode={visible > 2 ? "visible" : "hidden"}><CostTableView host={host} snapshot={snapshot} />
+        <Checks host={host} snapshot={snapshot} />
+        <AttentionNotice kind="cost" /></ReactActivity> : null}
       </div> :
       <Projects />}
     <DetailSheet detail={active ? view.detail : null} host={host} />

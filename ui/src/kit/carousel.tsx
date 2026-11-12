@@ -15,6 +15,7 @@ export function Carousel({ slides, index, onIndexChange, "aria-label": label }: 
   const root = useRef<HTMLDivElement>(null), track = useRef<HTMLDivElement>(null), viewportRef = useRef<HTMLDivElement>(null), x = useMotionValue(0), height = useMotionValue(0), { full, fade } = useKitMotion();
   const [width, setWidth] = useState(0), [restIndex, setRestIndex] = useState(index), [size, setSize] = useState(0), entered = useRef(new Set<string>()), drag = useRef<{ id: number; x: number; y: number; base: number; dx: number; live: boolean } | null>(null), tracker = useRef(velocityTracker()), handoff = useRef(0), suppress = useRef(false), wheel = useRef({ amount: 0, at: 0 }), movement = useRef<ReturnType<typeof animate> | null>(null), suppressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const current = Math.max(0, Math.min(slides.length - 1, index)), show = (next: number) => onIndexChange(Math.max(0, Math.min(slides.length - 1, next)));
+  const measured = useRef({ width: 0, height: 0 });
   if (slides[current]) entered.current.add(slides[current].key);
   useLayoutEffect(() => { x.set(0); }, [restIndex, x]);
   useLayoutEffect(() => {
@@ -22,8 +23,14 @@ export function Carousel({ slides, index, onIndexChange, "aria-label": label }: 
     const resize = new ResizeObserver(entries => {
       let width: number | undefined, size: number | undefined;
       for (const entry of entries) {
-        if (entry.target === viewport && entry.contentRect.width > 0) width = Math.round(entry.contentRect.width);
-        if (entry.target === slide && entry.contentRect.height > 0) size = Math.round(entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height);
+        if (entry.target === viewport && entry.contentRect.width > 0) {
+          const next = Math.round(entry.contentRect.width);
+          if (next !== measured.current.width) { width = next; measured.current.width = next; }
+        }
+        if (entry.target === slide && entry.contentRect.height > 0) {
+          const next = Math.round(entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height);
+          if (next !== measured.current.height) { size = next; measured.current.height = next; }
+        }
       }
       if (width !== undefined || size !== undefined) flushSync(() => { if (width !== undefined) setWidth(width); if (size !== undefined) setSize(size); });
     });

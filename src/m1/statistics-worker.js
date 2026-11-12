@@ -19,13 +19,13 @@ let packedSource,packedBytes;
 let deltaBytes,deltaBaseRevision;
 // The collector runs inside the ledger owner: no second resident ledger or parse worker.
 class LocalCollector extends EventEmitter {
-  constructor() { super(); this.executor=createExecutor(); this.pending=new Set(); this.closed=false; }
+  constructor() { super(); this.executor=createExecutor({sharesStatisticsThread:true}); this.pending=new Set(); this.closed=false; }
   postMessage(request) {
     const children=new Set();
     const p=Promise.resolve().then(()=>this.executor.execute(request,value=>{
       if(value.childPid){children.add(value.childPid);parentPort.postMessage({event:'child',pid:value.childPid});}
       if(!this.closed)this.emit('message',value);
-    })).catch(error=>{if(!this.closed)this.emit('error',error);}).finally(()=>{this.pending.delete(p);for(const pid of children)parentPort.postMessage({event:'childDone',pid});});
+    }, scan => { if (!this.closed) this.emit('prepare', request.id, scan); })).catch(error=>{if(!this.closed)this.emit('error',error);}).finally(()=>{this.pending.delete(p);for(const pid of children)parentPort.postMessage({event:'childDone',pid});});
     this.pending.add(p);
   }
   async terminate() { this.closed=true;this.executor.dispose();await Promise.all([...this.pending]);this.emit('exit',0); }
@@ -88,7 +88,7 @@ const commands={
   exportProjects:selection=>{const view=service.store.workbench(selection);return {csv:require('./workbench').csv(view),rows:view.projects.length};},
   serializeStatistics:payload=>{const value=selectSnapshot(payload,service.store.catalog());return {json:JSON.stringify(value,null,2),rows:value.daily.length};},
   attention:()=>{const view=service.store.workbench({period:'total',project:'all'});return {sources:[],issues:view.issues,omittedIssues:view.omittedIssues,budgetOverview:view.budgetOverview};},
-  diagnostics:()=>{const {heapUsed,heapTotal,external,arrayBuffers}=process.memoryUsage();return {storage:service.store.diagnostics(),projection:metrics.state(),reader:require('./transcript-tasks').metrics(),memory:{heapUsed,heapTotal,external,arrayBuffers}};},
+  diagnostics:()=>{const {heapUsed,heapTotal,external,arrayBuffers}=process.memoryUsage();return {collectionStages:service.collectionStages??null,storage:service.store.diagnostics(),projection:metrics.state(),reader:require('./transcript-tasks').metrics(),memory:{heapUsed,heapTotal,external,arrayBuffers}};},
   customCheck:token=>{service.custom.get(token);return true;},
   priceStart:()=>{priceSync.start();},priceSync:()=>priceSync.sync(),priceAuto:value=>priceSync.setEnabled(value),
   start:async()=>{if(started||closing)return;started=true;if(service.store.settings.enabled){const task=service.refresh();notify();await task;}priceSync.start();},

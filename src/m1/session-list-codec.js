@@ -27,20 +27,29 @@
   let frame;try{frame=JSON.parse(new TextDecoder().decode(wire.sessionBytes));}catch{invalid();}
   if(frame?.schemaVersion!=='SessionListWireV1'||!Array.isArray(frame.rows)||frame.rows.length>50000||!Array.isArray(frame.days)||!Array.isArray(frame.strings)||!Array.isArray(frame.arrays)||!Array.isArray(frame.usage)||!Array.isArray(frame.agents))invalid();
   if(frame.agents.some(agent=>typeof agent!=='string'||!agent.length||agent.length>200||/[\0-\x1f\x7f]/.test(agent)))invalid();
-  const catalog=Object.fromEntries(frame.agents.map(agent=>[agent,{}])),one=contract.createSelector(catalog),header=contract.selectSessions({...frame.header,sessions:[]},catalog),arrayModels=new Map(),arrayEntries=new Map(),usageMaps=new Map();
+  const catalog=Object.fromEntries(frame.agents.map(agent=>[agent,{}])),header=contract.selectSessions({...frame.header,sessions:[]},catalog),selectedArrays=new Map(),usageMaps=new Map();
   const string=index=>{if(index===-1)return null;if(!Number.isSafeInteger(index)||index<0||index>=frame.strings.length||typeof frame.strings[index]!=='string')invalid();return frame.strings[index];};
-  const array=index=>{if(!Number.isSafeInteger(index)||index<0||!Array.isArray(frame.arrays[index]))invalid();return frame.arrays[index].map(string);};
+  const one=contract.createSelector(catalog,(index,select)=>{
+    // An entry and a model can refer to the same dictionary index. Apply the
+    // field's own whitelist once, then share only the immutable selected value.
+    if(!selectedArrays.has(select))selectedArrays.set(select,new Map());
+    const cache=selectedArrays.get(select);
+    if(!cache.has(index)){
+      if(!Number.isSafeInteger(index)||index<0||!Array.isArray(frame.arrays[index]))invalid();
+      cache.set(index,Object.freeze(select(frame.arrays[index].map(string))));
+    }
+    return cache.get(index);
+  });
   let cursor=0;
   header.sessions=[];
   for(let index=0;index<frame.rows.length;index++){const row=frame.rows[index];
    if(!Array.isArray(row)||row.length!==13||row[11]!==cursor||!Number.isSafeInteger(row[12])||row[12]<0||row[12]>4000||cursor+row[12]>frame.days.length)invalid();
-   const s=one({key:string(row[0]),agent:string(row[1]),entries:array(row[2]),models:array(row[3]),start:string(row[4]),end:string(row[5]),id:string(row[6]),cwd:string(row[7]),title:string(row[8]),project:string(row[9]),resumable:row[10],days:[]});
-   if(!arrayEntries.has(row[2]))arrayEntries.set(row[2],Object.freeze(s.entries));s.entries=arrayEntries.get(row[2]);
-   if(!arrayModels.has(row[3]))arrayModels.set(row[3],Object.freeze(s.models));s.models=arrayModels.get(row[3]);
+   const s=one({key:string(row[0]),agent:string(row[1]),entries:row[2],models:row[3],start:string(row[4]),end:string(row[5]),id:string(row[6]),cwd:string(row[7]),title:string(row[8]),project:string(row[9]),resumable:row[10],days:[]});
    for(let at=cursor;at<cursor+row[12];at++){
     const d=frame.days[at];if(!Array.isArray(d)||d.length!==fields.length+2||!Number.isSafeInteger(d.at(-1))||d.at(-1)<0||d.at(-1)>=frame.usage.length)invalid();
-    const id=d.at(-1),selected=contract.selectPackedDay(string(d[0]),d,frame.usage[id]);
-    if(!usageMaps.has(id))usageMaps.set(id,Object.freeze(selected.knownUsage));selected.knownUsage=usageMaps.get(id);
+    const id=d.at(-1);
+    if(!usageMaps.has(id))usageMaps.set(id,Object.freeze(contract.knownUsage(frame.usage[id])));
+    const selected=contract.selectPackedDay(string(d[0]),d,usageMaps.get(id));
     s.days.push(selected);frame.days[at]=null;
    }
    cursor+=row[12];frame.rows[index]=null;header.sessions.push(s);yield;

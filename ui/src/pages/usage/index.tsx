@@ -1,7 +1,8 @@
 import { Activity as ReactActivity, memo, useEffect, useLayoutEffect, useRef } from "react";
 import { IconDownload, IconRefresh } from "@tabler/icons-react";
 import { AgentMark, Banner, Button, IconButton, PageHeader, Segmented } from "@ui/kit";
-import { motionAllowed, useViewActive } from "@ui/data";
+import { motionAllowed } from "@ui/data";
+import { usePageStages } from "@ui/data/page-stages";
 import { useUsageHost, type UsageUi, type UsageHost, type UsageSnapshot } from "@ui/data/usage-host";
 import { Overview as OverviewView } from "./overview";
 import { Activity as ActivityView } from "./activity";
@@ -12,7 +13,7 @@ import { Trend as TrendView } from "./trend";
 // has a new view identity; an empty-state refresh button still follows busy.
 type ContentProps = { host: UsageHost; snapshot: UsageSnapshot };
 const sameFacts = (a:ContentProps,b:ContentProps) => a.host===b.host && a.snapshot.view===b.snapshot.view;
-const Overview = memo(OverviewView,(a,b)=>sameFacts(a,b)&&(!b.snapshot.view.today.empty||a.snapshot.busy===b.snapshot.busy));
+const Overview = memo(OverviewView,(a,b)=>sameFacts(a,b)&&a.showClients===b.showClients&&a.mountClients===b.mountClients&&(!b.snapshot.view.today.empty||a.snapshot.busy===b.snapshot.busy));
 const Activity = memo(ActivityView,sameFacts), Trend = memo(TrendView,sameFacts);
 
 const periods = [
@@ -20,7 +21,8 @@ const periods = [
   { value: "7", label: "7 天" }, { value: "today", label: "今日" },
 ];
 export function UsagePage() {
-  const active = useViewActive("usage"), host = useUsageHost(), root = useRef<HTMLDivElement>(null);
+  const { active, visible, mounted, reveal } = usePageStages("usage", 3);
+  const host = useUsageHost(), root = useRef<HTMLDivElement>(null);
   const scheduled = useRef(0), held = useRef<{ element: HTMLElement; top: number } | null>(null);
   useEffect(() => {
     let locating = false;
@@ -39,6 +41,7 @@ export function UsagePage() {
     };
     const locate: UsageUi["locate"] = target => {
       interrupt();
+      reveal(target === "trend" ? 3 : 2);
       scheduled.current = requestAnimationFrame(() => {
         const element = root.current?.querySelector<HTMLElement>("[data-usage-" + target + "]");
         if (!element) return;
@@ -64,7 +67,7 @@ export function UsagePage() {
       window.removeEventListener("ui-view-leave", interrupt);
       delete window.usageUi;
     };
-  }, [host]);
+  }, [host, reveal]);
   useLayoutEffect(() => {
     const anchor = held.current;
     if (!active || !anchor?.element.isConnected) return;
@@ -72,6 +75,7 @@ export function UsagePage() {
     if (Math.abs(delta) > .5) window.scrollBy({ top: delta, behavior: "instant" });
     held.current = null;
   });
+  if (!active && mounted === 0) return null;
   const snapshot = host.get(), { state, view } = snapshot;
   const remember = () => {
     const section = document.activeElement?.closest<HTMLElement>("[data-usage-trend],[data-usage-activity]");
@@ -95,9 +99,9 @@ export function UsagePage() {
     {snapshot.loading ? <Banner tone="info">{"正在读取本地统计…"}</Banner> : null}
     {snapshot.error ? <Banner tone="warn">{snapshot.error}</Banner> : null}
     {snapshot.recovery ? <Banner tone="warn">{snapshot.recovery}</Banner> : null}
-    <Overview host={host} snapshot={snapshot} />
-    <Activity host={host} snapshot={snapshot} />
-    <Trend host={host} snapshot={snapshot} />
+    <Overview host={host} snapshot={snapshot} showClients={visible > 0} mountClients={mounted > 0} />
+    {mounted > 1 ? <ReactActivity mode={visible > 1 ? "visible" : "hidden"}><Activity host={host} snapshot={snapshot} /></ReactActivity> : null}
+    {mounted > 2 ? <ReactActivity mode={visible > 2 ? "visible" : "hidden"}><Trend host={host} snapshot={snapshot} />
     <section className="flex flex-wrap items-center gap-3" aria-label="采集来源" data-usage-sources>
       <Button variant="ghost" onClick={host.sources}>{"采集来源 "}{view.sourceCount}{" · Agent 管理"}</Button>
       {view.sourceMarks.map(source =>
@@ -105,6 +109,6 @@ export function UsagePage() {
           <AgentMark agent={source.id} variant="icon" size={20} />
         </span>
       )}
-    </section>
+    </section></ReactActivity> : null}
   </div></ReactActivity>;
 }

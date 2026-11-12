@@ -4,7 +4,7 @@ import {
   Figure, LineChart, RingChart, Segmented, StackBar
 } from "@ui/kit";
 import type { ChartTone } from "@ui/kit";
-import type { CostHero, CostHost, CostMonthHero } from "@ui/data/cost-host";
+import type { CostHost, CostMonthHero, CostSnapshot } from "@ui/data/cost-host";
 import { RangePicker } from "./range-picker";
 
 const ranges = [
@@ -107,11 +107,12 @@ function MonthHero({ month, host }: { month: CostMonthHero | null; host: CostHos
     </div>
   </Card>;
 }
-export function CostHeroView({ hero, host, agents, narrow, onCoverage }: {
-  hero: CostHero; host: CostHost; agents: { id: string; name: string; recorded: boolean }[]; narrow: boolean; onCoverage: () => void;
+export function CostHeroView({ snapshot, host, onCoverage }: {
+  snapshot: CostSnapshot; host: CostHost; onCoverage: () => void;
 }) {
   const [active, setActive] = useState<string | null>(null);
-  const state = host.state(), range = hero.range, facts = hero.facts, chosen = state.agents ? [...state.agents][0] : null;
+  const { state, view: { hero, agents } } = snapshot;
+  const range = hero.range, facts = hero.facts, chosen = state.agents ? [...state.agents][0] : null;
   // With one Agent chosen the bar shows only it; the legend keeps the others so the choice can move.
   const picks = chosen ? agents.filter(item => item.recorded).map(item => ({ key: item.id, label: item.name, tone: ("series:" + item.id) as ChartTone, hidden: item.id !== chosen })) :
     range.agents.map(item => ({ key: item.key, label: item.name, tone: item.tone, hidden: false }));
@@ -206,12 +207,10 @@ export function CostHeroView({ hero, host, agents, narrow, onCoverage }: {
         aria-label="缓存命中率" /> : undefined}
       note={facts.hitNote} />
   </>;
-  const rangeSlide = narrow ?
-    <div className="flex flex-col gap-4">{rangeCard}<div className="grid grid-cols-3 gap-4">{factCards}</div></div> :
-    <div className="grid grid-cols-3 gap-4">
-      <div className="col-span-2">{rangeCard}</div>
-      <div className="grid gap-4">{factCards}</div>
-    </div>;
+  const rangeSlide = <div className="grid gap-4" data-cost-range-layout>
+    <div data-cost-range-card>{rangeCard}</div>
+    <div className="grid gap-4" data-cost-range-facts>{factCards}</div>
+  </div>;
   return <section data-cost-section="month" data-cost-hero>
     <Carousel
       index={state.heroSlide === "month" ? 1 : 0}

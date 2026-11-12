@@ -18,6 +18,7 @@ export interface UsageBridge {
   installerAction(request: { action: "check" | "install" | "cancel" | "official" | "dismiss-installer" | "copy-launch" | "check-all" | "upgrade-all"; agent: string; revision: number }): Promise<T.InstallReply>;
   onInstallUpdate: T.Subscribe;
   pricing(): Promise<T.Pricing>;
+  pricingCoverage(): Promise<T.PriceCoverage | null>;
   savePrice(entry: T.PriceEntry): Promise<T.Pricing>;
   resetPrice(entry: T.PriceKey): Promise<T.Pricing>;
   syncPrices(): Promise<T.PriceSync>;

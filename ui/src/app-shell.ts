@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { appShell, ownNavigation, patchShell, views } from "./app-store";
+import { appShell, ownNavigation, showShellView, views } from "./app-store";
 import type { ViewName } from "./data/types";
 import { attachSidebarResize } from "./sidebar-resize";
 
@@ -30,17 +30,18 @@ export function useShellBehavior(view: ViewName, ready: boolean, dark: boolean) 
   const [floating, setFloating] = useState(false), [inactive, setInactive] = useState(false), [attention, setAttention] = useState({ count: 0, label: "" });
   const history = useRef<ViewName[]>([view]), index = useRef(0), positions = useRef(new Map<ViewName, number>());
   const [historyIndex, setHistoryIndex] = useState(0), [historyLength, setHistoryLength] = useState(1);
-  const pendingTop = useRef(0), previous = useRef<ViewName | null>(null), restoreFrame = useRef(0);
+  const pendingTop = useRef(0), departedTop = useRef<number | null>(null), previous = useRef<ViewName | null>(null), restoreFrame = useRef(0);
   const summaryOffered = view !== "settings", dock = integrated && summaryOffered && wide && docked, float = integrated && summaryOffered && !wide && floating;
   const navigate = (next: ViewName, traveling = false) => {
     if (appShell.get().view === next) return;
     window.dispatchEvent(new Event("ui-view-leave"));
     presentation.uiDetail?.cancelScroll();
-    positions.current.set(appShell.get().view, scrollY);
+    departedTop.current = scrollY;
+    positions.current.set(appShell.get().view, departedTop.current);
     if (!appShell.get().ready) { history.current = [next]; index.current = 0; pendingTop.current = 0; }
     else if (!traveling) { history.current.splice(index.current + 1); history.current.push(next); index.current++; pendingTop.current = 0; }
     setHistoryIndex(index.current); setHistoryLength(history.current.length);
-    setFloating(false); patchShell({ view: next });
+    setFloating(false); showShellView(next, pendingTop.current);
   };
   const travel = (delta: number) => {
     const next = index.current + delta;
@@ -61,8 +62,12 @@ export function useShellBehavior(view: ViewName, ready: boolean, dark: boolean) 
     window.dispatchEvent(new CustomEvent("ui-view-change", { detail: view }));
     cancelAnimationFrame(restoreFrame.current);
     const top = pendingTop.current;
-    if (view === "usage") restoreFrame.current = requestAnimationFrame(() => { if (appShell.get().view === view) presentation.uiDetail?.scrollTo(top); });
-    else presentation.uiDetail?.scrollTo(top);
+    // A top-to-top switch has no scroll to restore. Reading scrollY again
+    // after the new page mounts would synchronously lay out that page.
+    if (top !== 0 || departedTop.current !== 0) {
+      if (view === "usage") restoreFrame.current = requestAnimationFrame(() => { if (appShell.get().view === view) presentation.uiDetail?.scrollTo(top); });
+      else presentation.uiDetail?.scrollTo(top);
+    }
     presentation.uiMotion?.indicators();
     return () => cancelAnimationFrame(restoreFrame.current);
   }, [ready, view]);
@@ -77,9 +82,6 @@ export function useShellBehavior(view: ViewName, ready: boolean, dark: boolean) 
     return () => cancelAnimationFrame(frame);
   }, [integrated, collapsed, dock, float, inactive, dark]);
   useEffect(() => { setFloating(false); }, [wide]);
-  useEffect(() => {
-    if (float) document.querySelector<HTMLElement>('#summaryPanel button, #summaryPanel [href], #summaryPanel [tabindex]:not([tabindex="-1"])')?.focus();
-  }, [float]);
   useEffect(() => attachSidebarResize(), []);
   useEffect(() => {
     window.uiShell = Object.freeze({

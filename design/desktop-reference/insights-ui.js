@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const $=id=>document.getElementById(id),bridge=window.usageBridge;
-  const state={draft:'',message:'',error:'',focusBudget:null,view:null,general:null,period:'monthly',project:'all',busy:false,dirty:false,pending:false,version:0,open:new Set(),budgetOpen:new Set(),capOpen:new Set(),kind:'all',expanded:false};
+  const state={draft:'',message:'',error:'',focusBudget:null,view:null,general:null,period:'monthly',project:'all',busy:false,dirty:false,version:0,open:new Set(),budgetOpen:new Set(),capOpen:new Set(),kind:'all',expanded:false};
   const count=value=>new Intl.NumberFormat('zh-CN').format(value);
   const money=value=>value===null?'未定价':value>0&&value<.005?'<$0.01':window.displayValues.usd(value);
   // Budget thresholds are user-entered settings; retain their finer precision.
@@ -117,38 +117,56 @@
   }
   async function openBudget(key){
     const row=budgetOverview()?.budgets.find(row=>budgetKey(row)===key);if(!row)return;
-    state.period=row.period;state.project=row.scope==='all'||state.view?.projectOptions.some(p=>p.id===row.scope)?row.scope:'all';
+    state.period=row.period;state.project=row.state==='scope-missing'?'all':row.scope;
     state.dirty=false;state.budgetOpen.add(key);state.focusBudget=key;
-    window.usageData.view('cost');window.costUi?.projects();await load();publish();
+    window.usageData.view('cost');window.costUi?.projects();await loadProjects();
   }
-  function render(){
-    if(!state.dirty)state.draft=state.view?.budget.limitUsd==null?'':String(state.view.budget.limitUsd);
-    attention();controls();
-  }
-  // background: read for the sidebar count while no insight page is shown (UI-SHELL-20261022.md);
-  // it requests the small attention summary and never renders hidden pages.
+  // The sidebar and inline notices use the compact attention response. Only the
+  // projects tab and source capabilities need a full workbench view.
   const pendingReads=new Map();
   function once(key,read){if(!pendingReads.has(key)){const p=read().finally(()=>pendingReads.delete(key));pendingReads.set(key,p);}return pendingReads.get(key);}
-  async function load(clearMessage=true,background=false){
-    if(state.busy||(!visiblePage()&&!background))return;
-    if(!bridge){if(!background){message('请在桌面应用中查看本机项目与诊断。',true);controls();}return;}
+  function workbench(value){return once(JSON.stringify(value),()=>bridge.workbench(value));}
+  async function load(detail,clearMessage){
+    if(state.busy)return;
+    if(!bridge){if(detail)message('请在桌面应用中查看本机项目与诊断。',true);return;}
     const version=++state.version;
     try{
-      if(background&&!visiblePage()&&bridge.attention){const general=await once('attention',()=>bridge.attention());if(version===state.version&&!state.busy){state.general=general;attention();}return;}
-      const selected=selection(),all={period:'total',project:'all'};
-      const [view,general]=await Promise.all([once(JSON.stringify(selected),()=>bridge.workbench(selected)),once(JSON.stringify(all),()=>bridge.workbench(all))]);
+      const [general,view]=await Promise.all([
+        detail==='sources'||!bridge.attention?workbench({period:'total',project:'all'}):once('attention',()=>bridge.attention()),
+        detail==='projects'?workbench(selection()):null
+      ]);
       if(version!==state.version||state.busy)return;
-      state.view=view;state.general=general;if(clearMessage)message('',true);if(visiblePage()){render();window.sourcesHost?.update();}else attention();
-    }catch(error){if(version!==state.version)return;if(state.project!=='all'&&String(error).includes('WORKBENCH_SCOPE_INVALID')){state.project='all';state.dirty=false;return load(clearMessage,background);}if(!background)message(state.view?'刷新失败，保留上一次结果；可重试。':'项目与诊断暂不可用，请重试。',true);}
+      state.general=general;
+      if(view){
+        state.view=view;
+        if(!state.dirty)state.draft=view.budget.limitUsd==null?'':String(view.budget.limitUsd);
+      }
+      if(clearMessage){
+        if(visiblePage()==='cost')state.error='';
+        else message('',true);
+      }
+      attention();controls();
+    }catch(error){
+      if(version!==state.version)return;
+      if(detail==='projects'&&state.project!=='all'&&String(error).includes('WORKBENCH_SCOPE_INVALID')){
+        state.project='all';state.dirty=false;return loadProjects(clearMessage);
+      }
+      if(detail)message((detail==='projects'?state.view:state.general)?'刷新失败，保留上一次结果；可重试。':'项目与诊断暂不可用，请重试。',true);
+    }
+  }
+  function loadProjects(clearMessage=true){return load('projects',clearMessage);}
+  function loadCurrent(){
+    const page=visiblePage();
+    return load(page==='sources'?'sources':page==='cost'&&document.querySelector('[data-cost-projects]')?'projects':null,false);
   }
   async function act(task,text,resetDraft=false){
     if(state.busy)return;const origin=document.activeElement;state.busy=true;state.version++;controls();message('',true);message('');
     try{await task();if(resetDraft)state.dirty=false;if(text)message(text);}
     catch{message('操作未完成，原有数据和设置保持不变；请重试。',true);}
-    finally{state.busy=false;controls();state.pending=false;await load(false);if(origin?.isConnected&&!origin.disabled&&origin.getClientRects().length)origin.focus({preventScroll:true});}
+    finally{state.busy=false;controls();await loadCurrent();if(origin?.isConnected&&!origin.disabled&&origin.getClientRects().length)origin.focus({preventScroll:true});}
   }
   function pricing(){window.settingsUi.openSection('pricing');}
-  function changeSelection(patch){Object.assign(state,patch,{dirty:false});publish();return load();}
+  function changeSelection(patch){Object.assign(state,patch,{dirty:false});publish();return loadProjects();}
   function saveBudget(raw){
     const text=raw.trim(),value=/^(?:\d+\.?\d*|\.\d+)$/.test(text)?Number(text):NaN;
     if(!Number.isFinite(value)||value<=0||value>1000000){message('请输入大于 0、不超过 1,000,000 的 USD 预算；移除预算请使用移除按钮。',true);return Promise.resolve();}
@@ -172,14 +190,14 @@
     select:changeSelection,draft:text=>{state.dirty=true;state.draft=text;publish();},
     toggle:(kind,key,open)=>{const values=kind==='budget'?state.budgetOpen:state.open;if(open)values.add(key);else values.delete(key);publish();},
     budget:{save:saveBudget,remove:()=>act(()=>bridge.saveWorkbench({kind:'budget',...selection(),limitUsd:null}),'当前项目与周期的预算已移除。',true)},
-    projects:{load,export:()=>act(async()=>{const result=await bridge.exportProjects(selection());message(result.canceled?'已取消导出。':'项目汇总已导出，不含绝对路径和原始身份。');},'')},
+    projects:{load:loadProjects,export:()=>act(async()=>{const result=await bridge.exportProjects(selection());message(result.canceled?'已取消导出。':'项目汇总已导出，不含绝对路径和原始身份。');},'')},
     format:{count,money,budgetMoney,cost,agent,budgetKey,budgetName,budgetStates,budgetLabels,periods:PERIODS}
   });
-  window.addEventListener('ui-view-change',()=>void load());
+  window.addEventListener('ui-view-change',event=>{if(event.detail==='sources')void load('sources',true);});
   // The sidebar count stays current after each collection, whichever page is open.
-  window.addEventListener('usage-collection',()=>{if(!window.usageData.collection().collecting)void load(false,true);});
-  void load(false,true);
+  window.addEventListener('usage-collection',()=>{if(!window.usageData.collection().collecting)void loadCurrent();});
+  void loadCurrent();
   window.addEventListener('usage-collection',attention);
-  bridge?.onUpdate(()=>{if(state.busy)state.pending=true;else void load();});
-  controls();void load();
+  bridge?.onUpdate(()=>void loadCurrent());
+  controls();
 })();

@@ -5,13 +5,14 @@
  const state={list:null,error:false,loading:false,stale:true,drill:null,range:'today',labels:{},reading:null,also:[],compare:null,all:null},summaries=new Map();let labelsRead=null;let drills=0;let epoch=0,reading=null,recentList=null,recentReading=null,recentEpoch=0,recentStale=false,recentFailed=false,holds=0,allReading=null,allEpoch=0;
  const visible=()=>document.getElementById('main')?.dataset.currentView==='sessions',publish=()=>window.dispatchEvent(new Event('sessions-change'));
  const model=()=>window.sessionsModel.create({list:state.list,agent:'all',range:'today',sort:'cost',query:''},window),toast=text=>window.usageData?.toast(text);
- async function load(range=state.range){
+ async function load(range=state.range,force=true){
   if(!['today','7','30','all'].includes(range))throw Error('SESSION_SELECTION_INVALID');
   if(range!==state.range){state.range=range;state.stale=true;epoch++;}
   if(snapshotOnly){state.list=null;publish();return;}
   void loadLabels();
   if(!bridge){const list=model().demoList();state.list=window.settingsHost?.demo.get()==='empty'?{...list,sessions:[],unattributed:{}}:list;state.stale=false;publish();return;}
   if(reading)return reading;
+  if(!force&&state.list&&!state.stale&&!state.error)return;
   const version=epoch;state.loading=true;publish();
   reading=(async()=>{try{const list=await bridge.sessions({range:state.range});if(version===epoch){state.list=list;state.error=false;state.stale=false;}}catch{state.error=true;if(state.list&&visible())toast('会话列表刷新失败，显示的是上一次的结果。');}finally{reading=null;state.loading=false;if(version!==epoch&&visible())void load();else publish();}})();return reading;
  }
@@ -38,8 +39,11 @@
  // Every session, whatever range the page shows, while something needs them: the reading page and the quick switch. It is let go with the last of them.
  async function loadAll(){if(allReading)return allReading;
   // The page already owns these exact saved facts. Share its reference while a reader
-  // holds all; do not request and retain a second IPC copy of the same full list.
-  if(holds&&state.range==='all'&&state.list&&!state.stale&&!state.loading){state.all=state.list;publish();return;}
+  // holds all. Consumers already see it through their fallback to state.list.
+  if(holds&&state.range==='all'&&state.list&&!state.stale&&!state.loading){
+   state.all=state.list;
+   return;
+  }
   const version=allEpoch;allReading=(async()=>{try{const list=bridge?await bridge.sessions({range:'all'}):model().demoList();if(version===allEpoch&&holds)state.all=list;}catch{/* The page's own list stands in. */}finally{allReading=null;publish();}})();return allReading;}
  function holdAll(){holds++;if(!state.all)void loadAll();return ()=>{holds--;if(!holds){state.all=null;allEpoch++;}};}
  // Which other sessions changed a file: one batch per call, continued from its next offset; nothing is kept here.
@@ -60,7 +64,12 @@
  // The recent list behind the summary card and the widgets. It has its own version, so a change of the page's range cannot
  // void it; what is on screen stays while newer data is read; a failed read says so and tries again with the next data.
  async function loadRecent(){if(recentReading)return recentReading;const version=recentEpoch;recentReading=(async()=>{try{const list=bridge?await bridge.sessions({recent:true}):model().demoList();if(version===recentEpoch){recentList=list;recentStale=false;}recentFailed=false;}catch{recentFailed=true;}finally{recentReading=null;publish();}})();return recentReading;}
- function wantRecent(){if(recentReading||recentFailed)return;if(!recentList||recentStale)void loadRecent();}
+ function wantRecent(){
+  // The list and the right-hand overview share a statistics owner. Let the
+  // page's selected range arrive before requesting the secondary recent rows.
+  if(recentReading||recentFailed||visible()&&state.loading)return;
+  if(!recentList||recentStale)void loadRecent();
+ }
  function summary(date=model().today(),modelName='all'){
   if(!bridge?.sessionSummary)return null;
   const key=JSON.stringify([date,modelName]);let entry=summaries.get(key);
@@ -80,10 +89,10 @@
  async function copyResume(key){if(!bridge){toast('界面预览不复制命令；桌面应用里会把恢复命令复制到剪贴板。');return false;}try{await bridge.copyResume(key);toast('已复制恢复命令，粘贴到 PowerShell 里执行即可回到该会话。');return true;}catch{toast('无法生成这个会话的恢复命令。');return false;}}
  // Other pages open the sessions page on an Agent and range; the page may mount after the request.
  function drillDown(agent='all',range='today',query=null){state.drill={agent,range,query:typeof query==='string'?query.slice(0,120):null,seq:++drills};publish();}
- window.sessionsHost=Object.freeze({get:()=>state,list:()=>state.list,load,labels:()=>state.labels,label,position,read,readAlso,readInSlot,closePane,compare,facts,renameGroup,holdAll,fileHistory,readable:agent=>READABLE.has(agent),transcript,stamp,part,find,copyTurns,exportMarkdown,openLink,search,recent:()=>recentList,recentFailed:()=>recentFailed,loadRecent,wantRecent,summary,count,openFolder,copyResume,copyText,drillDown,snapshotOnly});
+ window.sessionsHost=Object.freeze({get:()=>state,list:()=>state.list,load,ensure:range=>load(range,false),labels:()=>state.labels,label,position,read,readAlso,readInSlot,closePane,compare,facts,renameGroup,holdAll,fileHistory,readable:agent=>READABLE.has(agent),transcript,stamp,part,find,copyTurns,exportMarkdown,openLink,search,recent:()=>recentList,recentFailed:()=>recentFailed,loadRecent,wantRecent,summary,count,openFolder,copyResume,copyText,drillDown,snapshotOnly});
  // The pre-migration reader kept for the widgets, the usage page and the home page (list/loaded/reload/count).
  window.sessionsUi=Object.freeze({count,reload:load,drillDown,list:()=>state.list,get loaded(){return Boolean(state.list);}});
- window.addEventListener('ui-view-change',event=>{if(event.detail==='sessions'&&(state.stale||!state.list))void load();});
+ window.addEventListener('ui-view-change',event=>{if(event.detail==='sessions')void load(state.range,false);});
  // Collection busy/checkedAt notifications do not change the session facts.
  // The snapshot owner emits this only for changed facts (including repricing).
  window.addEventListener('usage-data-change',()=>{epoch++;state.stale=true;summaries.clear();recentEpoch++;recentStale=true;recentFailed=false;allEpoch++;if(holds)void loadAll();if(visible())void load();else publish();});

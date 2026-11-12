@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { AnimatePresence, animate, motion, useMotionValue } from "motion/react";
 import { IconArrowsDiagonal, IconArrowsDiagonalMinimize2, IconLayoutSidebar, IconLayoutSidebarRight } from "@tabler/icons-react";
 import { portalRoot } from "@/lib/portal-root";
@@ -58,8 +58,21 @@ function PaneSurface({ pane, collapsed, narrow, wide, onToggle }: { pane: Pane; 
   </motion.section>;
 }
 export function PaneGroup({ panes, collapsed, onCollapsedChange }: { panes: Pane[]; collapsed: string | null; onCollapsedChange: (key: string | null) => void }) {
-  const root = useRef<HTMLDivElement>(null), [narrow, setNarrow] = useState(false);
-  useLayoutEffect(() => { const element = root.current; if (!element) return; const resize = new ResizeObserver(() => setNarrow(element.clientWidth <= 760)); resize.observe(element); setNarrow(element.clientWidth <= 760); return () => resize.disconnect(); }, []);
+  const root = useRef<HTMLDivElement>(null), [narrow, setNarrow] = useState(false), measuredNarrow = useRef(false);
+  useLayoutEffect(() => {
+    const element = root.current;
+    if (!element) return;
+    const resize = new ResizeObserver(([entry]) => {
+      const width = Math.round(entry.contentRect.width);
+      if (width <= 0) return;
+      const next = width <= 760;
+      if (measuredNarrow.current === next) return;
+      measuredNarrow.current = next;
+      flushSync(() => setNarrow(next));
+    });
+    resize.observe(element);
+    return () => resize.disconnect();
+  }, []);
   return <div ref={root} data-pane-group data-narrow={narrow || undefined} className={"flex items-stretch gap-4 " + (narrow ? "flex-col" : "flex-row")}>{panes.map(pane => <PaneSurface key={pane.key} pane={pane} narrow={narrow} wide={Boolean(collapsed && collapsed !== pane.key)} collapsed={collapsed === pane.key} onToggle={() => onCollapsedChange(collapsed && collapsed !== pane.key ? null : panes.find(item => item.key !== pane.key)?.key ?? null)}/>)}</div>;
 }
 

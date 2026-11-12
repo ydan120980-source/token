@@ -29,31 +29,77 @@ async function collect(data){
   worker.on('exit',()=>{clearTimeout(timer);clearTimeout(termination);if(failed||!result||result.error)reject(Error(failed||result?.error||'REAL_COLLECTION_FAILED'));else resolve(result);});
  });
 }
-async function run({selected=roots(),directory=path.resolve('artifacts/local-performance-'+Date.now()),profile:cpuProfile=false,layoutProfile=false,readerOnly=false}={}){
+// Use the normal group/row controls. Test markers are fixed ordinals, so IDs,
+// names and project paths never appear in Playwright selectors or the receipt.
+async function readerRow(page,index){
+ const groupSelector='[data-local-perf-group="'+index+'"]';
+ const marked=await page.evaluate(index=>{
+  const {list,labels}=window.sessionsHost.get(),target=window.__localTargets[index];
+  const model=window.sessionsModel.create({list,labels,agent:'all',range:'all',sort:'recent',group:'project',query:''},window);
+  const match=model.groupFor(target.key);
+  const group=[...document.querySelectorAll('[data-session-group]')].find(element=>element.getAttribute('data-session-group')===match?.id);
+  if(!group)return false;
+  group.setAttribute('data-local-perf-group',String(index));return true;
+ },index);
+ if(!marked)throw Error('REAL_SESSION_GROUP_MISSING');
+ const group=page.locator(groupSelector),head=group.locator('[data-fold-head] button[aria-expanded]').first();
+ if(await head.getAttribute('aria-expanded')==='false')await head.click();
+ const markRow=()=>group.evaluate((element,index)=>{
+  const key=window.__localTargets[index].key;
+  const row=[...element.querySelectorAll('[data-session]')].find(node=>node.getAttribute('data-session')===key);
+  const button=row?.querySelector('[data-session-name] button');
+  if(!button)return false;
+  button.setAttribute('data-local-perf-reader',String(index));return true;
+ },index);
+ if(!await markRow()){
+  await group.locator('[data-session-more] button').click({timeout:10000});
+  if(!await markRow())throw Error('REAL_SESSION_ROW_MISSING');
+ }
+ const button=group.locator('[data-local-perf-reader="'+index+'"]');
+ await button.scrollIntoViewIfNeeded();
+ return button;
+}
+async function run({selected=roots(),directory=path.resolve('artifacts/local-performance-'+Date.now()),profile:cpuProfile=false,layoutProfile=false,readerOnly=false,collectionOverlap=false}={}){
  const {_electron:electron}=require('playwright'),{cleanup,isolatePointer}=require('./ui-settle');
  directory=path.resolve(directory);
  for(const root of Object.values(selected).flat())if(require('../../src/m1/jsonl-adapter').overlaps(root,directory))throw Error('VALIDATION_OUTPUT_OVERLAP');
  fs.mkdirSync(directory,{recursive:true});
  const source=path.resolve(process.env.PERF_SOURCE_ROOT||'.');
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'agentusage-real-perf-')),home=path.join(root,'empty-home'),usage=path.join(root,'usage');fs.mkdirSync(home);
- let app;const report={schemaVersion:'LocalInteractionPerformanceV1',realData:true,readerOnly,cpuDiagnostic:cpuProfile,sourceWrites:false,providerCalls:false,rawContentSaved:false,measurement:'Event Timing uses trusted pointer events through first presentation; driver readyMs includes automation waits and is not click latency; frame gaps are observed, not a refresh-rate guarantee',phases:[],errors:[],source:{rendererSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(source,'design/desktop-reference/ui/agent-ui.js'))).digest('hex')}};
+ let app;const report={schemaVersion:'LocalInteractionPerformanceV1',realData:true,readerOnly,cpuDiagnostic:cpuProfile,sourceWrites:false,providerCalls:false,rawContentSaved:false,measurement:'Event Timing uses trusted pointer events through presentation; firstContentMs starts at the trusted click and confirms the expected content on two animation frames; readyMs includes driver waits',phases:[],errors:[],probeSha256:crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),source:{rendererSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(source,'design/desktop-reference/ui/agent-ui.js'))).digest('hex')}};
  report.layoutDiagnostic=layoutProfile;
- report.source.modules=Object.fromEntries(['design/desktop-reference/preview.js','design/desktop-reference/cost-page.js','design/desktop-reference/sessions-model.js','src/m1/session-list.js','src/m1/session-list-codec.js','src/m1/policy.js','src/m1/transcript.js','src/m1/transcript-tasks.js','src/m1/statistics-service.js'].map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(source,file))).digest('hex')]));
+ report.source.modules=Object.fromEntries(['design/desktop-reference/preview.js','design/desktop-reference/cost-page.js','design/desktop-reference/insights-ui.js','design/desktop-reference/sessions-host.js','design/desktop-reference/sessions-model.js','design/desktop-reference/ui/agent-ui.css','src/m1/session-list.js','src/m1/session-list-codec.js','src/m1/policy.js','src/m1/store.js','src/m1/transcript.js','src/m1/transcript-lines.js','src/m1/transcript-tasks.js','src/m1/statistics-service.js','src/quota/main.js','src/quota/preload.js'].map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(source,file))).digest('hex')]));
  const save=()=>fs.writeFileSync(path.join(directory,'performance.json'),JSON.stringify(report,null,2));
  try{
   report.desktopAdmission=require('./desktop-readiness').desktopReadiness();save();if(!report.desktopAdmission.eligible)throw Error('DESKTOP_UNAVAILABLE');
   report.load=await collect({selected,usage,home,cpuProfile});save();
   app=await electron.launch({executablePath:require('electron'),cwd:source,args:['src/quota/main.js','--usage-data-dir',usage,'--quota-data-dir',path.join(root,'quota'),'--m1-fixture-root',home]});
   const page=await app.firstWindow();await page.waitForURL(/^file:/);await page.waitForFunction(()=>window.usageData?.ready(),null,{timeout:60000});await isolatePointer(app);
-  report.windowAdmission=await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];win.show();win.focus();let lost=0;win.on('blur',()=>lost++);globalThis.localPerformanceFocusLosses=()=>lost;return{visible:win.isVisible(),focused:win.isFocused(),minimized:win.isMinimized()};});
+  report.windowAdmission=await app.evaluate(({BrowserWindow})=>{
+   const win=BrowserWindow.getAllWindows()[0];win.show();win.focus();let lost=0;
+   const changes=[],note=focused=>changes.push({at:performance.timeOrigin+performance.now(),focused});
+   note(win.isFocused());
+   win.on('blur',()=>{lost++;note(false);});
+   win.on('focus',()=>note(true));
+   globalThis.localPerformanceFocus=()=>({lost,changes});
+   return {visible:win.isVisible(),focused:win.isFocused(),minimized:win.isMinimized()};
+  });
   report.fontFacesBefore=await page.evaluate(()=>[...document.fonts].map(face=>({family:face.family,status:face.status})));
   page.on('pageerror',error=>report.errors.push({name:error.name,reactCode:error.message.match(/Minified React error #(\d+)/)?.[1]??null,locations:[...error.stack.matchAll(/agent-ui\.js:(\d+):(\d+)/g)].slice(0,6).map(match=>({line:Number(match[1]),column:Number(match[2])}))}));
   // Wall time only, no arguments, IDs, bodies or result copies retained.
   await app.evaluate(({ipcMain})=>{
    globalThis.localPerformanceRequests=[];
-   for(const channel of ['usage:transcript','usage:transcriptFacts','usage:sessions']){
+   for(const channel of ['usage:transcript','usage:transcriptFacts','usage:sessions','usage:workbench','usage:attention','usage:pricing']){
     const original=ipcMain._invokeHandlers.get(channel);if(!original)continue;
-    ipcMain._invokeHandlers.set(channel,async(...args)=>{const start=performance.now();try{return await original(...args);}finally{globalThis.localPerformanceRequests.push({channel,handlerMs:performance.now()-start});if(globalThis.localPerformanceRequests.length>200)globalThis.localPerformanceRequests.shift();}});
+    ipcMain._invokeHandlers.set(channel,async(...args)=>{
+     const start=performance.now(),request=args[1];
+     const kind=channel==='usage:pricing'?request==='coverage'?'coverage':'catalog':channel==='usage:sessions'?request?.recent===true?'recent':'range':null;
+     try{return await original(...args);}
+     finally{
+      globalThis.localPerformanceRequests.push({channel,kind,at:performance.timeOrigin+start,handlerMs:performance.now()-start});
+      if(globalThis.localPerformanceRequests.length>200)globalThis.localPerformanceRequests.shift();
+     }
+    });
    }
   });
   await page.evaluate(()=>{
@@ -63,20 +109,49 @@ async function run({selected=roots(),directory=path.resolve('artifacts/local-per
   report.requestTimingInstrumentation=true;
   report.display=await app.evaluate(({screen,BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0],d=screen.getDisplayMatching(win.getBounds());return{refresh:d.displayFrequency,scale:d.scaleFactor,window:win.getBounds()};});
   await page.evaluate(()=>{
-   const state=window.__localInteraction={phase:null,timeline:[],events:[],longTasks:[],frames:[],previous:0},phaseAt=at=>state.timeline.findLast(row=>row.at<=at)?.name??null;
-   new PerformanceObserver(list=>{for(const e of list.getEntries())state.longTasks.push({phase:phaseAt(e.startTime),start:e.startTime,ms:e.duration});}).observe({type:'longtask'});
-   new PerformanceObserver(list=>{for(const e of list.getEntries())if(e.interactionId)state.events.push({phase:phaseAt(e.startTime),type:e.name,ms:e.duration,inputDelay:e.processingStart-e.startTime,processing:e.processingEnd-e.processingStart});}).observe({type:'event',durationThreshold:16});
-   const frame=at=>{if(state.previous&&state.phase)state.frames.push({phase:state.phase,ms:at-state.previous});state.previous=at;requestAnimationFrame(frame);};requestAnimationFrame(frame);
+   const state=window.__localInteraction={phase:null,timeline:[],events:[],longTasks:[],frames:[],previous:0,content:null};
+   const phaseAt=at=>{const step=state.timeline.findLast(row=>row.at<=at);return{phase:step?.name??null,step:step?.index??null};};
+   window.addEventListener('click',event=>{
+    if(event.isTrusted&&state.content?.click===null)state.content.click=event.timeStamp;
+   },true);
+   new PerformanceObserver(list=>{for(const e of list.getEntries())state.longTasks.push({...phaseAt(e.startTime),start:e.startTime,ms:e.duration});}).observe({type:'longtask'});
+   new PerformanceObserver(list=>{for(const e of list.getEntries())if(e.interactionId)state.events.push({...phaseAt(e.startTime),type:e.name,ms:e.duration,inputDelay:e.processingStart-e.startTime,processing:e.processingEnd-e.processingStart});}).observe({type:'event',durationThreshold:16});
+   const frame=at=>{
+    if(state.previous&&state.phase)state.frames.push({phase:state.phase,ms:at-state.previous});
+    state.previous=at;
+    const content=state.content;
+    if(content&&content.click!==null&&content.ready===null){
+     const found=Boolean(document.querySelector(content.selector));
+     if(found&&content.seen)content.ready=performance.now()-content.click;
+     content.seen=found;
+    }
+    requestAnimationFrame(frame);
+   };
+   requestAnimationFrame(frame);
   });
   const cdp=cpuProfile||layoutProfile?await page.context().newCDPSession(page):null,layout=layoutProfile?await require('./local-layout-profile').start(cdp):null;
   if(cpuProfile){await cdp.send('Profiler.setSamplingInterval',{interval:1000});await cdp.send('Profiler.enable');await cdp.send('Profiler.start');}
-  const phase=async(name,action,ready)=>{
-   await page.evaluate(({name,index})=>{performance.mark('local-perf:'+index+':'+name);window.__localInteraction.phase=name;window.__localInteraction.began=performance.now();window.__localInteraction.timeline.push({name,at:performance.now()});},{name,index:report.phases.length});
+  const phase=async(name,action,ready,selector=null)=>{
+   const index=report.phases.length;
+   await page.evaluate(({name,index,selector})=>{
+    performance.mark('local-perf:'+index+':'+name);
+    const state=window.__localInteraction;state.phase=name;state.began=performance.now();state.timeline.push({name,index,at:state.began});
+    state.content=selector?{selector,click:null,seen:false,ready:null}:null;
+   },{name,index,selector});
    await action();if(ready)await ready();
    const ms=await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(performance.now()-window.__localInteraction.began)))));
-   report.phases.push({name,readyMs:ms});await page.waitForTimeout(150);save();
+   const row={name,index,readyMs:ms};
+   if(selector){
+    await page.waitForFunction(()=>window.__localInteraction.content.ready!==null,null,{timeout:20000});
+    row.firstContentMs=await page.evaluate(()=>window.__localInteraction.content.ready);
+   }
+   report.phases.push(row);await page.waitForTimeout(150);
+   await page.evaluate(index=>{window.__localInteraction.timeline[index].ended=performance.now();},index);save();
   };
-  for(const view of readerOnly?['sessions']:['usage','cost','sessions','usage','cost','usage','sessions'])await phase('navigate-'+view,()=>page.locator('[data-view="'+view+'"]').click(),()=>page.waitForFunction(view=>document.getElementById('main').dataset.currentView===view,view));
+  const content={usage:'#usage:not([hidden]) [data-usage-hero]',cost:'#cost:not([hidden]) [data-cost-hero-number]',sessions:'#sessions:not([hidden]) [data-sessions-page][data-ready=true]',reader:'#sessions:not([hidden]) [data-reader-turn]'};
+  const sessionsReady=()=>page.waitForFunction(()=>{const state=window.sessionsHost.get();return state.list&&!state.loading&&!state.error;});
+  const navigate=(view,name='navigate-'+view)=>phase(name,()=>page.locator('[data-view="'+view+'"]').click(),view==='sessions'?sessionsReady:null,content[view]);
+  for(const view of readerOnly?['sessions']:['usage','cost','sessions','usage','cost','usage','sessions'])await navigate(view);
   await phase('all-sessions',()=>page.getByRole('tab',{name:'全部',exact:true}).click(),()=>page.waitForFunction(()=>window.sessionsHost.get().range==='all'&&!window.sessionsHost.get().loading));
   report.sessionCounts=await page.evaluate(()=>{
    const sessions=window.sessionsHost.list()?.sessions||[],readable=sessions.filter(s=>window.sessionsHost.readable(s.agent));
@@ -84,7 +159,12 @@ async function run({selected=roots(),directory=path.resolve('artifacts/local-per
    return {all:sessions.length,readable:readable.length,selected:window.__localTargets.map(s=>({agent:s.agent,records:s.days.reduce((n,d)=>n+d.records,0)}))};
   });
   for(let index=0;index<report.sessionCounts.selected.length;index++){
-   await phase('open-record-'+index,()=>page.evaluate(index=>window.sessionsHost.read(window.__localTargets[index]),index),()=>page.waitForFunction(index=>window.__localBridgeRequests[index]?.outcome==='error'||window.__localBridgeRequests[index]?.outcome==='ok'&&document.querySelector('[data-reader-turn]'),index,{timeout:90000}));
+   const button=await readerRow(page,index);
+   const listScrollBefore=await page.evaluate(()=>document.scrollingElement?.scrollTop??0);
+   await phase('open-record-'+index,()=>button.click(),async()=>{
+    await page.waitForFunction(index=>Boolean(window.__localBridgeRequests[index]),index,{timeout:90000});
+    if(!await page.evaluate(index=>window.__localBridgeRequests[index]?.outcome==='ok',index))throw Error('REAL_TRANSCRIPT_FAILED');
+   },content.reader);
    report.phases.at(-1).drawn=await page.locator('[data-reader-turn]').count();
    report.phases.at(-1).dom=await page.evaluate(()=>({nodes:document.querySelectorAll('*').length,paneNodes:document.querySelector('[data-reader-page]')?.querySelectorAll('*').length??0,textChars:document.querySelector('[data-reader-page]')?.textContent.length??0,items:document.querySelectorAll('[data-reader-item]').length,turns:document.querySelectorAll('[data-rail-mark]').length}));
    if(!report.phases.at(-1).drawn)throw Error('REAL_TRANSCRIPT_FAILED');
@@ -101,9 +181,14 @@ async function run({selected=roots(),directory=path.resolve('artifacts/local-per
      await phase('reader-nav-hover-'+index,async()=>{const rows=page.locator('[data-nav-session]');for(let at=0;at<Math.min(await rows.count(),6);at++){await rows.nth(at).hover();await page.waitForTimeout(50);}});
     }
    }
-   await phase('leave-record-'+index,()=>page.locator('[data-reader-back] button').click(),()=>page.waitForSelector('[data-sessions-page]'));
+   await phase('leave-record-'+index,()=>page.locator('[data-reader-back] button').click(),()=>page.waitForSelector('[data-sessions-page]'),content.sessions);
+   const restored=await page.evaluate(index=>({
+    scroll:document.scrollingElement?.scrollTop??0,
+    focused:document.activeElement?.closest('[data-session]')?.getAttribute('data-session')===window.__localTargets[index].key
+   }),index);
+   report.phases.at(-1).returnPosition={before:listScrollBefore,...restored};
   }
-  if(!readerOnly)await phase('return-usage',()=>page.locator('[data-view="usage"]').click(),()=>page.waitForFunction(()=>document.getElementById('main').dataset.currentView==='usage'));
+  if(!readerOnly)await navigate('usage','return-usage');
   await page.waitForTimeout(400);
   report.fonts=await page.evaluate(()=>performance.getEntriesByType('resource').filter(entry=>entry.name.endsWith('.woff2')).map(entry=>({file:entry.name.split('/').at(-1),start:entry.startTime,ms:entry.duration})));
   report.fontFacesAfter=await page.evaluate(()=>[...document.fonts].map(face=>({family:face.family,status:face.status})));
@@ -116,10 +201,30 @@ async function run({selected=roots(),directory=path.resolve('artifacts/local-per
    const summarize=frames=>{const sorted=frames.map(f=>f.ms).sort((a,b)=>a-b);return {count:sorted.length,p50:sorted[Math.floor(sorted.length*.5)],p95:sorted[Math.floor(sorted.length*.95)],max:sorted.at(-1),over16:sorted.filter(ms=>ms>16).length,over50:sorted.filter(ms=>ms>50).length};};
    return {events:state.events,longTasks:state.longTasks,frames:state.frames.filter(f=>f.ms>12),frameSummary:summarize(state.frames),phaseFrames:Object.fromEntries([...new Set(state.frames.map(f=>f.phase))].map(phase=>[phase,summarize(state.frames.filter(f=>f.phase===phase))]))};
   });
-  report.requests=await app.evaluate(()=>globalThis.localPerformanceRequests);report.bridgeRequests=await page.evaluate(()=>window.__localBridgeRequests);
-  report.windowEnd=await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];return{visible:win.isVisible(),focused:win.isFocused(),minimized:win.isMinimized(),focusLosses:globalThis.localPerformanceFocusLosses()};});
+  const diagnostics=await app.evaluate(()=>({requests:globalThis.localPerformanceRequests,focus:globalThis.localPerformanceFocus().changes}));
+  const timing=await page.evaluate(({requests,focus})=>{
+   const timeline=window.__localInteraction.timeline,origin=performance.timeOrigin;
+   return {
+    requests:requests.map(({at,...row})=>({...row,step:timeline.findLast(phase=>origin+phase.at<=at)?.index??null})),
+    focused:timeline.map(phase=>{
+     const start=origin+phase.at,end=origin+phase.ended;
+     return focus.findLast(change=>change.at<=start)?.focused===true&&!focus.some(change=>change.at>start&&change.at<=end&&!change.focused);
+    })
+   };
+  },diagnostics);
+  report.requests=timing.requests;
+  for(const phase of report.phases)phase.focusedThroughout=timing.focused[phase.index];
+  report.bridgeRequests=await page.evaluate(()=>window.__localBridgeRequests);
+  if(collectionOverlap){
+   const {measureCollection,measureIdleNavigation}=require('./collection-interaction');
+   report.idleNavigation=await measureIdleNavigation(page);
+   report.collection=await measureCollection(page,{overlap:true});
+   report.collection.stages=await page.evaluate(async()=> (await window.usageBridge.statisticsDiagnostics()).owner?.collectionStages??null);
+   if(report.collection.statusError)throw Error('REAL_COLLECTION_FAILED');
+  }
+  report.windowEnd=await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];return{visible:win.isVisible(),focused:win.isFocused(),minimized:win.isMinimized(),focusLosses:globalThis.localPerformanceFocus().lost};});
   report.desktopEnd=require('./desktop-readiness').desktopReadiness();report.runComplete=report.desktopEnd.eligible&&report.errors.length===0&&report.load.records>0&&report.sessionCounts.selected.length>0&&report.phases.filter(p=>p.name.startsWith('open-record-')).every(p=>p.drawn>0);report.measurementEligible=report.runComplete&&!cpuProfile&&!layoutProfile&&report.windowAdmission.focused&&report.windowEnd.focused&&report.windowEnd.focusLosses===0;save();if(!report.runComplete)throw Error('LOCAL_PERFORMANCE_INELIGIBLE');return report;
- }catch(error){report.failed=/^[A-Z_]+$/.test(error.message)?error.message:'LOCAL_PERFORMANCE_FAILED';report.failureType=/^[A-Za-z]+Error$/.test(error.name)?error.name:'Error';if(app){report.requests=await app.evaluate(()=>globalThis.localPerformanceRequests).catch(()=>[]);report.bridgeRequests=await app.firstWindow().then(page=>page.evaluate(()=>window.__localBridgeRequests)).catch(()=>[]);}save();throw Error('LOCAL_PERFORMANCE_FAILED',{cause:error});}
+ }catch(error){report.failed=/^[A-Z_]+$/.test(error.message)?error.message:'LOCAL_PERFORMANCE_FAILED';report.failureType=/^[A-Za-z]+Error$/.test(error.name)?error.name:'Error';if(app){report.requests=await app.evaluate(()=>globalThis.localPerformanceRequests?.map(({channel,handlerMs})=>({channel,handlerMs}))??[]).catch(()=>[]);report.bridgeRequests=await app.firstWindow().then(page=>page.evaluate(()=>window.__localBridgeRequests)).catch(()=>[]);}save();throw Error('LOCAL_PERFORMANCE_FAILED',{cause:error});}
  finally{
   if(app)await app.close();
   if(path.dirname(fs.realpathSync(root))===fs.realpathSync(os.tmpdir())&&path.basename(root).startsWith('agentusage-real-perf-'))await cleanup(root);

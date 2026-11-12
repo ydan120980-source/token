@@ -24,6 +24,7 @@ import { buildTurns, changedFiles, isShell, processExpansion, processParts, segm
 // (UI-READER-NAV-20261104.md). Those two columns belong to the window and follow the pane in use; panes are placed by holding
 // and dragging them (UI-READER-PANES-20261104.md).
 const PAGE_TURNS = 30, SCROLL_MARGIN = 24;
+const NO_CHANGED_FILES: ReturnType<typeof changedFiles> = [];
 type ReaderView = "all" | "talk" | "fail";
 const views: { value: ReaderView; label: string }[] = [{ value: "all", label: "全部" }, { value: "talk", label: "只看对话" }, { value: "fail", label: "只看失败" }];
 const SIDE_KEY = "agentusage.reader.side.v1", NAV_WIDTH = 248, SIDE_WIDTH = 320, SIDE_ROWS = 200, PANE_MIN = 440, PANE_FLOOR = 320, PANE_MAX = 3, DOCK_MAX = 440, FOLLOW_MS = 4000, RECENT_MS = 3600000, POSITION_MS = 2000;
@@ -300,7 +301,9 @@ function ReaderPane({ reading, siblings, split, leading, focused, otherPanes, ca
   const turnOf = useMemo(() => { const map = new Int32Array(items.length); for (const turn of turns) map.fill(turn.index, turn.from, turn.to + 1); return map; }, [turns]);
   const moments = useMemo(() => turnMoments(items, turns), [transcript]);
   const weights = useMemo(() => turns.map(turn => turnWeight(items, turn)), [transcript]);
-  const files = useMemo(() => changedFiles(items), [transcript]), usageKnown = useMemo(() => turns.some(turn => turn.tokens !== null), [turns]);
+  const needsFiles = Boolean(reading.file || file || (focused && side && sideTab === "files"));
+  const files = useMemo(() => needsFiles ? changedFiles(items) : NO_CHANGED_FILES, [transcript, needsFiles]);
+  const usageKnown = useMemo(() => turns.some(turn => turn.tokens !== null), [turns]);
   const shownTurns = useMemo(() => {
     if (file) { const touched = new Set(files.find(entry => entry.path === file)?.indices.map(index => turnOf[index])); return turns.filter(turn => touched.has(turn.index)); }
     return view === "fail" ? turns.filter(turn => turn.failed) : turns;
@@ -613,12 +616,12 @@ function ReaderPane({ reading, siblings, split, leading, focused, otherPanes, ca
   const picked = picking && picking.from !== null ? { from: Math.min(picking.from, picking.to ?? picking.from), to: Math.max(picking.from, picking.to ?? picking.from) } : null;
   const pick = useCallback((index: number) => setPicking(current => !current || current.from === null || current.to !== null ? { from: index, to: null } : { from: current.from, to: index }), []);
   // How much each turn took, on a root scale so one huge turn does not flatten the rest. Only when the record reports any.
-  const peakTokens = useMemo(() => Math.max(0, ...turns.map(turn => turn.tokens ?? 0)), [turns]);
+  const peakTokens = useMemo(() => turns.reduce((peak, turn) => Math.max(peak, turn.tokens ?? 0), 0), [turns]);
   // The rail and the outline are one entry per turn: rebuilt when a turn, a time or a hit changes, not when the page
   // merely draws again — otherwise every scroll hands the rail a new list of 300 marks to measure and place.
   const marks: RailMark[] = useMemo(() => shownTurns.map(turn => ({ key: String(turn.index), weight: weights[turn.index], flag: turn.failed > 0, hit: hitTurns.has(turn.index),
     ...(peakTokens > 0 ? { level: turn.tokens === null ? null : Math.sqrt(turn.tokens / peakTokens) } : {}),
-    tip: <TipCard title={turnLabel(items, turn)} aside={moments[turn.index]?.time ?? undefined} note={[usageKnown ? "Token " + (turn.tokens === null ? "未知" : shortTokens(turn.tokens)) : "", turn.failed ? turn.failed + " 次失败" : ""].filter(Boolean).join(" · ") || undefined} /> })), [shownTurns, weights, hitTurns, peakTokens, items, moments, usageKnown]);
+    tip: () => <TipCard title={turnLabel(items, turn)} aside={moments[turn.index]?.time ?? undefined} note={[usageKnown ? "Token " + (turn.tokens === null ? "未知" : shortTokens(turn.tokens)) : "", turn.failed ? turn.failed + " 次失败" : ""].filter(Boolean).join(" · ") || undefined} /> })), [shownTurns, weights, hitTurns, peakTokens, items, moments, usageKnown]);
   const outlineItems = useMemo(() => shownTurns.map(turn => ({ key: String(turn.index), label: turnLabel(items, turn), time: moments[turn.index]?.time ?? undefined, before: view === "fail" ? undefined : moments[turn.index]?.gap ?? undefined,
     flag: turn.failed ? turn.failed + " 次失败" : undefined, marked: Boolean(picked && turn.index >= picked.from && turn.index <= picked.to) })), [shownTurns, items, moments, view, picked]);
   const exportRange = (from: number, to: number, name: string) => { if (reading && transcript) host.exportMarkdown(reading.key, { stamp: transcript.stamp, from, to, name }).catch(failed); };

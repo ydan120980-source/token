@@ -2350,6 +2350,26 @@ body.dark .sidebar-profile .profile-edit img {
 #cost {
   container: cost-page / inline-size;
 }
+[data-cost-range-layout] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+[data-cost-range-card] {
+  grid-column: span 2;
+}
+[data-cost-section="coverage"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@container cost-page (max-width: 760px) {
+  [data-cost-range-layout], [data-cost-section="coverage"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-cost-range-card] {
+    grid-column: auto;
+  }
+  [data-cost-range-facts] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 #sessions {
   container: sessions-page / inline-size;
 }

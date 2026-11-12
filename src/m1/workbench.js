@@ -4,6 +4,7 @@ const path=require('node:path');
 const {add}=require('./aggregate');
 const {digest}=require('./normalize');
 const {directory,projectName}=require('./sessions');
+const {localDay}=require('./usage-math');
 const PERIODS=['daily','weekly','monthly','total'];
 const FIELDS=['inputUncached','output','cacheRead','cacheWrite','reasoning'];
 const FORMATS={codex:['JSONL'],claude:['JSONL'],opencode:['SQLite','JSON'],workbuddy:['JSONL','SQLite'],mimo:['SQLite'],gemini:['JSON','JSONL'],cursor:['SDK SQLite','NDJSON','CSV'],zcode:['SQLite'],deepseek:['JSONL','Zstandard'],antigravity:['JSONL','SQLite 配对']};
@@ -51,22 +52,26 @@ function budgetIssue(store,config,row,overview=false){
   return maintenanceIssue(store,config,{project:scope,period},'BUDGET_'+row.state.replaceAll('-','_').toUpperCase(),null,
     {scope,period,limitUsd,lower:total.lower,upper:total.upper,unpricedTokens:total.unpricedTokens},'workbench',scope+period);
 }
-function build(store,value={}){
-  const selection=request(value),snapshot=store.snapshot(),config=store.workbenchSettings||emptySettings(),catalog=store.catalog(),records=store.records(),projects=new Map(),options=new Map(),sources=new Map(),projectSources=new Map(),totals=new Map(),sessions=new Map(),sourceSessions=new Map(),pricing=new Map();
-  const span=range(snapshot.today,selection.period),formatter=new Intl.DateTimeFormat('en-CA',{timeZone:snapshot.timezone,year:'numeric',month:'2-digit',day:'2-digit'}),projectCache=new Map();
+function build(store,value={}, {snapshot=store.snapshot(),cachedDate}={}){
+  const selection=request(value),config=store.workbenchSettings||emptySettings(),catalog=store.catalog(),records=store.records(),projects=new Map(),options=new Map(),sources=new Map(),projectSources=new Map(),totals=new Map(),sessions=new Map(),sourceSessions=new Map(),pricing=new Map();
+  const span=range(snapshot.today,selection.period),projectCache=new Map(),sessionProjects=new WeakMap(),unknown={id:'unknown',name:'未知项目'};
   const periods=new Map([...new Set(Object.keys(config.budgets).map(key=>key.split(':')[1]))].map(period=>[period,{span:range(snapshot.today,period),totals:new Map()}]));
+  const budgetPeriods=[...periods.values()];
   const info=record=>{
-    const saved=store.state.sessions?.[record.sessionKey],cwd=saved?.agent===record.agent?directory(saved.cwd):null;
-    if(!cwd)return {id:'unknown',name:'未知项目'};
+    const saved=store.state.sessions?.[record.sessionKey];
+    if(!saved||saved.agent!==record.agent)return unknown;
+    const cached=sessionProjects.get(saved);if(cached)return cached;
+    const cwd=directory(saved.cwd);
+    if(!cwd){sessionProjects.set(saved,unknown);return unknown;}
     const normalized=(/^[a-z]:/i.test(cwd)?path.win32.normalize(cwd):path.posix.normalize(cwd)).replaceAll('\\','/').replace(/\/+$/,'').toLowerCase();
     if(!projectCache.has(normalized))projectCache.set(normalized,{id:digest(store.state.salt,'project:'+normalized),name:projectName(cwd)||'未知项目'});
-    return projectCache.get(normalized);
+    const project=projectCache.get(normalized);sessionProjects.set(saved,project);return project;
   };
   // Dates are taken from timestamps in the SAME timezone as all other views.
   for(const record of records){
     const project=info(record);options.set(project.id,project);
-    const date=formatter.format(new Date(record.timestamp)),selected=date<=span.to&&(!span.from||date>=span.from);
-    const matching=[...periods.values()].filter(p=>date<=p.span.to&&(!p.span.from||date>=p.span.from));
+    const date=cachedDate?.(record.timestamp)??localDay(snapshot.timezone,record.timestamp),selected=date<=span.to&&(!span.from||date>=span.from);
+    const matching=budgetPeriods.filter(p=>date<=p.span.to&&(!p.span.from||date>=p.span.from));
     if(!selected&&!matching.length)continue;
     const estimate=store.estimate(record);
     for(const p of matching){add(p.totals,'all',{},record,estimate);add(p.totals,project.id,{},record,estimate);}

@@ -16,15 +16,19 @@ export function StackBar({ segments, height, variant = "continuous", width = "fu
   active, onActiveChange, onSelect, tooltip, "aria-label": label }: StackProps) {
   const tip = useSharedChartTooltip(Boolean(tooltip));
   const root = useRef<SVGSVGElement>(null), id = useId(), { full, mode } = useKitMotion();
-  const [actualWidth, setWidth] = useState(width === "inline" ? 44 : 1), [entered, setEntered] = useState(false);
+  const [measuredWidth, setWidth] = useState(1), [entered, setEntered] = useState(false);
+  const actualWidth = width === "inline" ? 44 : measuredWidth;
   const [ready, setReady] = useState(false), previous = useRef(false);
   useEffect(() => {
     const svg = root.current; if (!svg) return;
-    const resize = new ResizeObserver(() => { const next = width === "inline" ? 44 : svg.clientWidth; if (next > 0) setWidth(next); });
-    resize.observe(svg);
+    const resize = width === "full" ? new ResizeObserver(([entry]) => {
+      const next = Math.round(entry.contentRect.width);
+      if (next > 0) setWidth(next);
+    }) : null;
+    resize?.observe(svg);
     const intersection = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= .25)) { setEntered(true); intersection.disconnect(); } }, { threshold: .25 });
     intersection.observe(svg);
-    return () => { resize.disconnect(); intersection.disconnect(); };
+    return () => { resize?.disconnect(); intersection.disconnect(); };
   }, [width]);
   useEffect(() => { if (entered && !full) previous.current = true; }, [entered, full]);
   const initial = !previous.current, tier = initial ? data.enter : data.update;

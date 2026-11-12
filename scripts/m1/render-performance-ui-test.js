@@ -71,13 +71,14 @@ const output = path.resolve(process.env.RENDER_EVIDENCE_DIR || 'artifacts/render
     await page.evaluate(()=>{const host=document.createElement('div');host.id='renderFigures';document.body.append(host);window.renderFigures=window.agentUi.mount('kit-gallery',host);});
     const rollingCase=page.locator('#renderFigures [data-m8-case=rolling]');await rollingCase.scrollIntoViewIfNeeded();await page.waitForTimeout(1100);
     const rolling=await rollingCase.evaluate(async root=>{
-      const figure=root.querySelector('.text-figure-cost-hero'),columns=figure.querySelectorAll('[aria-hidden=true] > .flex-col');
-      const column=columns[1],digitHeight=column.firstElementChild.getBoundingClientRect().height;
+      const figure=root.querySelector('.text-figure-cost-hero'),columns=figure.querySelectorAll('[data-digit-strip]');
+      const column=columns[1],digitHeight=column.parentElement.getBoundingClientRect().height,stripHeight=column.getBoundingClientRect().height;
       root.querySelector('button').click();await new Promise(resolve=>requestAnimationFrame(resolve));
-      return{y:new DOMMatrixReadOnly(getComputedStyle(column).transform).m42,digitHeight,expectedStart:-5*digitHeight};
+      return{y:new DOMMatrixReadOnly(getComputedStyle(column).transform).m42,digitHeight,stripHeight,expectedStart:-5*digitHeight};
     });
     await page.evaluate(()=>{window.renderFigures.unmount();document.getElementById('renderFigures').remove();});
     fs.writeFileSync(path.join(output,'rolling-check.json'),JSON.stringify(rolling,null,2));
+    assert(Math.abs(rolling.stripHeight-10*rolling.digitHeight)<.5,'one strip line fills exactly one digit viewport');
     assert(Math.abs(rolling.y-rolling.expectedStart)<rolling.digitHeight*.75,'settled Figure resumes at previous digit');
     await showView(page,'cost');await page.locator('[data-cost-duo]').scrollIntoViewIfNeeded();await page.waitForTimeout(1300);
     // The readout wrapper positions the label; spring.fast animates its keyed

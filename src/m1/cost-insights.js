@@ -42,15 +42,22 @@
   function months(rows, { today, coverageStart = null, minimumDays = 7 } = {}) {
     if (!today) return [];
     const first = coverageStart || rows.reduce((min, row) => !min || row.date < min ? row.date : min, null) || today;
+    const byMonth = new Map();
+    for (const row of rows) {
+      const key = row.date.slice(0, 7);
+      let list = byMonth.get(key);
+      if (!list) byMonth.set(key, list = []);
+      list.push(row);
+    }
     const out = [];
     for (let start = monthStart(today); start >= monthStart(first); start = previousMonth(start)) {
       const end = monthEnd(start), from = start < first ? first : start, to = end > today ? today : end, current = end >= today;
-      const sum = total(within(rows, from, to)), started = from === start;
+      const sum = total(within(byMonth.get(start.slice(0, 7)) || [], from, to)), started = from === start;
       let delta = null, deltaKind = null;
       const before = previousMonth(start), beforeCovered = before >= first;
       if (started && beforeCovered && sum.lower !== null) {
         const beforeTo = current ? (() => { const same = shift(before, days(start, today) - 1); return same > monthEnd(before) ? monthEnd(before) : same; })() : monthEnd(before);
-        const previous = total(within(rows, before, beforeTo));
+        const previous = total(within(byMonth.get(before.slice(0, 7)) || [], before, beforeTo));
         if (previous.lower) { delta = (sum.lower - previous.lower) / previous.lower; deltaKind = current ? 'same-days' : 'month'; }
       }
       let projection = null;
@@ -83,7 +90,16 @@
     const sum = total(rows), cost = Object.fromEntries(PARTS.map(part => [part, 0]));
     const full = { tokens: Object.fromEntries(PARTS.map(part => [part, 0])), cost: Object.fromEntries(PARTS.map(part => [part, 0])) };
     const counts = {}, buckets = new Map(), origin = from || rows.reduce((min, row) => !min || row.date < min ? row.date : min, null);
-    const keyOf = date => bucket === 'day' || !origin ? date : shift(origin, Math.floor((at(date) - at(origin)) / DAY / 7) * 7);
+    const bucketDates = new Map(), originTime = origin ? at(origin) : 0;
+    const keyOf = date => {
+      if (bucket === 'day' || !origin) return date;
+      let key = bucketDates.get(date);
+      if (key === undefined) {
+        key = shift(origin, Math.floor((at(date) - originTime) / DAY / 7) * 7);
+        bucketDates.set(date, key);
+      }
+      return key;
+    };
     for (const row of rows) {
       if (!row.costParts) continue;
       for (const part of PARTS) cost[part] += row.costParts[part] || 0;

@@ -309,8 +309,9 @@ export function useFluidHover<T extends HTMLElement>(
       // overlays to the top of the list, so treat the whole pass as
       // incomplete. A boxless element is the only case: `position: fixed`
       // items also have no offsetParent but do have a size.
+      const offsetParent = element.offsetParent as HTMLElement | null;
       const hasLayoutBox =
-        element.offsetParent !== null ||
+        offsetParent !== null ||
         element.offsetWidth > 0 ||
         element.offsetHeight > 0;
       if (!hasLayoutBox) {
@@ -328,7 +329,7 @@ export function useFluidHover<T extends HTMLElement>(
       // loop never runs and this is exactly the plain offsetTop/offsetLeft.
       let top = element.offsetTop;
       let left = element.offsetLeft;
-      let ancestor = element.offsetParent as HTMLElement | null;
+      let ancestor = offsetParent;
       while (ancestor && ancestor !== container && container.contains(ancestor)) {
         top += ancestor.offsetTop + ancestor.clientTop;
         left += ancestor.offsetLeft + ancestor.clientLeft;
@@ -369,11 +370,19 @@ export function useFluidHover<T extends HTMLElement>(
     runMeasurement();
   }, [runMeasurement]);
 
+  const measureAfterLayout = useCallback(() => {
+    if (!runMeasurement()) return;
+    if (remeasureRafIdRef.current !== null) {
+      cancelAnimationFrame(remeasureRafIdRef.current);
+      remeasureRafIdRef.current = null;
+    }
+    setIsMeasured(true);
+  }, [runMeasurement]);
+
   /**
-   * The hook's single measurement pass: coalesces every trigger (item
-   * registration, container resize) into one remeasure on the next frame and
-   * is the only place readiness is reported, so `isMeasured` can never turn
-   * true while another pass is still queued.
+   * Fallback for changes that do not resize a box, such as removing a row
+   * from a fixed-height list. Initial registration and resizes use the
+   * browser's post-layout delivery.
    */
   const scheduleMeasurement = useCallback(
     (attempts: number) => {
@@ -411,19 +420,24 @@ export function useFluidHover<T extends HTMLElement>(
   const itemRoRef = useRef<ResizeObserver | null>(null);
   const getItemRo = useCallback(() => {
     if (itemRoRef.current === null && typeof ResizeObserver !== "undefined") {
-      itemRoRef.current = new ResizeObserver(() =>
-        scheduleMeasurement(measurementAttempts)
-      );
+      itemRoRef.current = new ResizeObserver(measureAfterLayout);
     }
     return itemRoRef.current;
-  }, [scheduleMeasurement]);
+  }, [measureAfterLayout]);
 
   const registerItem = useCallback(
     (index: number, element: HTMLElement | null) => {
       if (element) {
         itemsRef.current.set(index, element);
-        getItemRo()?.observe(element);
         if (index === activeIndexRef.current) element.setAttribute(ACTIVE_ATTR, "");
+        const observer = getItemRo();
+        if (observer) {
+          // The initial notification follows natural layout. Reading offsets
+          // in a registration rAF would force the new page to lay out early.
+          setIsMeasured(false);
+          observer.observe(element);
+          return;
+        }
       } else {
         const previous = itemsRef.current.get(index);
         if (previous) itemRoRef.current?.unobserve(previous);
@@ -542,18 +556,15 @@ export function useFluidHover<T extends HTMLElement>(
     [isItemDisabled, gapClick, gapClickMaxDistance]
   );
 
-  // Remeasure when the container resizes — a reflow moves items even though
-  // the registered set is unchanged, which would otherwise leave itemRects
-  // stale. Coalesced through the same rAF as register/unregister. Readiness is
-  // deliberately not dropped: the item set is unchanged, so the published rects
-  // stay usable, and hiding overlays on every reflow would flicker them.
+  // A container resize can move items without changing their sizes. Both
+  // observers read after layout and retain the last complete measurement.
   useEffect(() => {
     const container = containerRef.current;
     if (!container || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => scheduleMeasurement(measurementAttempts));
+    const ro = new ResizeObserver(measureAfterLayout);
     ro.observe(container);
     return () => ro.disconnect();
-  }, [containerRef, scheduleMeasurement]);
+  }, [containerRef, measureAfterLayout]);
 
   // Clean up rAF and the item observer on unmount
   useEffect(() => {

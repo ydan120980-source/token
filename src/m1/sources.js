@@ -202,13 +202,29 @@ function listFiles(agent, selectedRoots, audit) {
 // One walk of every root, shared by the stamp, the refresh and the scan of the same
 // collection. Each stage used to list the folders and stat every file again, so a
 // refresh walked the same tree three times and stat'ed every file twice.
-function survey(selectedRoots, audit) {
-  const agents = [];
+function* surveyEntries(selectedRoots, audit) {
   for (const agent of SOURCES) {
     const listed = listFiles(agent, selectedRoots, audit);
+    yield;
     const stamps = new Map();
-    for (const file of listed.files) { try { stamps.set(file, fileStamp(file, agent)); } catch { stamps.set(file, null); } }
-    agents.push({ agent, detected: listed.detected, errors: [...listed.errors], all: listed.files, files: canonical(agent, listed.files).slice(), stamps, index: indexStamps(agent, selectedRoots) });
+    for (const file of listed.files) {
+      try { stamps.set(file, fileStamp(file, agent)); } catch { stamps.set(file, null); }
+      yield;
+    }
+    yield { agent, detected: listed.detected, errors: [...listed.errors], all: listed.files, files: canonical(agent, listed.files).slice(), stamps, index: indexStamps(agent, selectedRoots) };
+  }
+}
+function survey(selectedRoots, audit) {
+  const agents = [];
+  for (const entry of surveyEntries(selectedRoots, audit)) if (entry) agents.push(entry);
+  return { agents };
+}
+async function surveyWithCheckpoint(selectedRoots, audit, checkpoint) {
+  const agents = [];
+  for (const entry of surveyEntries(selectedRoots, audit)) {
+    if (entry) agents.push(entry);
+    const wait = checkpoint();
+    if (wait) await wait;
   }
   return { agents };
 }
@@ -258,11 +274,12 @@ async function parseFile(agent, file, salt, audit) {
 function scanOutcome(outcome, borrowRecords) {
   return { ...outcome, records: borrowRecords ? outcome.records.map(record => record.sharedKey ? structuredClone(record) : Object.freeze(record)) : structuredClone(outcome.records) };
 }
-function remember(cache,key,stamp,outcome) {
-  if(!cache.fingerprints)return;
+const outcomeSignature = text => crypto.createHash('sha256').update(text).digest('hex');
+function remember(cache,key,stamp,signature) {
   if(cache.fingerprints.size>=100000&&!cache.fingerprints.has(key))cache.fingerprints.delete(cache.fingerprints.keys().next().value);
-  cache.fingerprints.set(key,{stamp,signature:crypto.createHash('sha256').update(JSON.stringify(outcome)).digest('hex')});
+  cache.fingerprints.set(key,{stamp,signature});
 }
+const listingSignature = walk => JSON.stringify(walk.agents.map(entry => [entry.agent, entry.detected, entry.errors, entry.index]));
 async function parsedFile(agent, file, salt, audit, cache, knownStamp, borrowRecords) {
   if (!cache) return parseFile(agent, file, salt, audit);
   const key = agent + '\0' + file; cache.seen.add(key);
@@ -272,20 +289,25 @@ async function parsedFile(agent, file, salt, audit, cache, knownStamp, borrowRec
   if (hit && stamp !== null && hit.stamp === stamp) return scanOutcome(hit.outcome, borrowRecords);
   const outcome = await parseFile(agent, file, salt, audit);
   if (outcome.failure || stamp === null) {cache.files.delete(key);cache.fingerprints?.delete(key);}
-  else { cache.files.set(key, { stamp, outcome });remember(cache,key,stamp,outcome);return scanOutcome(outcome, borrowRecords); }
+  else {
+    cache.files.set(key, { stamp, outcome });
+    if (cache.fingerprints) remember(cache,key,stamp,outcomeSignature(JSON.stringify(outcome)));
+    return scanOutcome(outcome, borrowRecords);
+  }
   return outcome;
 }
 // Re-parses only files whose stamp changed and reports whether any parse outcome,
 // file or listing differs from what the cache held. Identical outcomes merge into an
 // identical scan, so an unchanged report lets the caller skip the merge entirely.
-async function refreshCache(selectedRoots, salt, audit, cache, prepared = null) {
+async function refreshCache(selectedRoots, salt, audit, cache, prepared = null, checkpoint = null) {
   if (cache.salt !== salt) { cache.files.clear(); cache.fingerprints?.clear();cache.salt = salt; cache.listing = null; }
-  const report = { changed: false, failures: 0 }, seen = new Set(), listing = [];
+  const report = { changed: false, failures: 0 }, seen = new Set();
   const walk = prepared || survey(selectedRoots, audit);
   for (const entry of walk.agents) {
     const agent = entry.agent;
-    listing.push([agent, entry.detected, entry.errors, entry.index]);
     for (const file of entry.files) {
+      const wait = checkpoint?.();
+      if (wait) await wait;
       const key = agent + '\0' + file; seen.add(key);
       const stamp = entry.stamps.has(file) ? entry.stamps.get(file) : null;
       const hit = cache.files.get(key);
@@ -293,19 +315,20 @@ async function refreshCache(selectedRoots, salt, audit, cache, prepared = null) 
       if (stamp !== null && (hit?.stamp === stamp || fingerprint?.stamp===stamp)) continue;
       const outcome = await parseFile(agent, file, salt, audit);
       if (outcome.failure || stamp === null) { cache.files.delete(key);cache.fingerprints?.delete(key); report.failures++; report.changed = true; continue; }
-      const changed=fingerprint?fingerprint.signature!==crypto.createHash('sha256').update(JSON.stringify(outcome)).digest('hex'):!hit||JSON.stringify(hit.outcome)!==JSON.stringify(outcome);
+      const serialized = JSON.stringify(outcome), signature = cache.fingerprints ? outcomeSignature(serialized) : null;
+      const changed = fingerprint ? fingerprint.signature !== signature : !hit || JSON.stringify(hit.outcome) !== serialized;
       if (changed) report.changed = true;
       cache.files.set(key, { stamp, outcome });
-      remember(cache,key,stamp,outcome);
+      if (cache.fingerprints) remember(cache,key,stamp,signature);
     }
   }
-  const signature = JSON.stringify(listing);
+  const signature = listingSignature(walk);
   if (cache.listing !== signature) { cache.listing = signature; report.changed = true; }
   for (const key of cache.files.keys()) if (!seen.has(key)) { cache.files.delete(key); report.changed = true; }
   if(cache.fingerprints)for(const key of cache.fingerprints.keys())if(!seen.has(key)){cache.fingerprints.delete(key);report.changed=true;}
   return report;
 }
-async function scanSources(selectedRoots, salt, audit, { cache = null, report = null, prepared = null, borrowRecords = false } = {}) {
+async function scanSources(selectedRoots, salt, audit, { cache = null, report = null, prepared = null, borrowRecords = false, checkpoint = null } = {}) {
   if (cache) { if (cache.salt !== salt) { cache.files.clear();cache.fingerprints?.clear(); cache.salt = salt; } cache.seen = new Set(); }
   const result = {}, physical = new Set(), shared = new Map();
   const walk = prepared || survey(selectedRoots, audit);
@@ -330,6 +353,8 @@ async function scanSources(selectedRoots, salt, audit, { cache = null, report = 
       // Detailed WorkBuddy logs supersede aggregate fallback, never sum them.
       files.sort((a, b) => Number(a.endsWith('.db')) - Number(b.endsWith('.db')));
       for (const file of files) {
+        const wait = checkpoint?.();
+        if (wait) await wait;
         if (encodingConflicts.has(path.dirname(file))) continue;
         if (Date.now() - started > 55000) { errors.add('SOURCE_TIMEOUT'); if (report) report.failures++; break; }
         if (physical.has(file)) continue;
@@ -386,7 +411,11 @@ async function scanSources(selectedRoots, salt, audit, { cache = null, report = 
     const listed = agent === 'continue' ? continueSessions(selectedRoots, salt, audit) : [];
     result[agent] = { records: retained, sessions: [...seenSessions.values(), ...listed], detected, fileCount, skipped, partial: partial || errors.size > 0, errors: [...errors], durationMs: Date.now() - started };
   }
-  if (cache) for (const key of cache.files.keys()) if (!cache.seen.has(key)) cache.files.delete(key);
+  if (cache) {
+    cache.listing = listingSignature(walk);
+    for (const key of cache.files.keys()) if (!cache.seen.has(key)) cache.files.delete(key);
+    if (cache.fingerprints) for (const key of cache.fingerprints.keys()) if (!cache.seen.has(key)) cache.fingerprints.delete(key);
+  }
   return result;
 }
-module.exports = { parseObjects, parseDatabase, scanSources, sourceStamp, refreshCache, canonical, survey };
+module.exports = { parseObjects, parseDatabase, scanSources, sourceStamp, refreshCache, canonical, survey, surveyWithCheckpoint };

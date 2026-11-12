@@ -78,9 +78,14 @@
       perMillionNote:Number.isFinite(prior)&&prior>0&&Number.isFinite(now)?span.compare+' '+signed((now-prior)/prior):'',saved:dest.savings===null?null:money(dest.savings),hit:Number.isFinite(hit)?hit:null,hitNote:Number.isFinite(hit)?'缓存命中 '+pct(hit):'命中率未报告'};
     const today=data.today(),current=list.find(m=>m.current&&m.month===today.slice(0,7));let month=null;
     if(current){
-      const first=current.month+'-01',end=insights.monthEnd(first),inMonth=all.filter(r=>r.date.slice(0,7)===current.month),days=[];
+      const first=current.month+'-01',end=insights.monthEnd(first),inMonth=all.filter(r=>r.date.slice(0,7)===current.month),days=[],byDay=new Map();
+      for (const row of inMonth) {
+        let group = byDay.get(row.date);
+        if (!group) byDay.set(row.date, group = []);
+        group.push(row);
+      }
       for(let day=first;day<=end;day=shift(day,1)){
-        const on=inMonth.filter(r=>r.date===day),priced=on.filter(r=>Number.isFinite(r.estimatedCostUsd)),value=priced.length?priced.reduce((n,r)=>n+r.estimatedCostUsd,0):null;
+        const on=byDay.get(day)||[],priced=on.filter(r=>Number.isFinite(r.estimatedCostUsd)),value=priced.length?priced.reduce((n,r)=>n+r.estimatedCostUsd,0):null;
         const future=day>today,used=on.length>0;
         days.push({key:day,date:day,title:dayTitle(day),short:md(day),future,today:day===today,used,value,partial:partialOf(on),label:dayTitle(day)+'，'+(future?'还没到':value!==null?money(value):used?'有用量，未计入':'没有记录'),state:future?'future':value===0?'zero':value!==null?'value':used?'unpriced':'unobserved'});
       }

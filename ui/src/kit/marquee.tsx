@@ -57,7 +57,7 @@ export function Marquee({ text, children, title }: { text: string; children?: Re
 const offsets = { up: { y: -12 }, down: { y: 12 }, left: { x: -12 }, right: { x: 12 } };
 /** Content that takes another's place: a quick fade, rising a little from the side it came from when it has one. */
 export function Appear({ from, skip = false, className, children }: { from?: keyof typeof offsets; skip?: boolean; className?: string; children: ReactNode }) {
-  const { full, fade } = useKitMotion(), initial = skip ? false : full ? { opacity: 0, ...(from ? offsets[from] : {}) } : fade ? { opacity: 0 } : false;
+  const { full, fade } = useKitMotion(), initial = skip || !full && !fade ? false : { opacity: 0, x: 0, y: 0, ...(full && from ? offsets[from] : {}) };
   return <motion.div className={className} initial={initial} animate={{ opacity: 1, x: 0, y: 0 }} transition={full ? spring.moderate : reducedFade}>{children}</motion.div>;
 }
 /** Animate the visible viewport rather than the very tall scroll contents.
@@ -76,6 +76,9 @@ export function ViewportAppear({ replay, from, children }: { replay: string; fro
 }
 /** A view that replaces another in place, sliding in from one side (the reading view and the list it came from). */
 export function SlideIn({ from, skip = false, children }: { from: "left" | "right"; skip?: boolean; children: ReactNode }) {
-  const { full, fade } = useKitMotion(), initial = skip ? false : full ? { x: from === "left" ? "-100%" : "100%" } : fade ? { opacity: 0 } : false;
+  const { full, fade } = useKitMotion();
+  // The slide is fully opaque in full-motion mode. Supply the start value
+  // so Motion never has to resolve it from the newly mounted page's style.
+  const initial = skip ? false : full ? { x: from === "left" ? "-100%" : "100%", opacity: 1 } : fade ? { x: 0, opacity: 0 } : false;
   return <motion.div className="h-full min-w-0" initial={initial} animate={{ x: 0, opacity: 1 }} transition={full ? spring.slow : reducedFade}>{children}</motion.div>;
 }

@@ -257,7 +257,9 @@ function codex(objects, options = {}) {
       out.call(p.id ?? null, 'web_search', { query: asked ?? action.pattern ?? action.url ?? '' }, at);
     } else if (p.type === 'function_call_output' || p.type === 'custom_tool_call_output' || p.type === 'local_shell_call_output') {
       const raw = typeof p.output === 'string' ? p.output : codexOutput(out, p.output?.content ?? p.output, at);
-      const parsed = typeof raw === 'string' ? parseJson(raw) : null;
+      // Only a JSON object can carry the output and exit-code fields. Shell
+      // output usually starts with text, so it need not raise a parse error.
+      const parsed = typeof raw === 'string' && /^[\t\r\n ]*\{/.test(raw) ? parseJson(raw) : null;
       const exit = parsed?.metadata?.exit_code ?? p.output?.metadata?.exit_code;
       // exec_command reports its exit in the text of its result (codex-rs/core/src/unified_exec).
       const said = typeof raw === 'string' ? /^Process exited with code (\d+)$/m.exec(raw.slice(0, 400))?.[1] : null;

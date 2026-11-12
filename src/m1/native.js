@@ -37,16 +37,20 @@ async function verifyIn(records, directory, onSpawn) {
   const home = path.join(directory, 'projection');
   const project = path.join(home, '.claude', 'projects', 'statistics-only'); fs.mkdirSync(project, { recursive: true });
   const file = path.join(project, 'usage.jsonl');
-  const eligible = records.filter(r => r.totalTokens >= 0);
   // Canonical statistics-only transcript. No original paths, titles, bodies,
   // accounts or tokens. Native process cannot inherit provider environments.
   // Preserve the exact projection bytes while bounding temporary serialization
   // to a chunk, instead of retaining every row string plus the joined file.
-  const fd=fs.openSync(file,'w',0o600);let lines=[],length=0;
+  const fd=fs.openSync(file,'w',0o600);let lines=[],length=0,eligible=0,expected=0;
   const flush=()=>{if(lines.length){fs.writeFileSync(fd,lines.join(''));lines=[];length=0;}};
   try{
-    for(const r of eligible){const line=JSON.stringify({type:'assistant',uuid:r.id,sessionId:'m1-projection',timestamp:r.timestamp,message:{id:r.id,role:'assistant',model:'m1-statistical-projection',usage:{input_tokens:r.totalTokens,output_tokens:0,cache_read_input_tokens:0,cache_creation_input_tokens:0}}})+'\n';lines.push(line);length+=line.length;if(length>=65536)flush();}
-    if(!eligible.length)lines.push('\n');flush();
+    for(const r of records){
+      if (!(r.totalTokens >= 0)) continue;
+      eligible++; expected += r.totalTokens;
+      const line=JSON.stringify({type:'assistant',uuid:r.id,sessionId:'m1-projection',timestamp:r.timestamp,message:{id:r.id,role:'assistant',model:'m1-statistical-projection',usage:{input_tokens:r.totalTokens,output_tokens:0,cache_read_input_tokens:0,cache_creation_input_tokens:0}}})+'\n';
+      lines.push(line);length+=line.length;if(length>=65536)flush();
+    }
+    if(!eligible)lines.push('\n');flush();
   }finally{fs.closeSync(fd);}
   const env = {
     SystemRoot: process.env.SystemRoot || 'C:\\Windows', WINDIR: process.env.WINDIR || 'C:\\Windows',
@@ -65,9 +69,8 @@ async function verifyIn(records, directory, onSpawn) {
   });
   const parsed = JSON.parse(text);
   if (!['totalInput', 'totalOutput', 'totalCacheRead', 'totalCacheWrite'].every(key => Number.isSafeInteger(parsed[key]) && parsed[key] >= 0)) throw new Error('NATIVE_SCHEMA_MISMATCH');
-  const expected = eligible.reduce((sum, r) => sum + r.totalTokens, 0);
   const actual = ['totalInput', 'totalOutput', 'totalCacheRead', 'totalCacheWrite'].reduce((sum, key) => sum + (parsed[key] ?? 0), 0);
   if (actual !== expected) throw new Error('NATIVE_TOTAL_MISMATCH');
-  return { status: 'passed', records: eligible.length, tokens: actual, engine: 'tokscale/' + TOKSCALE.version };
+  return { status: 'passed', records: eligible, tokens: actual, engine: 'tokscale/' + TOKSCALE.version };
 }
 module.exports = { TOKSCALE, binary, trustedBinary, verifyProjection };

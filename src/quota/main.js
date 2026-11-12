@@ -324,7 +324,10 @@ else {
       if (error) throw new Error(error);
       return { opened: true, path: dir };
     });
-    usageHandle('usage:pricing', async () => ({...await usage.pricing(), sync:priceSync.state()}));
+    usageHandle('usage:pricing', async view => {
+      const result = await usage.pricing(view);
+      return view === 'coverage' ? result : {...result, sync:priceSync.state()};
+    });
     usageHandle('usage:priceSync', () => priceSync.sync());
     usageHandle('usage:priceAuto', enabled => priceSync.setEnabled(enabled));
     usageHandle('usage:billingSave', async value => { const result = await usage.setBilling(value); await priceSync.start(); window.webContents.send('usage:update'); return result; });

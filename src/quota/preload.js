@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('usageTransport', Object.freeze({
   agentSetupAction: request => ipcRenderer.invoke('usage:agentSetupAction', request),
   installers: () => ipcRenderer.invoke('usage:installers'), installerAction: request => ipcRenderer.invoke('usage:installerAction', request),
   onInstallUpdate: callback => { const listener = () => callback(); ipcRenderer.on('usage:installUpdate', listener); return () => ipcRenderer.removeListener('usage:installUpdate', listener); },
-  pricing: () => ipcRenderer.invoke('usage:pricing'), savePrice: entry => ipcRenderer.invoke('usage:priceSave', entry), resetPrice: entry => ipcRenderer.invoke('usage:priceReset', entry),
+  pricing: () => ipcRenderer.invoke('usage:pricing'), pricingCoverage: () => ipcRenderer.invoke('usage:pricing','coverage'), savePrice: entry => ipcRenderer.invoke('usage:priceSave', entry), resetPrice: entry => ipcRenderer.invoke('usage:priceReset', entry),
   syncPrices: () => ipcRenderer.invoke('usage:priceSync'), autoPrices: enabled => ipcRenderer.invoke('usage:priceAuto', enabled), saveBilling: value => ipcRenderer.invoke('usage:billingSave', value),
   previewCodex: () => ipcRenderer.invoke('usage:codexPreview'), applyCodex: id => ipcRenderer.invoke('usage:codexApply', id),
   get: revision => ipcRenderer.invoke('usage:getPacked', Number.isSafeInteger(revision) ? revision : null), refresh: revision => ipcRenderer.invoke('usage:refreshPacked', Number.isSafeInteger(revision) ? revision : null),

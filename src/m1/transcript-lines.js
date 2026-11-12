@@ -3,7 +3,7 @@
 // Same regular-file/link/size and changed-file rejection as policy.readBytes;
 // a chunk and the current line replace the whole decoded file + object array.
 const fs=require('node:fs');
-const CHUNK=64*1024;
+const CHUNK=256*1024;
 const same=(a,b)=>a.dev===b.dev&&a.ino===b.ino&&a.size===b.size&&a.mtimeMs===b.mtimeMs;
 function closeChecked(fd,before,file){
  try{if(!same(before,fs.fstatSync(fd))||!same(before,fs.lstatSync(file)))throw Error('SOURCE_BUSY');}

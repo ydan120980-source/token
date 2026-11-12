@@ -39,7 +39,12 @@ export function SessionsPage() {
   useEffect(() => { if (data.reading) setSelected(null); }, [data.reading?.key]);
   // Reading and back: the list returns where it was, with focus on the row that opened the conversation.
   const readingKey = data.reading?.key ?? null, away = Boolean(readingKey), lastKey = useRef<string | null>(null);
-  if (away && !wasReading.current) listTop.current = document.scrollingElement?.scrollTop ?? 0;
+  useEffect(() => {
+    if (!active || away) return;
+    const remember = () => { listTop.current = scrollY; };
+    window.addEventListener("scroll", remember, { passive: true });
+    return () => window.removeEventListener("scroll", remember);
+  }, [active, away]);
   useLayoutEffect(() => {
     if (readingKey) lastKey.current = readingKey;
     if (away) { wasReading.current = true; return; }
@@ -55,10 +60,16 @@ export function SessionsPage() {
     });
     observer.observe(root); return () => observer.disconnect();
   }, [readingKey, away, active]);
-  useEffect(() => { if(active) void host.load(range); }, [host, range, active]);
+  useEffect(() => { if(active) void host.ensure(range); }, [host, range, active]);
   const listQuery = scope === "sessions" ? query : "";
   const model = useMemo(() => createSessionsModel({ list: data.list, agent, range, sort, query: listQuery, group: grouping, labels: data.labels }), [data.list, agent, range, sort, listQuery, grouping, data.labels]);
   const summary = useMemo(() => active ? model.pageSummary() : null, [model, active]), list = summary?.list ?? [];
+  const readableSiblings = useMemo(() => summary?.list.flatMap(group => group.sessions.filter(session => host.readable(session.agent))) ?? [], [host, summary]);
+  const agentOptions = useMemo(() => {
+    const recorded = new Set<string>();
+    for (const session of data.list?.sessions ?? []) recorded.add(session.agent);
+    return Object.entries(catalog).map(([id, meta]) => ({ id, name: meta.name, recorded: recorded.has(id) }));
+  }, [catalog, data.list]);
   // The first project starts open until the person folds or opens something themselves.
   const isOpen = (id: string) => opened.has(id) || !touched && !opened.size && list[0]?.id === id;
   const reset = () => { setOpened(new Set()); setDrawers(new Set()); setTouched(false); };
@@ -86,12 +97,12 @@ export function SessionsPage() {
   const notice = insights.notices("sessions"), status = insights.get();
   const chooseScope = (next: SearchScope) => { setScope(next); setContent(next === "content" && query.trim() ? query.trim() : null); reset(); };
   const searchKey = (event: KeyboardEvent<HTMLDivElement>) => { if (scope === "content" && event.key === "Enter" && !event.nativeEvent.isComposing && query.trim()) { event.preventDefault(); setContent(query.trim()); } };
-  if (data.reading) return <ViewContent active><SlideIn key="reader" from="right"><SessionReader siblings={list.flatMap(group => group.sessions).filter(session => host.readable(session.agent))} /></SlideIn></ViewContent>;
+  if (data.reading) return <ViewContent active><SlideIn key="reader" from="right"><SessionReader siblings={readableSiblings} /></SlideIn></ViewContent>;
   const stopPicking = () => { setPicking(false); setPicked(new Map()); };
   const chosen = [...picked.values()], readable = chosen.filter(session => host.readable(session.agent));
   const each = async (patch: Parameters<typeof host.label>[1], keys = chosen.map(session => session.key)) => { for (const key of keys) await host.label(key, patch); };
   const allPinned = chosen.length > 0 && chosen.every(session => data.labels[session.key]?.pinned);
-  const names = model.collections().map(item => item.name);
+  const names = picking ? model.collections().map(item => item.name) : [];
   const saveName = async () => {
     const name = groupName.trim().slice(0, 40); if (!name || !naming) return;
     if (naming.from) await host.renameGroup(naming.from, name); else { await each({ group: name }, naming.keys); stopPicking(); }
@@ -111,7 +122,7 @@ export function SessionsPage() {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AgentFilter display="icon" aria-label="会话 Agent 筛选" value={agent} onChange={id => { setAgent(id); reset(); }}
-          agents={Object.entries(catalog).map(([id, meta]) => ({ id, name: meta.name, recorded: Boolean(data.list?.sessions.some(session => session.agent === id)) }))} />
+          agents={agentOptions} />
         {content ? null : <div className="flex flex-wrap items-center gap-3">
           <Segmented value={grouping} onChange={value => { setGrouping(value); reset(); }} items={groupings} aria-label="会话分组" />
           <div data-session-sort><Select value={sort} onChange={setSort} options={sorts} aria-label="会话排序" /></div>

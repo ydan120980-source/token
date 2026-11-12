@@ -21,6 +21,11 @@ function selectUsageSnapshot(previous, incoming) {
   const order = Number(valid(incoming)) - Number(valid(previous)) || incoming.totalTokens - previous.totalTokens;
   if (order < 0) return {record:previous, issue:incoming.totalTokens < previous.totalTokens ? REGRESSION : previous.usageConflict ? CONFLICT : null};
   if (order > 0) return {record:incoming, issue:incoming.usageConflict ? CONFLICT : null};
+  // A routine scan repeatedly sees the same facts. The equal canonical
+  // snapshot would keep the previous object without serializing either side.
+  if (!previous.usageConflict && !incoming.usageConflict && rank(incoming) === rank(previous) &&
+      incoming.timestamp === previous.timestamp && incoming.model === previous.model && incoming.provider === previous.provider &&
+      FIELDS.every(field => incoming[field] === previous[field])) return { record: previous, issue: null };
   const conflict = rank(previous) > 0 && rank(incoming) > 0 && FIELDS.some(field => Number.isFinite(previous[field]) && Number.isFinite(incoming[field]) && previous[field] !== incoming[field]);
   if (conflict || previous.usageConflict || incoming.usageConflict) {
     const base = rank(incoming) > rank(previous) ? incoming : previous;

@@ -2,6 +2,7 @@
 const path = require('node:path');
 const os = require('node:os');
 const { Worker } = require('node:worker_threads');
+const { performance } = require('node:perf_hooks');
 const crypto = require('node:crypto');
 const { Store, atomic } = require('./store');
 const {CustomSources}=require('./custom-sources');
@@ -16,27 +17,40 @@ class Service {
   async refresh(maintenance = false) {
     if (this.closed || this.customBusy) return this.get();
     if (this.current) { if (maintenance) throw new Error('MAINTENANCE_BUSY'); try { await this.current; } catch {} return this.get(); }
+    this.collectionStages = null;
     if (maintenance) this.maintenance = null;
     clearTimeout(this.timer);
     let failureStage='collection';
+    let prepared;
     this.current = new Promise((resolve, reject) => {
       // Routine collections reuse one worker so its per-file parse cache survives;
       // maintenance previews always read every file in a worker of their own.
       const worker = maintenance ? this.spawn() : (this.collector ||= this.spawn()), id = ++this.requests;
       this.worker = worker;
       let timedOut = false;
-      const settle = () => { clearTimeout(timer); worker.off('message', onMessage); worker.off('error', onError); worker.off('exit', onExit); };
+      const settle = () => { clearTimeout(timer); worker.off('prepare', onPrepare); worker.off('message', onMessage); worker.off('error', onError); worker.off('exit', onExit); };
       const discard = () => { if (this.collector === worker) this.collector = null; this.stop(worker); };
       const timer = setTimeout(() => { timedOut = true; this.killChild(); discard(); }, this.timeoutMs);
+      const onPrepare = (request, scan) => {
+        if (request !== id || this.closed || maintenance) return;
+        const start = performance.now();
+        // The native process can run while the owner builds a private draft.
+        // A failed check never reaches commit, and a changed basis is rebuilt.
+        try {
+          const { state, settings } = this.store, snapshot = this.store.snapshot();
+          const batch = this.store.prepareCollection(scan, { status: 'passed' }, {});
+          prepared = { scan, state, settings, snapshot, batch, ms: performance.now() - start };
+        } catch { /* Use the normal ingest path after a successful check. */ }
+      };
       const onMessage = result => {
         if (result.id !== id) return;
         if (result.childPid) { this.childPid = result.childPid; return; }
-        settle(); this.childPid = null; this.audit = result.audit; if (maintenance) discard();
+        settle(); this.childPid = null; this.audit = result.audit; this.collectionStages = result.stages ?? null; if (maintenance) discard();
         if (result.error) reject(fromMessage(result)); else resolve(result);
       };
       const onError = error => { settle(); discard(); reject(fromMessage({error:'COLLECTION_WORKER_FAILED',diagnostic:classify(error,'worker')})); };
       const onExit = () => { settle(); discard(); this.killChild(); reject(fromMessage({error:timedOut ? 'COLLECTION_TIMEOUT' : 'COLLECTION_WORKER_FAILED'},'COLLECTION_WORKER_FAILED','worker')); };
-      worker.on('message', onMessage); worker.on('error', onError); worker.on('exit', onExit);
+      worker.on('prepare', onPrepare); worker.on('message', onMessage); worker.on('error', onError); worker.on('exit', onExit);
       worker.postMessage({ id, roots: maintenance ? { codex: this.store.sourceRoots().codex } : this.store.sourceRoots(), salt: this.store.state.salt, dir: this.store.dir, maintenance,
         customSources:maintenance ? {} : this.store.state.customSources || {}, customReservedRoots:[...Object.values(this.store.defaults).flat(),...Object.values(this.store.settings.sources.added).flat()],customProtectedDirs:this.custom.protectedDirs,
         previousStamp: this.stampSequence === this.store.state.sequence ? this.stamp : null });
@@ -56,7 +70,16 @@ class Service {
       // Unchanged sources reproduce the stored ledger; skip ingest, verification and writes.
       if (!this.closed) {
         failureStage='ingest';
-        this.store.ingestCollection(result.unchanged?null:result.scan,result.native,result.custom);
+        const ingestStart = performance.now();
+        try {
+          if (prepared && result.scan === prepared.scan && result.native?.status === 'passed' &&
+              this.store.state === prepared.state && this.store.settings === prepared.settings &&
+              this.store.snapshot() === prepared.snapshot && !Object.keys(result.custom || {}).length) {
+            this.store.commitCollection(prepared.batch, new Date().toISOString());
+            if (this.collectionStages) this.collectionStages.preparedDuringVerification = prepared.ms;
+          } else this.store.ingestCollection(result.unchanged?null:result.scan,result.native,result.custom);
+        }
+        finally { if (this.collectionStages) this.collectionStages.ingest = performance.now() - ingestStart; }
         if(!result.unchanged)this.scanHadError = Object.values(result.scan).some(s => s.errors.some(code => !DATA_NOTICES.has(code)));
         this.stamp = result.stamp; this.stampSequence = this.store.state.sequence; this.lastCollection = result.unchanged?'unchanged:'+result.reason:'ingested';
       }
