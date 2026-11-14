@@ -149,7 +149,7 @@ node design/desktop-reference/serve.js
 ## GitHub 账号与同步
 
 - 维护者在 GitHub 注册项目自己的 GitHub App，启用设备流程，仓库权限设为 **Contents: Read and write**、**Metadata: Read-only**。公共分发时，将 App 配置为其他用户也可安装。在 `package.json` 填写公开的 Client ID（`githubAppClientId`）和 App slug（`githubAppSlug`，即 `github.com/apps/` 后的名称）。本机测试也可在启动前设置环境变量 `AGENT_USAGE_GITHUB_CLIENT_ID`。设备流程无需 Client Secret 或私钥。
-- 用户在「设置 → 账号与同步」点击「连接 GitHub」，在 GitHub 输入设备代码并确认授权。把 GitHub App 安装到自己选定的私有仓库，返回「刷新仓库」。选择仓库、打开同步开关，再点击「同步」。
+- 用户在「设置 → 账号与同步」点击「连接 GitHub」，在 GitHub 输入设备代码并确认授权。然后点击「一键配置同步」。首次使用时，按 GitHub 页面提示选中要授权的个人私有仓库。返回应用后会自动检查授权，唯一可用仓库会直接设为目标，多仓库时由用户选择。手动点击「同步」上传用量汇总。
 - 同步会在该仓库默认分支提交 `agent-usage/<设备 ID>.json`，其中是每日各 Agent、各模型的 Token 和估算费用汇总。每台电脑写自己的文件，应用只在点击「同步」后发出写入。GitHub 和有权限的仓库协作者能看到该文件。
 - 「断开」会清除本机的加密登录与同步设置，已上传文件保留。可在 GitHub 的 [Applications 设置](https://github.com/settings/installations) 中管理安装授权。
 

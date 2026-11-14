@@ -48,10 +48,12 @@ let state = OFFLINE, actionError = "", loaded = false;
 const listeners = new Set<() => void>();
 const publish = () => { for (const listener of listeners) listener(); };
 async function apply(reply: Promise<Reply> | undefined) {
-  if (!reply) return;
-  try { const value = await reply; if (value.ok) { state = value.state; actionError = ""; } else actionError = githubMessage(value.error); }
+  if (!reply) return null;
+  let result: GithubState | null = null;
+  try { const value = await reply; if (value.ok) { state = value.state; result = value.state; actionError = ""; } else actionError = githubMessage(value.error); }
   catch { actionError = githubMessage("GITHUB_REQUEST_FAILED"); }
   publish();
+  return result;
 }
 const load = () => apply(window.githubBridge?.get());
 function subscribe(listener: () => void) {
@@ -70,6 +72,6 @@ export const githubActions = {
   setSync: (request: { enabled: boolean; repository: string | null }) => apply(window.githubBridge?.setSync(request)),
   syncNow: () => apply(window.githubBridge?.syncNow()),
   copyCode: async () => { try { return await window.githubBridge?.copyCode() ?? false; } catch { return false; } },
-  open: (url: string) => { void window.githubBridge?.open(url).catch(() => {}); },
+  open: async (url: string) => { try { return await window.githubBridge?.open(url) ?? false; } catch { return false; } },
 };
 export function useGithub() { return useSyncExternalStore(subscribe, read); }

@@ -9,7 +9,7 @@ const { payload } = require('../m1/github-sync-payload');
 const { githubError, REPOSITORY } = require('./github-errors');
 const failure = error => githubError(error?.message);
 const AVATAR = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
-const appSlug = require('../../package.json').githubAppSlug;
+const appSlug = process.env.AGENT_USAGE_GITHUB_APP_SLUG ?? require('../../package.json').githubAppSlug;
 const INSTALL_APP = typeof appSlug === 'string' && /^[a-z0-9-]{1,100}$/.test(appSlug)
   ? 'https://github.com/apps/' + appSlug + '/installations/new' : null;
 
@@ -135,13 +135,15 @@ class GithubService {
     return this.changed();
   }
   setSync({ enabled, repository } = {}) {
-    if (this.syncing || this.starting || this.pending) throw new Error('GITHUB_BUSY');
+    if (this.syncing || this.listing || this.starting || this.pending) throw new Error('GITHUB_BUSY');
     if (typeof enabled !== 'boolean' || repository !== null && (typeof repository !== 'string' || !REPOSITORY.test(repository))) throw new Error('GITHUB_REPOSITORY_INVALID');
     if (!this.saved.account || this.saved.account.expired) throw new Error('GITHUB_NOT_CONNECTED');
-    if (enabled && !repository) throw new Error('GITHUB_REPOSITORY_INVALID');
+    if (enabled && (!repository || this.repositories !== null && !this.repositories.includes(repository))) throw new Error('GITHUB_REPOSITORY_INVALID');
+    const previous = this.saved.sync;
     this.saved.sync = { ...(repository === this.saved.sync?.repository ? this.saved.sync : {}), enabled, repository };
+    try { this.save(); }
+    catch (error) { this.saved.sync = previous; throw error; }
     this.syncError = null;
-    this.save();
     return this.changed();
   }
   async syncNow() {

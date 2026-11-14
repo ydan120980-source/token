@@ -51,7 +51,7 @@ export function SettingsPage() {
       <div className="flex flex-col gap-8">
         <PricingSection />
         <General onEditProfile={() => setProfileOpen(true)} />
-        <AccountSection />
+        <AccountSection active={current === "account"} />
         <QuotaSettings />
         <CollectionSection />
         <Privacy onExport={() => setExportOpen(true)} />

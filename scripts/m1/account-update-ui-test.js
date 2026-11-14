@@ -11,6 +11,7 @@ const output = process.env.ACCOUNT_EVIDENCE_DIR || 'artifacts/ui-account';
 
 (async () => {
   fs.mkdirSync(output, { recursive: true });
+  process.env.AGENT_USAGE_GITHUB_APP_SLUG = 'quotadock-fixture';
   const session = await launch({ size: [1480, 960] }), { app, page, errors } = session;
   const section = async name => { await showView(page, 'settings'); await page.evaluate(value => window.settingsUi.openSection(value), name); await settle(page); };
   try {
@@ -36,13 +37,13 @@ const output = process.env.ACCOUNT_EVIDENCE_DIR || 'artifacts/ui-account';
 
     // The fake GitHub: authorized when the suite says so, records what it was sent.
     await app.evaluate(({ shell, BrowserWindow }) => {
-      const fake = { authorize: false, puts: [], opened: [] };
+      const fake = { authorize: false, puts: [], opened: [], repositories: [] };
       shell.openExternal = async url => { fake.opened.push(url); };
       globalThis.githubFixtureTransport = {
         startDevice: async () => ({ deviceCode: 'dc', userCode: 'DEMO-CODE', verificationUri: 'https://github.com/login/device', expiresIn: 900, interval: 1 }),
         pollDevice: async () => fake.authorize ? { status: 'authorized', token: 'demo-secret-token' } : { status: 'pending' },
         user: async () => ({ login: 'demo-user', name: '示例用户', avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==' }),
-        privateRepositories: async () => [{ fullName: 'demo-user/usage-data' }, { fullName: 'demo-user/other' }],
+        privateRepositories: async () => fake.repositories.map(fullName => ({ fullName })),
         put: async (token, repository, file, text) => { fake.puts.push({ token, repository, file, text }); return { committedAt: 'x' }; },
       };
       globalThis.githubFake = fake;
@@ -67,14 +68,22 @@ const output = process.env.ACCOUNT_EVIDENCE_DIR || 'artifacts/ui-account';
     assert.equal(await page.locator('#profileAvatar img').count(), 1);
     assert(!JSON.stringify(await page.evaluate(() => window.githubBridge.get())).includes('demo-secret-token'), 'the window never sees the token');
 
-    // Choose a private repository, sync, and see what left.
+    // Open authorization for an empty list, then configure the single granted repository on return.
     const syncPanel = page.locator('[data-github-sync]');
-    await until(page, () => !document.querySelector('[data-github-sync] [role=combobox]')?.hasAttribute('disabled'));
-    await syncPanel.getByRole('combobox').click();
-    await page.getByRole('option', { name: 'demo-user/usage-data', exact: true }).click();
-    await until(page, () => !document.querySelector('[data-github-sync] [role=switch]')?.hasAttribute('disabled'));
-    await syncPanel.getByRole('switch').click();
+    await syncPanel.getByRole('button', { name: '一键配置同步' }).click();
+    await syncPanel.getByText('等待仓库授权', { exact: true }).waitFor();
+    await page.waitForFunction(() => {
+      const button = [...document.querySelectorAll('[data-github-sync] button')].find(button => button.textContent === '检查授权');
+      return button && !button.disabled;
+    });
+    assert.deepEqual(await app.evaluate(() => globalThis.githubFake.opened), ['https://github.com/login/device', 'https://github.com/apps/quotadock-fixture/installations/new']);
+    await page.screenshot({ path: path.join(output, 'waiting-for-repository.png') });
+    await app.evaluate(() => { globalThis.githubFake.repositories = ['demo-user/usage-data']; });
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await until(page, () => document.querySelector('[data-github-sync] [role=switch]')?.getAttribute('aria-checked') === 'true');
+    assert.match(await syncPanel.getByRole('combobox').innerText(), /demo-user\/usage-data/);
+    assert.equal(await app.evaluate(() => globalThis.githubFake.puts.length), 0);
+    // Only the explicit Sync button writes the selected daily totals.
     await page.locator('[data-github-sync]').getByRole('button', { name: '同步', exact: true }).click();
     await until(page, () => /最近同步/.test(document.querySelector('[data-github-sync]')?.textContent ?? ''), 20000);
     const sent = await app.evaluate(() => globalThis.githubFake.puts[0]);
@@ -85,10 +94,15 @@ const output = process.env.ACCOUNT_EVIDENCE_DIR || 'artifacts/ui-account';
     for (const secret of ['synthetic-workspace', '实验项目', 'style-session', 'sessionKey', 'cwd']) assert(!sent.text.includes(secret), secret + ' stays home');
     await page.screenshot({ path: path.join(output, 'connected-light.png') });
     await setTheme(page, 'dark'); await settle(page); await page.screenshot({ path: path.join(output, 'connected-dark.png') }); await setTheme(page, 'light');
+    await syncPanel.getByRole('switch').click();
+    await app.evaluate(() => { globalThis.githubFake.repositories.push('demo-user/other'); });
+    await syncPanel.getByRole('button', { name: '一键配置同步' }).click();
+    await syncPanel.getByText('选择同步仓库', { exact: true }).waitFor();
+    assert.equal(await syncPanel.getByRole('switch').getAttribute('aria-checked'), 'false');
     await syncPanel.getByRole('combobox').click();
     await page.getByRole('option', { name: 'demo-user/other', exact: true }).click();
-    await until(page, () => document.querySelector('[data-github-sync] [role=switch]')?.getAttribute('aria-checked') === 'false');
-    assert.equal(await syncPanel.getByRole('button', { name: '同步', exact: true }).isDisabled(), true);
+    await until(page, () => document.querySelector('[data-github-sync] [role=switch]')?.getAttribute('aria-checked') === 'true');
+    assert.match(await syncPanel.getByRole('combobox').innerText(), /demo-user\/other/);
     assert.equal(await app.evaluate(() => globalThis.githubFake.puts.length), 1);
 
     // Leaving: back to the local person, sync off, token forgotten.
