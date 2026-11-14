@@ -1,7 +1,7 @@
 {
   "name": "agent-usage",
   "productName": "QuotaDock",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Windows-local usage statistics for ten AI coding agents, provider-reported quota and explicit local configuration management",
   "main": "src/quota/main.js",
   "githubAppClientId": null,
