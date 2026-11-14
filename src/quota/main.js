@@ -142,7 +142,7 @@ else {
       if (typeof id !== 'string' || id.length > 64) throw new Error('ACCOUNT_NOT_FOUND');
       return readHistory.list(id).map(line => ({ ...line, message: line.code ? readMessage(line.code) ?? MESSAGES[line.code] ?? null : null }));
     });
-    // GitHub identity and sync. The real transport is Codex's (github-transport.js); a synthetic run may hand in its own.
+    // The real GitHub transport runs in an isolated child. Fixture runs can only use an injected transport.
     const githubTransport = require('./github-transport').create();
     github = new GithubService(path.join(dataDir, 'github'), {
       transport: () => (fixtureRoot ? globalThis.githubFixtureTransport : githubTransport) ?? null,

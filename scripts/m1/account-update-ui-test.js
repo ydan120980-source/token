@@ -68,8 +68,12 @@ const output = process.env.ACCOUNT_EVIDENCE_DIR || 'artifacts/ui-account';
     assert(!JSON.stringify(await page.evaluate(() => window.githubBridge.get())).includes('demo-secret-token'), 'the window never sees the token');
 
     // Choose a private repository, sync, and see what left.
+    const syncPanel = page.locator('[data-github-sync]');
     await until(page, () => !document.querySelector('[data-github-sync] [role=combobox]')?.hasAttribute('disabled'));
-    await page.evaluate(() => window.githubBridge.setSync({ enabled: true, repository: 'demo-user/usage-data' }));
+    await syncPanel.getByRole('combobox').click();
+    await page.getByRole('option', { name: 'demo-user/usage-data', exact: true }).click();
+    await until(page, () => !document.querySelector('[data-github-sync] [role=switch]')?.hasAttribute('disabled'));
+    await syncPanel.getByRole('switch').click();
     await until(page, () => document.querySelector('[data-github-sync] [role=switch]')?.getAttribute('aria-checked') === 'true');
     await page.locator('[data-github-sync]').getByRole('button', { name: '同步', exact: true }).click();
     await until(page, () => /最近同步/.test(document.querySelector('[data-github-sync]')?.textContent ?? ''), 20000);
@@ -81,6 +85,11 @@ const output = process.env.ACCOUNT_EVIDENCE_DIR || 'artifacts/ui-account';
     for (const secret of ['synthetic-workspace', '实验项目', 'style-session', 'sessionKey', 'cwd']) assert(!sent.text.includes(secret), secret + ' stays home');
     await page.screenshot({ path: path.join(output, 'connected-light.png') });
     await setTheme(page, 'dark'); await settle(page); await page.screenshot({ path: path.join(output, 'connected-dark.png') }); await setTheme(page, 'light');
+    await syncPanel.getByRole('combobox').click();
+    await page.getByRole('option', { name: 'demo-user/other', exact: true }).click();
+    await until(page, () => document.querySelector('[data-github-sync] [role=switch]')?.getAttribute('aria-checked') === 'false');
+    assert.equal(await syncPanel.getByRole('button', { name: '同步', exact: true }).isDisabled(), true);
+    assert.equal(await app.evaluate(() => globalThis.githubFake.puts.length), 1);
 
     // Leaving: back to the local person, sync off, token forgotten.
     await section('account');

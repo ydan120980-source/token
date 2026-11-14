@@ -8,6 +8,8 @@ export interface GithubState {
   connection: { status: "none" | "pending" | "connected" | "expired"; login: string | null; name: string | null; avatar: string | null; connectedAt: string | null; device: { userCode: string; verificationUri: string; expiresAt: string } | null; error: string | null };
   sync: { enabled: boolean; repository: string | null; status: "idle" | "syncing" | "ok" | "error"; lastSuccess: string | null; days: number | null; error: string | null; device: string | null };
   repositories: string[] | null;
+  repositoriesLoading: boolean;
+  installUrl: string | null;
 }
 type Reply = { ok: true; state: GithubState } | { ok: false; error: string };
 export interface GithubBridge {
@@ -30,6 +32,7 @@ export const GITHUB_MESSAGES: Record<string, string> = {
   GITHUB_REPOSITORY_INVALID: "请选择一个私有仓库。",
   GITHUB_NOT_CONNECTED: "请先连接 GitHub。",
   GITHUB_BUSY: "上一步还在进行，请稍等。",
+  GITHUB_SYNC_CONFLICT: "同步文件发生冲突，请重新同步。若反复出现，请检查仓库里的同名文件。",
 };
 export const githubMessage = (code: string | null) => code ? GITHUB_MESSAGES[code] ?? GITHUB_MESSAGES.GITHUB_REQUEST_FAILED : "";
 
@@ -38,6 +41,8 @@ const OFFLINE: GithubState = {
   connection: { status: "none", login: null, name: null, avatar: null, connectedAt: null, device: null, error: null },
   sync: { enabled: false, repository: null, status: "idle", lastSuccess: null, days: null, error: null, device: null },
   repositories: null,
+  repositoriesLoading: false,
+  installUrl: null,
 };
 let state = OFFLINE, actionError = "", loaded = false;
 const listeners = new Set<() => void>();

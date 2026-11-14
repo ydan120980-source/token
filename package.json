@@ -4,6 +4,8 @@
   "version": "0.1.5",
   "description": "Windows-local usage statistics for ten AI coding agents, provider-reported quota and explicit local configuration management",
   "main": "src/quota/main.js",
+  "githubAppClientId": null,
+  "githubAppSlug": null,
   "scripts": {
     "start": "electron .",
     "dev": "electron .",

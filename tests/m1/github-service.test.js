@@ -23,10 +23,16 @@ const fake = (answers = [{ status: 'pending' }, { status: 'slow_down' }, { statu
 });
 
 test('without a transport the app says it is not configured and makes no request', async t => {
-  assert.equal(create(), null, 'the real connection is Codex\'s to add');
+  assert.equal(create(''), null, 'an unconfigured app makes no GitHub requests');
   const { service } = setup(t, null);
   assert.equal(service.state().configured, false);
   await assert.rejects(service.connect(), /GITHUB_NOT_CONFIGURED/);
+});
+
+test('the configured transport runs validation in its child and returns only the public error code', async t => {
+  const transport = create('Iv1.demoClient');
+  t.after(() => transport.close());
+  await assert.rejects(transport.user('x'), { message: 'GITHUB_AUTH_REQUIRED' });
 });
 
 test('device flow: the code shows while waiting, the token never reaches state or a file', async t => {
@@ -89,7 +95,8 @@ test('a rejected token marks the account expired, and disconnecting forgets it a
   assert.equal(out.connection.status, 'none'); assert.equal(out.sync.enabled, false); assert.equal(held(), null);
 });
 
-test('only the two approved pages may be opened', async () => {
+test('only the fixed GitHub pages may be opened', async () => {
   assert(openable('https://github.com/login/device')); assert(openable('https://github.com/ydan120980-source/token/releases/tag/v1'));
+  assert(openable('https://github.com/settings/installations'));
   for (const bad of ['http://github.com/login/device', 'https://evil.example/login/device', 'https://github.com/login/device/x', 'https://github.com/other/repo/releases/1', 'https://a@github.com/login/device']) assert(!openable(bad), bad);
 });

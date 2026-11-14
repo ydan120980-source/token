@@ -14,7 +14,7 @@ Windows 本地 AI 编码 Agent 用量统计、会话阅读与账号额度监控�
 
 额度页与来源页共同展示支持能力、账号连接和数据新鲜度。本地用量不等于账号额度；新接入服务的覆盖范围、授权条件和试验标记见下表。Codex 有历史真实读取记录；2026-10-21 修复后 WorkBuddy 一次只读积分查询、OpenCode Zen 的 Chrome 授权与余额读取也已成功，Zen 重启加密恢复通过；ZCode 授权与连接保持已通过，但该账号返回空额度桶，数值仍未知。Antigravity 随后完成首次设置并退出官方 CLI，两次真实额度报告读取成功；其重启恢复仍未验证。其余路线仍须分别验收，不能称为全部真实可读。个人来源只接入用量。
 
-产品后续方向面向公开用户，优先完善来源与额度状态，再推进 GitHub 账号绑定、选定仓库的只读项目监控和有限 Git 能力。GitHub 功能目前只有首版合同，尚未接入；配置检查已有下述独立静态 CLI，DIY 仍暂缓。当前范围见[产品方向记录](docs/m2/PRODUCT-DIRECTION-20261019.md)。
+产品面向公开用户，支持来源与额度状态、GitHub 账号绑定和手动同步每日用量汇总。GitHub 连接需要在构建中配置项目自己的 GitHub App。选定仓库的只读项目监控与有限 Git 能力见[产品方向记录](docs/m2/PRODUCT-DIRECTION-20261019.md)。
 
 ## 这不是什么
 
@@ -145,6 +145,13 @@ node design/desktop-reference/serve.js
 在“额度监控”里该 Agent 的卡片上连接（未连接的 Agent 列在页面下方）。ZCode／OpenCode Zen 的设备授权在 Chrome 完成后自动返回应用；其他网站手动备用路线在本机 Chrome 日常标签页打开官网，随后回到应用手动提供本站 Cookie／Token；应用不自动读取 Chrome 个人资料、现有标签页、Cookie 或本地存储，不创建内置网页登录窗口。WorkBuddy 网站备用路线还需同一次请求的 User-Agent；Claude／OpenCode 网站手动路线的多组织账号需填写对应组织／工作区 ID。Codex 的官方授权页也明确使用 Chrome；其他官方 CLI 保留其外部官方授权流程。勾选系统加密保持连接时，先验证额度再保存；未勾选的手动凭据只在内存，移除会删除应用保存的凭据。启动恢复不联网，失效后重新提供。**不要在聊天里发送凭据。** 复用已有客户端登录是另一个明确操作，仅使用已核对的固定文件合同，不由网页登录或后台采集触发。接口缺字段、订阅资格未知或读取失败都不补零；到期不自动续额，独立充值余额不随订阅推定失效。见 [Chrome 登录修复](docs/m2/CHROME-LOGIN-RECOVERY-20261021.md) 与 [账号登录合同](docs/m2/CODEXBAR-LOGIN-PARITY-20261020.md)。
 
 已知缺口需要在贡献前了解：Gemini CLI 与 Cursor 目前**只有格式合成样本与 Electron 测试，没有真实调用样本**，因此不能认为这两个来源的真实数据已被验收；ZCode 没有官方数据库合同，按投影字段读取。
+
+## GitHub 账号与同步
+
+- 维护者在 GitHub 注册项目自己的 GitHub App，启用设备流程，仓库权限设为 **Contents: Read and write**、**Metadata: Read-only**。公共分发时，将 App 配置为其他用户也可安装。在 `package.json` 填写公开的 Client ID（`githubAppClientId`）和 App slug（`githubAppSlug`，即 `github.com/apps/` 后的名称）。本机测试也可在启动前设置环境变量 `AGENT_USAGE_GITHUB_CLIENT_ID`。设备流程无需 Client Secret 或私钥。
+- 用户在「设置 → 账号与同步」点击「连接 GitHub」，在 GitHub 输入设备代码并确认授权。把 GitHub App 安装到自己选定的私有仓库，返回「刷新仓库」。选择仓库、打开同步开关，再点击「同步」。
+- 同步会在该仓库默认分支提交 `agent-usage/<设备 ID>.json`，其中是每日各 Agent、各模型的 Token 和估算费用汇总。每台电脑写自己的文件，应用只在点击「同步」后发出写入。GitHub 和有权限的仓库协作者能看到该文件。
+- 「断开」会清除本机的加密登录与同步设置，已上传文件保留。可在 GitHub 的 [Applications 设置](https://github.com/settings/installations) 中管理安装授权。
 
 ## 数据位置
 
