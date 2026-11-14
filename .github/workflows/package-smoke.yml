@@ -1,0 +1,144 @@
+name: package-smoke
+
+# Matrix packaging + smoke test for a release candidate.
+#
+# Why the matrix is Windows-only: this app ships Windows x64 only.
+# `package.json` build targets are `win` dir/nsis x64, the native tokenizer is
+# the Windows-only `@tokscale/cli-win32-x64-msvc` binary, and the packaged
+# `.exe` cannot run on a macOS/Linux runner at all. So the matrix is the two
+# Windows runner images (Server 2025 vs Server 2022), not three OSes.
+#
+# What it proves that `release.yml` does not: the release job builds the
+# installer, audits the packaged tree and checks the update metadata, but it
+# never launches the packaged app. This job packages the same installer and
+# then runs the main UI suite (`npm run test:ui`) against the packaged
+# executable through `QUOTA_PACKAGED_EXE`, so a build that installs fine but
+# renders blank or breaks IPC fails here instead of on the owner's machine.
+#
+# Scope: the smoke is `test:ui` only. Full release-candidate acceptance (every
+# `scripts/m1/*-ui-test.js` on the packaged build, the ZIP extracted to a path
+# with spaces and non-ASCII characters plus a collecting suite on that copy,
+# and the `docs/m2/RESULTS-*` record) still belongs to the release owner on a
+# desktop Windows machine, per CONTRIBUTING.md "测试分层" / "发布验收归属".
+# The other suites run the same way against a packaged build
+# (`QUOTA_PACKAGED_EXE=<exe> npm run test:<name>:ui`); add them here only if
+# the matrix runtime stays acceptable.
+#
+# Placement: this file must exist at the commit a tag points to, because a tag
+# push runs the workflow from the tagged commit. Tags are currently cut from
+# the release branches, so keep this file next to `release.yml` there (or on
+# `main`, once tags are cut from `main`). It never publishes anything; the
+# draft release is still created only by `release.yml`, and publishing a draft
+# is still the owner's action.
+#
+# Scripts used here come from the release branch: `dist:win:setup`,
+# `typecheck:ui`, `check-build-deps.js` (via the dist scripts). They do not
+# exist on the older `main` checkout.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to smoke-test, e.g. v0.1.4'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-smoke-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  package-smoke:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-2022]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          # Match the Windows runtime used for package and source verification.
+          node-version: '24.13.1'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Download Electron binary
+        # `--ignore-scripts` skips Electron's postinstall, and electron-builder needs that distribution to package.
+        run: node node_modules/electron/install.js
+
+      - name: Verify (ESLint + types + units)
+        shell: pwsh
+        run: |
+          # Windows runner TEMP may contain a short-name alias. Use an owned, canonical directory for the test fixtures.
+          $fixtureDir = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP 'agent-usage-release-fixtures') -Force
+          $fixturePath = node -p "require('node:fs').realpathSync.native(process.argv[1])" $fixtureDir.FullName
+          if ($LASTEXITCODE -ne 0 -or -not $fixturePath) { throw 'Unable to resolve the release test directory' }
+          $env:TEMP = $fixturePath
+          $env:TMP = $fixturePath
+          npm run lint
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run typecheck:ui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Keep the Windows job fixtures from competing for compiler/startup time.
+          node --test --test-concurrency=1 tests/m1/*.test.js
+
+      - name: Runtime audit
+        run: npm run audit:runtime
+
+      - name: Confirm the tag is the version in package.json
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $tag = $env:RELEASE_TAG
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($tag -ne "v$version") {
+            Write-Error "tag $tag does not match package.json version $version (electron-updater reads v<version>)"
+            exit 1
+          }
+          Write-Host "releasing $version"
+
+      - name: Build the installer
+        # `--publish never` keeps the upload out of electron-builder: this job only smoke-tests the build.
+        run: npm run dist:win:setup
+
+      - name: Audit the packaged tree
+        run: npm run audit:package
+
+      - name: Smoke-test the packaged app
+        shell: pwsh
+        run: |
+          # Smoke the unpacked executable, not the installer: the installer only extracts these same bytes
+          # (the extracted-copy check stays with the release owner, see the header), and launching the
+          # unpacked build is what `QUOTA_PACKAGED_EXE` was built for.
+          $exe = Join-Path (Get-Location) 'dist\win-unpacked\Agent Usage Quota.exe'
+          if (-not (Test-Path $exe)) { Write-Error "packaged exe not found: $exe"; exit 1 }
+          $env:QUOTA_PACKAGED_EXE = $exe
+          $fixtureDir = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP 'agent-usage-release-fixtures') -Force
+          $fixturePath = node -p "require('node:fs').realpathSync.native(process.argv[1])" $fixtureDir.FullName
+          if ($LASTEXITCODE -ne 0 -or -not $fixturePath) { throw 'Unable to resolve the release test directory' }
+          $env:TEMP = $fixturePath
+          $env:TMP = $fixturePath
+          npm run test:ui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Keep smoke screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshots-${{ matrix.os }}-${{ github.ref_name }}
+          path: artifacts/maintenance/*.png
+          retention-days: 7
