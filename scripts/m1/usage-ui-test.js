@@ -34,7 +34,7 @@ async function state(page, predicate) {
       const initial = await state(page, s => s.snapshot.sequence > 0 && !s.collecting);
       assert.equal(initial.snapshot.daily.reduce((sum, r) => sum + r.totalTokens, 0), f.total);
       assert.equal(initial.audit.networkAttempts, 0); assert.equal(initial.audit.authenticationReads, 0); assert.equal(initial.audit.sourceWrites, 0);
-      assert.equal(await page.title(), 'Agent Usage · Codex 额度'); assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
+      assert.equal(await page.title(), 'QuotaDock · 额度台'); assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
       await page.locator('[data-view="usage"]').click(); await usageUi.waitValue(page, 'totalTokens', '694');
       for (const period of ['today', '7', '30', 'all']) { await usageUi.period(page, period); assert.equal(await usageUi.value(page, 'totalTokens'), '694'); }
       await usageUi.agent(page, 'codex'); await settle(page); assert.equal(await usageUi.value(page, 'totalTokens'), '180');

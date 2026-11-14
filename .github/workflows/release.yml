@@ -125,7 +125,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { Write-Error "upload to draft $tag failed"; exit 1 }
           } else {
             $notes = 'Windows x64 未签名预览版。首次从旧版启用应用内更新时，请手动安装此版本。后续可在「设置 → 关于」查看更新，下载完成后点击「重启并更新」。'
-            gh release create $tag @assets --verify-tag --draft --prerelease --title "Agent Usage Quota $version" --notes $notes
+            gh release create $tag @assets --verify-tag --draft --prerelease --title "QuotaDock $version" --notes $notes
             if ($LASTEXITCODE -ne 0) { Write-Error "creating draft $tag failed"; exit 1 }
           }
 

@@ -18,8 +18,8 @@ function installWindowShell(window, { ipcMain, Menu, dialog }, valid) {
       {label:'色彩外观',submenu:[{label:'跟随系统',click:()=>send('theme-system')},{label:'浅色',click:()=>send('theme-light')},{label:'深色',click:()=>send('theme-dark')}]}, {type:'separator'},
       {label:'界面动效',submenu:[{label:'跟随系统',click:()=>send('motion-system')},{label:'减少动态',click:()=>send('motion-reduced')},{label:'关闭动效',click:()=>send('motion-off')}]},
       {label:'设置',accelerator:'CmdOrCtrl+,',click:()=>send('settings')}] },
-    { label:'关于', id:'about', submenu:[{label:'关于 Agent Usage',click:()=>{
-      void dialog.showMessageBox(window,{type:'info',title:'Agent Usage',message:'Agent Usage '+require('../../package.json').version,detail:'本机用量与 Codex 额度\nCtrl+R 刷新当前页面 · Ctrl+E 导出统计\nAlt+← / → 页面历史 · Ctrl+B 切换侧栏\nAPI 等价估算不代表订阅账单。',buttons:['关闭']});
+    { label:'关于', id:'about', submenu:[{label:'关于 QuotaDock',click:()=>{
+      void dialog.showMessageBox(window,{type:'info',title:'QuotaDock',message:'QuotaDock '+require('../../package.json').version,detail:'本机用量与 Codex 额度\nCtrl+R 刷新当前页面 · Ctrl+E 导出统计\nAlt+← / → 页面历史 · Ctrl+B 切换侧栏\nAPI 等价估算不代表订阅账单。',buttons:['关闭']});
     }}] }
   ];
   const menu = Menu.buildFromTemplate(menus); Menu.setApplicationMenu(menu);

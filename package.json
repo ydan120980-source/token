@@ -1,7 +1,7 @@
 {
   "name": "agent-usage",
-  "productName": "Agent Usage Quota",
-  "version": "0.1.5",
+  "productName": "QuotaDock",
+  "version": "0.1.6",
   "description": "Windows-local usage statistics for ten AI coding agents, provider-reported quota and explicit local configuration management",
   "main": "src/quota/main.js",
   "githubAppClientId": null,
@@ -60,7 +60,7 @@
   },
   "build": {
     "appId": "local.agentusage.quota",
-    "productName": "Agent Usage Quota",
+    "productName": "QuotaDock",
     "directories": {
       "output": "dist"
     },
@@ -74,7 +74,6 @@
       "design/desktop-reference/**/*",
       "!design/desktop-reference/serve.js",
       "!design/desktop-reference/README.md",
-      "assets/icon-win.png",
       "package.json",
       "LICENSE",
       "docs/m1/UPSTREAM.md",
@@ -97,8 +96,9 @@
           ]
         }
       ],
-      "icon": "assets/icon-win.png",
-      "signAndEditExecutable": false
+      "icon": "design/desktop-reference/assets/ui/quotadock.png",
+      "executableName": "Agent Usage Quota",
+      "signExecutable": false
     },
     "publish": [
       {

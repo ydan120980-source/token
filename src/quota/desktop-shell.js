@@ -20,10 +20,10 @@ function ringBitmap(fraction, [red, green, blue], size = 32) {
   return pixels;
 }
 function trayText(rows) {
-  if (!rows.length) return 'Agent Usage';
+  if (!rows.length) return 'QuotaDock';
   const top = rows[0];
   // The tooltip has room for about 127 characters on Windows.
-  return ('Agent Usage · ' + top.agentName + ' ' + top.window + ' 剩余 ' + top.remaining + '%').slice(0, 120);
+  return ('QuotaDock · ' + top.agentName + ' ' + top.window + ' 剩余 ' + top.remaining + '%').slice(0, 120);
 }
 const CARD_WIDTH = 340, CARD_ROWS = 6;
 // An account's own name only where one Agent has several connections to tell apart.
@@ -108,13 +108,13 @@ class DesktopShell {
       if (this.quitting() || !this.tray || !this.settings.closeToTray) return;
       event.preventDefault(); this.window.hide();
       // Said once: where the window went, and where to quit.
-      if (!this.settings.toldTray) { this.settings.toldTray = true; this.save(); this.notify({ title: 'Agent Usage 还在托盘里', body: '额度提醒照常。要退出，右键托盘图标。' }); }
+      if (!this.settings.toldTray) { this.settings.toldTray = true; this.save(); this.notify({ title: 'QuotaDock 还在托盘里', body: '额度提醒照常。要退出，右键托盘图标。' }); }
     });
     if (!this.enabled) return;
     this.tray = new Tray(this.icon(this.last ?? []));
-    this.tray.setToolTip('Agent Usage');
+    this.tray.setToolTip('QuotaDock');
     this.tray.setContextMenu(Menu.buildFromTemplate([
-      { label: '打开 Agent Usage', click: () => this.showWindow(null) },
+      { label: '打开 QuotaDock', click: () => this.showWindow(null) },
       { type: 'separator' },
       { label: '退出', click: () => this.quit() },
     ]));

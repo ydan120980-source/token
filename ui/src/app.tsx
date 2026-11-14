@@ -18,15 +18,8 @@ const Sessions = memo(SessionsPage), Sources = memo(SourcesPage), Settings = mem
 const Readout = memo(TitleReadout), Summary = memo(PageSummary);
 function Image({ name }: { name: string }) { return <img src={"assets/ui/" + name + ".svg"} alt="" />; }
 function Brand() {
-  return <a href="#" className="brand" aria-label="Agent Usage">
-    <svg className="brand-mark" viewBox="0 0 28 28" aria-hidden="true">
-      <rect width="28" height="28" rx="8" className="brand-tile" />
-      <g className="brand-dots">
-        <circle cx="8" cy="20" r="1.9" /><circle cx="14" cy="20" r="1.9" /><circle cx="20" cy="20" r="1.9" />
-        <circle cx="14" cy="14" r="1.9" /><circle cx="20" cy="14" r="1.9" /><circle cx="20" cy="8" r="1.9" />
-        <circle cx="8" cy="14" r="1.9" className="brand-dim" /><circle cx="8" cy="8" r="1.9" className="brand-dim" /><circle cx="14" cy="8" r="1.9" className="brand-dim" />
-      </g>
-    </svg><span className="brand-name">Agent Usage</span>
+  return <a href="#" className="brand" aria-label="QuotaDock">
+    <img className="brand-mark" src="assets/ui/quotadock.png" width={28} height={28} alt="" /><span className="brand-name">QuotaDock</span>
   </a>;
 }
 /** One production root. Existing data hosts publish facts; React owns the shell
@@ -60,7 +53,7 @@ export function App() {
         title={shell.collapsed ? "展开侧栏 (Ctrl+B)" : "收起侧栏 (Ctrl+B)"} onClick={shell.toggleSidebar}><Image name="layout-sidebar" /></button>
       <button id="windowBack" className="window-icon" aria-label="后退" title="后退 (Alt+←)" disabled={shell.historyIndex === 0} onClick={() => shell.travel(-1)}><Image name="arrow-left" /></button>
       <button id="windowForward" className="window-icon" aria-label="前进" title="前进 (Alt+→)" disabled={shell.historyIndex === shell.historyLength - 1} onClick={() => shell.travel(1)}><Image name="arrow-right" /></button>
-      <span className="window-title shell-crumb"><span className="shell-crumb-app">Agent Usage</span><span aria-hidden="true" className="shell-crumb-sep">/</span><span id="windowPage">{viewNames[state.view]}</span></span>
+      <span className="window-title shell-crumb"><span className="shell-crumb-app">QuotaDock</span><span aria-hidden="true" className="shell-crumb-sep">/</span><span id="windowPage">{viewNames[state.view]}</span></span>
       <span id="titlebarPageStart" className="titlebar-page" data-ui-root="" />
       <div className="titlebar-tools">
         <span className="titlebar-readout" data-ui-root="" data-page-root="title-readout">{state.ready ? <Readout /> : null}</span>
@@ -105,7 +98,7 @@ export function App() {
       <section id="sessions" hidden={state.view !== "sessions"} data-motion-surface="page"><div data-ui-root="" data-page-root="sessions">{state.ready ? <Sessions /> : null}</div></section>
       <section id="sources" hidden={state.view !== "sources"} data-motion-surface="page"><div data-ui-root="" data-page-root="sources">{state.ready ? <Sources /> : null}</div></section>
       <section id="settings" hidden={state.view !== "settings"} data-motion-surface="page"><div data-ui-root="" data-page-root="settings">{state.ready ? <Settings /> : null}</div></section>
-      <footer hidden><span>Agent Usage · 本地用量与账号额度</span><span id="collectionState">{state.collectionState}</span></footer>
+      <footer hidden><span>QuotaDock · 本地用量与账号额度</span><span id="collectionState">{state.collectionState}</span></footer>
     </main>
     <div id="panelFrame" className="panel-frame" aria-hidden="true" />
     <aside id="summaryPanel" className={"summary-panel" + (scrolled ? " is-scrolled" : "")} aria-label="概要" data-summary-views="quota usage cost sessions sources" hidden={!shell.dock && !shell.float} onScroll={event => setScrolled(event.currentTarget.scrollTop > 0)}><div data-ui-root="" data-page-root="widgets">{state.ready && summaryView === state.view ? <Summary view={summaryView} /> : null}</div></aside>

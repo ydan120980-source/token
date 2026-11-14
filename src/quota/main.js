@@ -40,7 +40,7 @@ function runtimeDiscoveryEnvironment() {
   return { platform: process.platform, home: app.getPath('home'), appData: app.getPath('appData'), localAppData: process.env.LOCALAPPDATA || path.join(app.getPath('home'), 'AppData/Local'), programFiles: process.env.ProgramFiles, programFilesX86: process.env['ProgramFiles(x86)'], path: [process.env.Path || process.env.PATH || '', ...(installers?.searchDirectories() || [])].join(';') };
 }
 const dataDir = path.resolve(argument('--quota-data-dir') || path.join(app.getPath('appData'), 'AgentUsage-M1-Quota'));
-app.setName('Agent Usage Quota'); app.setPath('userData', dataDir); app.setAppUserModelId('local.agentusage.quota');
+app.setName('QuotaDock'); app.setPath('userData', dataDir); app.setAppUserModelId('local.agentusage.quota');
 app.commandLine.appendSwitch('disable-background-networking'); app.commandLine.appendSwitch('disable-component-update');
 // Bound temporary allocation growth, not live-data capacity. In pinned V8 15,
 // the growth percentage schedules ordinary collection sooner after a GC; it
@@ -90,7 +90,7 @@ else {
     const dark = nativeTheme.shouldUseDarkColors;
     // Wide enough for the reading page with its outline and right column (a 720px text column), within the screen.
     const area = require('electron').screen.getPrimaryDisplay().workAreaSize;
-    window = new BrowserWindow({ show: false, width: Math.min(1480, area.width), height: Math.min(960, area.height), minWidth: 800, minHeight: 600, backgroundColor: GROUND[dark ? 'dark' : 'light'], title: 'Agent Usage · Codex 额度', titleBarStyle:'hidden', titleBarOverlay:titleBarOverlay(dark ? 'dark' : 'light'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+    window = new BrowserWindow({ show: false, width: Math.min(1480, area.width), height: Math.min(960, area.height), minWidth: 800, minHeight: 600, backgroundColor: GROUND[dark ? 'dark' : 'light'], title: 'QuotaDock · 额度台', icon: path.join(__dirname, '../../design/desktop-reference/assets/ui/quotadock.png'), titleBarStyle:'hidden', titleBarOverlay:titleBarOverlay(dark ? 'dark' : 'light'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     const valid = event => event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame;
     configHealth = new ConfigHealthService(async (agent, scope) => {
       const result = await dialog.showOpenDialog(window, { title: '选择 ' + (agent === 'codex' ? 'Codex' : 'Claude Code') + (scope === 'home' ? ' 用户根目录（包含 .codex / .claude）' : ' 项目根目录'), properties: ['openDirectory'] });
@@ -132,7 +132,7 @@ else {
     const fixtureShell = Boolean(fixtureRoot) && !process.argv.includes('--desktop-shell-test');
     watch = new QuotaWatch(dataDir, { accounts: quotaAccounts, show: notice => desktopShell.notify(notice), changed: rows => desktopShell.update(rows) });
     desktopShell = new DesktopShell(dataDir, {
-      electron: require('electron'), window, valid, preload: path.join(__dirname, 'tray-preload.js'), cardFile: path.join(__dirname, '../../design/desktop-reference/tray/card.html'), iconFile: path.join(__dirname, '../../assets/icon-win.png'),
+      electron: require('electron'), window, valid, preload: path.join(__dirname, 'tray-preload.js'), cardFile: path.join(__dirname, '../../design/desktop-reference/tray/card.html'), iconFile: path.join(__dirname, '../../design/desktop-reference/assets/ui/quotadock.png'),
       packaged: app.isPackaged, hasAccounts: () => quotaAccounts().length > 0 || fixtureShell, exitPath: () => stopped, watch, enabled: !fixtureShell, quit: () => app.quit(),
     });
     desktopShell.install();
@@ -417,12 +417,12 @@ else {
     if (!quitting) { lookSoon(); void usage.start().catch(() => { if (!quitting && !window.isDestroyed()) window.webContents.send('usage:update'); }); }
     // Updates wait for the window: a check shortly after start-up, then every few hours. Only a packaged build does this.
     if (!quitting) updates.start();
-  }).catch(() => { if (!quitting) { dialog.showErrorBox('Agent Usage Quota', '额度窗口初始化失败，请检查独立数据目录。'); app.exit(1); } });
+  }).catch(() => { if (!quitting) { dialog.showErrorBox('QuotaDock', '额度窗口初始化失败，请检查独立数据目录。'); app.exit(1); } });
   app.on('before-quit', event => {
     if (stopped) { desktopShell?.close(); updates?.close(); return; }
     event.preventDefault();
     void shutdown().then(() => app.quit()).catch(() => {
-      try { dialog.showErrorBox('Agent Usage Quota', '子进程退出等待失败，请重试退出；若仍失败，请在任务管理器确认该应用的进程已结束。'); } catch { /* the window may already be gone */ }
+      try { dialog.showErrorBox('QuotaDock', '子进程退出等待失败，请重试退出；若仍失败，请在任务管理器确认该应用的进程已结束。'); } catch { /* the window may already be gone */ }
     });
   });
 }

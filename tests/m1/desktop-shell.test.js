@@ -88,8 +88,8 @@ test('tray pieces: the ring shows what is left, an unknown reads full, and the c
   assert.equal(quarter.length, 32 * 32 * 4);
   assert.ok(lit(quarter) < lit(half) && lit(half) < lit(full));
   assert.equal(lit(ringBitmap(NaN, [1, 2, 3])), lit(full), 'unknown is not drawn as empty');
-  assert.equal(trayText([]), 'Agent Usage');
-  assert.equal(trayText([{ agentName: 'Codex', window: '每周', remaining: 7 }]), 'Agent Usage · Codex 每周 剩余 7%');
+  assert.equal(trayText([]), 'QuotaDock');
+  assert.equal(trayText([{ agentName: 'Codex', window: '每周', remaining: 7 }]), 'QuotaDock · Codex 每周 剩余 7%');
   assert.ok(trayText([{ agentName: 'x'.repeat(200), window: 'y', remaining: 1 }]).length <= 127, 'Windows cuts a tooltip past 127');
   const many = Array.from({ length: CARD_ROWS + 3 }, (_, index) => ({ agent: 'codex', agentName: 'Codex', window: String(index), remaining: index, key: 'secret', account: 'secret' }));
   const card = cardRows(many); assert.equal(card.rows.length, CARD_ROWS); assert.equal(card.more, 3); assert.equal(card.rows[0].account, undefined, 'the card gets what it shows and no ids');

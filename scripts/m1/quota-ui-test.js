@@ -32,7 +32,7 @@ const usageUi = require('./usage-ui-helpers');
       const addCodex = async () => { await q.openDetails(page, 'codex'); await q.details(page).locator('[data-provider-connect="codex"] button').click(); await q.codexLogin(page).waitFor(); };
       const alias = () => q.codexLogin(page).locator('[data-quota-alias-field] input'), loginStart = () => q.codexLogin(page).getByRole('button', { name: '打开官方登录' }), loginFooter = name => q.codexLogin(page).locator('[data-sheet-footer]').getByRole('button', { name, exact: true });
       await app.evaluate(async ({ BrowserWindow }) => { const window = BrowserWindow.getAllWindows()[0]; if (!window.isVisible()) await new Promise(resolve => window.once('show', resolve)); });
-      assert.equal(await page.title(), 'Agent Usage · Codex 额度');
+      assert.equal(await page.title(), 'QuotaDock · 额度台');
       assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isVisible()), true);
       assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
       assert.equal(await page.locator('#main').getAttribute('data-current-view'), 'quota');
