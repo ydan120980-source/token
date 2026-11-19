@@ -91,7 +91,7 @@ export function Overview({ host, snapshot, showClients, mountClients }: { host: 
         </div>
         {today.empty ?
           <EmptyState message={today.empty} action={
-            <Button variant="ghost" disabled={snapshot.busy} onClick={() => void host.refresh()}>{"刷新今日"}</Button>
+            <Button variant="ghost" loading={snapshot.busy} disabled={snapshot.busy} onClick={() => host.refresh()}>{"刷新今日"}</Button>
           } /> :
           mountClients ? <ReactActivity mode={showClients ? "visible" : "hidden"}><div className="mt-2"><Clients items={today.clients} host={host} today /></div></ReactActivity> : null}
       </Card>

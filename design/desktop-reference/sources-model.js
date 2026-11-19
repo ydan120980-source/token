@@ -30,12 +30,16 @@
 
   function create(state, agents) {
   function demoDiscovery() {
-    const files = { codex: [144, 6], claude: [20, null], opencode: [1], workbuddy: [62, 1, null, null], mimo: [1], gemini: [null], cursor: [null], zcode: [1], deepseek: [44, null], antigravity: [17, null, null] };
-    const homes = { codex: ['.codex\\sessions', '.codex\\archived_sessions'], claude: ['.claude\\projects', '.claude\\transcripts'], opencode: ['.local\\share\\opencode'], workbuddy: ['.workbuddy\\projects', '.workbuddy\\workbuddy.db', '.workbuddy-ai\\projects', '.workbuddy-ai\\workbuddy.db'], mimo: ['.local\\share\\mimocode'], gemini: ['.gemini\\tmp'], cursor: ['.cursor\\projects'], zcode: ['.zcode\\cli\\db\\db.sqlite'], deepseek: ['.dsh\\sessions', '.dsh\\profiles\\desktop\\sessions'], antigravity: ['.gemini\\antigravity\\brain', '.gemini\\antigravity-cli\\brain', '.gemini\\antigravity-ide\\brain'] };
+    const files = { codex: [144, 6], claude: [20, null], opencode: [1], workbuddy: [62, 1, null, null], mimo: [1], gemini: [null], cursor: [null], zcode: [1], deepseek: [44, null], antigravity: [17, null, null], copilot: [9, null], cline: [1], pi: [null], continue: [null], kilo: [3], qwen: [null], kimi: [12] };
+    const homes = { codex: ['.codex\\sessions', '.codex\\archived_sessions'], claude: ['.claude\\projects', '.claude\\transcripts'], opencode: ['.local\\share\\opencode'], workbuddy: ['.workbuddy\\projects', '.workbuddy\\workbuddy.db', '.workbuddy-ai\\projects', '.workbuddy-ai\\workbuddy.db'], mimo: ['.local\\share\\mimocode'], gemini: ['.gemini\\tmp'], cursor: ['.cursor\\projects'], zcode: ['.zcode\\cli\\db\\db.sqlite'], deepseek: ['.dsh\\sessions', '.dsh\\profiles\\desktop\\sessions'], antigravity: ['.gemini\\antigravity\\brain', '.gemini\\antigravity-cli\\brain', '.gemini\\antigravity-ide\\brain'], copilot: ['.copilot\\session-state', '.copilot\\logs'], cline: ['.cline\\logs'], pi: ['.pi\\sessions'], continue: ['.continue\\devdata.sqlite'], kilo: ['.kilo\\logs'], qwen: ['.qwen\\logs'], kimi: ['.kimi\\logs'] };
     const latest = new Date(Date.now() - 36e5).toISOString();
     return { schemaVersion: 'SourceDiscoveryV1', checkedAt: new Date().toISOString(), unsupported: [{ id: 'kiro', name: 'Kiro', markers: ['~/.kiro'] }, { id: 'trae', name: 'Trae', markers: ['~/.trae'] }],
       sources: Object.keys(agents).map(agent => {
-        const paths = homes[agent].map((home, index) => ({ path: 'C:\\Users\\demo\\' + home, display: '~\\' + home, origin: 'auto', state: 'included', exists: files[agent][index] !== null, kind: home.endsWith('.db') || home.endsWith('.sqlite') ? 'file' : 'directory', files: files[agent][index], latest: files[agent][index] ? latest : null, issues: [] }));
+        // A demo entry must exist for every catalog Agent, or the preview throws the moment a new
+        // Agent is registered. An Agent the demo has no plausible location for still reports itself.
+        const homesFor = homes[agent] || ['.' + agent];
+        const filesFor = files[agent] || [null];
+        const paths = homesFor.map((home, index) => ({ path: 'C:\\Users\\demo\\' + home, display: '~\\' + home, origin: 'auto', state: 'included', exists: filesFor[index] !== null, kind: home.endsWith('.db') || home.endsWith('.sqlite') ? 'file' : 'directory', files: filesFor[index] ?? null, latest: filesFor[index] ? latest : null, issues: [] }));
         const total = paths.reduce((n, entry) => n + (entry.files || 0), 0);
         return { agent, enabled: true, installed: total > 0, files: total, latest: total ? latest : null, paths };
       }) };

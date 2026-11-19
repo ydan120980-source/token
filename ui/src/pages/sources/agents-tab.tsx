@@ -123,8 +123,8 @@ function AgentsPane({ section, admin, bridge }: { section: AdminSection; admin: 
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 className="text-title font-semibold text-foreground" data-agent-title>{TITLES[section]}</h2>
       <div className="flex flex-wrap items-center gap-2">
-        {inventory ? <IconButton icon={IconRefresh} label="重新检查" disabled={state?.busy} onClick={() => void check()} /> : null}
-        {inventory && section !== "history" ? <Button variant="tertiary" disabled={Boolean(using)} onClick={() => void countUse()}>{using ? "统计中 " + using.searched + " / " + using.total : "统计使用情况"}</Button> : null}
+        {inventory ? <IconButton icon={IconRefresh} label="重新检查" loading={state?.busy} disabled={state?.busy} onClick={() => void check()} /> : null}
+        {inventory && section !== "history" ? <Button variant="tertiary" loading={Boolean(using)} disabled={Boolean(using)} onClick={() => void countUse()}>{using ? "统计中 " + using.searched + " / " + using.total : "统计使用情况"}</Button> : null}
         <Button variant="tertiary" leadingIcon={IconPlus} onClick={async () => { take(await bridge.agents("addProject")); }}>添加项目</Button>
       </div>
     </div>
@@ -134,7 +134,7 @@ function AgentsPane({ section, admin, bridge }: { section: AdminSection; admin: 
     {message || state?.error ? <div role="status" data-agent-message><Banner tone="warn">{message || failed(state?.error)}</Banner></div> : null}
     {!inventory ? <div className="flex flex-col items-center gap-4 rounded-2xl bg-card px-6 py-12 text-center shadow-card" data-agent-start>
       <p className="max-w-96 text-body text-muted-foreground">{state?.busy ? "正在检查，只读取配置，不运行任何东西。" : "看看这台电脑上的 Agent 装了哪些 MCP、Skills、Hooks 和插件，哪些有问题。只读取配置，不运行任何东西，也不联网。"}</p>
-      <Button variant="primary" disabled={state?.busy} onClick={() => void check()}>检查本机配置</Button>
+      <Button variant="primary" loading={state?.busy} disabled={state?.busy} onClick={() => void check()}>检查本机配置</Button>
     </div> : section === "history" ? (records.length ? <div className="flex flex-col gap-3" data-agent-history>{records.map(record => <div key={record.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-card p-4 shadow-card" data-agent-record={record.id}>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="break-words text-body font-semibold text-foreground">{record.summary}</span><span className="text-caption text-muted-foreground">{when(record.at) + (record.files.length ? " · " + record.files.join("、") : "")}</span></div>
       {record.restorable ? <Button variant="secondary" size="compact" onClick={async () => { const value = await bridge.agents("restore", record.id); if (value.error) setMessage(failed(value.error)); else { setRecords(value.records ?? []); setMessage(""); await check(); } }}>恢复到改之前</Button> : <span className="text-caption text-muted-foreground">文件之后又改过，或已恢复</span>}
@@ -167,7 +167,7 @@ function AgentsPane({ section, admin, bridge }: { section: AdminSection; admin: 
       footer={pending && editing ? <PreviewBar pending={pending} busy={busy} onCancel={() => setPending(null)} onApply={() => void apply()} /> : undefined}>
       {editing ? <div className="flex flex-col gap-2" data-agent-instruction>
         <TextArea value={editing.text} onChange={text => setEditing({ ...editing, text })} label={editing.name} rows={16} />
-        <div className="flex justify-end"><Button variant="secondary" disabled={busy} onClick={() => void preview(":edit", { id: editing.id, action: "text", text: editing.text, revision: editing.revision })}>预览修改</Button></div>
+        <div className="flex justify-end"><Button variant="secondary" loading={busy} disabled={busy} onClick={() => void preview(":edit", { id: editing.id, action: "text", text: editing.text, revision: editing.revision })}>预览修改</Button></div>
       </div> : null}
     </Sheet>
   </section>;
@@ -176,7 +176,7 @@ function AgentsPane({ section, admin, bridge }: { section: AdminSection; admin: 
 function PreviewBar({ pending, busy, onCancel, onApply }: { pending: Pending; busy: boolean; onCancel: () => void; onApply: () => void }) {
   return <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl bg-muted p-3" data-agent-preview>
     <div className="flex min-w-0 flex-1 flex-col gap-1"><span className="text-body text-foreground">{pending.summary}</span><span className="text-caption text-muted-foreground">{pending.normalization ? "保存后不保留这个文件里的注释；写入前加密备份，可以从“恢复记录”恢复。" : "写入前加密备份，可以从“恢复记录”恢复。"}</span></div>
-    <div className="flex shrink-0 gap-2"><Button variant="tertiary" disabled={busy} onClick={onCancel}>取消</Button><Button variant="primary" disabled={busy} onClick={onApply}>应用</Button></div>
+    <div className="flex shrink-0 gap-2"><Button variant="tertiary" disabled={busy} onClick={onCancel}>取消</Button><Button variant="primary" loading={busy} disabled={busy} onClick={onApply}>应用</Button></div>
   </div>;
 }
 /** Where an item lives. Only its id goes to the app, which knows the path; opening is for text files. */
@@ -245,7 +245,7 @@ function RepairSheet({ open, plan, bridge, nameOf, onClose, onDone, onError }: {
   const apply = async () => { setBusy(true); const value = await bridge.agents("repair", [...chosen]); setBusy(false); if (value.error) { onError(value.error); onClose(); return; } await onDone(value); };
   const place = (row: { agent: string; kind: string; file: string }) => nameOf(row.agent) + " · " + (KIND_NAMES[row.kind] ?? row.kind) + " · " + row.file;
   return <Sheet scrollable open={open} onOpenChange={value => { if (!value) onClose(); }} title="一键处理" size="lg"
-    footer={<div className="flex w-full flex-wrap items-center justify-between gap-3"><p className="text-body text-foreground" role="status" data-repair-count>{chosen.size ? "将停用 " + chosen.size + " 项；写入前加密备份，可以一步撤销" : "没有选中的项"}</p><Button variant="primary" disabled={busy || !chosen.size} onClick={() => void apply()}>应用</Button></div>}>
+    footer={<div className="flex w-full flex-wrap items-center justify-between gap-3"><p className="text-body text-foreground" role="status" data-repair-count>{chosen.size ? "将停用 " + chosen.size + " 项；写入前加密备份，可以一步撤销" : "没有选中的项"}</p><Button variant="primary" loading={busy} disabled={busy || !chosen.size} onClick={() => void apply()}>应用</Button></div>}>
     <div className="flex flex-col gap-6" data-agent-repair>
       <section className="flex flex-col gap-2" data-repair-rows>
         <span className="text-subtitle font-semibold text-foreground">{"可以一键处理 " + (plan?.rows.length ?? 0)}</span>

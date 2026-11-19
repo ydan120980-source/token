@@ -36,7 +36,7 @@ export function KitGallery() {
         <div className="flex items-center gap-3"><Button variant="ghost" tone="danger" onClick={noop}>断开连接</Button><Button variant="secondary" leadingIcon={IconPlus} trailingIcon={IconArrowRight} onClick={noop}>添加示例</Button></div>
       </Group>
       <Group title="图标按钮 IconButton"><div className="flex items-center gap-3">
-        <IconButton icon={IconPlus} label="添加默认示例" onClick={noop} /><IconButton icon={IconPlus} label="添加紧凑示例" size="compact" onClick={noop} /><IconButton icon={IconPlus} label="禁用示例" disabled onClick={noop} />
+        <IconButton icon={IconPlus} label="添加默认示例" onClick={noop} /><IconButton icon={IconPlus} label="添加紧凑示例" size="compact" onClick={noop} /><IconButton icon={IconPlus} label="加载中示例" loading onClick={noop} /><IconButton icon={IconPlus} label="禁用示例" disabled onClick={noop} />
       </div></Group>
       <Group title="分段切换 Segmented 与轻量分类 SubTabs">
         <Segmented value={period} onChange={setPeriod} items={[{ value: "today", label: "今日" }, { value: "7d", label: "7 天" }, { value: "30d", label: "30 天" }]} aria-label="默认范围" />

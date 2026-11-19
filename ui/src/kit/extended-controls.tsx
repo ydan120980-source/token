@@ -133,7 +133,7 @@ export function CopyButton({ label, onCopy, size = "default" }: { label: string;
     pending.current = false; setBusy(false); setCopied(success);
     if (success) timer.current = setTimeout(() => { if (current === generation.current) setCopied(false); }, 1600);
   };
-  return <span data-copy-state={busy ? "busy" : copied ? "copied" : "idle"}><IconButton icon={copied ? IconCheck : IconCopy} label={label} onClick={() => { void copy(); }} size={size} disabled={busy} /></span>;
+  return <span data-copy-state={busy ? "busy" : copied ? "copied" : "idle"}><IconButton icon={copied ? IconCheck : IconCopy} label={label} onClick={() => { void copy(); }} size={size} disabled={busy} loading={busy} /></span>;
 }
 
 /** One choice in a list of things being picked: a box that fills when chosen. */

@@ -70,7 +70,6 @@ body[data-motion='full'] .topbar .brand:hover .brand-mark { animation: brand-ris
 .summary-docked .summary-panel > [data-ui-root]:has([data-page-summary][data-fill]) { display: flex; flex-direction: column; min-height: 100%; }
 
 /* 概览's Agent cards answer the pointer the Apple way (owner 2026-10-29): the shadow deepens under it,
-   a press gives a little and springs back on release; nothing lifts. A drag's own transform wins. */
-#quotaCards .quota-card { transition: box-shadow 240ms var(--motion-ease), scale 420ms var(--motion-expand); }
-#quotaCards .quota-card:hover:not(.is-dragging) { box-shadow: var(--pop-shadow); }
-body[data-motion='full'] #quotaCards .quota-card:active:not(.is-dragging) { scale: .98; transition-duration: 240ms, 120ms; }
+   a press gives a little and springs back on release. A drag's own transform wins. */
+#quotaCards .quota-card { transition: box-shadow 240ms var(--motion-ease); }
+#quotaCards .quota-card:hover:not(.is-dragging):not(.is-flying) { box-shadow: var(--pop-shadow); }

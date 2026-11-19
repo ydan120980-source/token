@@ -124,7 +124,7 @@ export function SourcesPage() {
   return <div ref={root} className="flex flex-col gap-6" data-sources-page data-ready={Boolean(state.discovery)}>
     <div data-source-summary>
       <PageHeader title="Agent 管理" description={tab === "sources" ? model.sourceSummary(state, !host.demo) : undefined} actions={tab === "sources" ? <div className="flex flex-wrap items-center gap-2">
-        <span data-source-refresh><IconButton icon={IconRefresh} label="重新检查" disabled={state.busy || Boolean(state.collection?.collecting)} onClick={() => { void host.load(true); }} /></span>
+        <span data-source-refresh><IconButton icon={IconRefresh} label="重新检查" loading={Boolean(state.busy || state.collection?.collecting)} disabled={state.busy || Boolean(state.collection?.collecting)} onClick={() => { void host.load(true); }} /></span>
         {!host.demo && host.available ? <Button variant="tertiary" onClick={() => { setSheet("install"); void host.loadInstallers(); }}>{"安装与更新"}</Button> : null}
         {!host.demo && host.available ? <Button variant="primary" leadingIcon={IconPlus} onClick={() => { void host.openCustom(); }}>{"添加我的 Agent"}</Button> : null}
       </div> : undefined} />
@@ -134,7 +134,7 @@ export function SourcesPage() {
       ...ADMIN_SECTIONS.map(item => ({ value: item.value, label: item.label + (admin.state?.inventory && item.value !== "history" ? " " + admin.counts[item.value].total : "") })),
     ]} />
     {notice || state.retry ? <div role="status" data-source-notice>
-      <Banner tone={state.stale ? "warn" : "info"} action={state.retry ? <Button variant="tertiary" disabled={state.busy} onClick={() => { void host.retry(); }}>
+      <Banner tone={state.stale ? "warn" : "info"} action={state.retry ? <Button variant="tertiary" loading={state.busy} disabled={state.busy} onClick={() => { void host.retry(); }}>
         {state.stale && state.message.includes("已保存") ? "重试检查" : "重试操作"}</Button> : undefined}>{notice}</Banner>
     </div> : null}
     {tab !== "sources" ? <AgentsTab section={tab} admin={admin} /> : <>
@@ -168,7 +168,7 @@ export function SourcesPage() {
     <section className="flex flex-col gap-4" data-source-rows>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-title font-semibold text-foreground">全部来源</h2>
-        {host.available ? <span data-source-bulk><Button variant="tertiary" size="compact" disabled={state.busy || !all.length} onClick={() => { void host.change("all", null, enabled !== all.length); }}>{enabled === all.length && all.length ? "全部停用" : "全部读取"}</Button></span> : null}
+        {host.available ? <span data-source-bulk><Button variant="tertiary" size="compact" loading={state.busy} disabled={state.busy || !all.length} onClick={() => { void host.change("all", null, enabled !== all.length); }}>{enabled === all.length && all.length ? "全部停用" : "全部读取"}</Button></span> : null}
       </div>
       <div className="ff-grid-cards grid gap-4">
         {sections.flatMap((section, index) => [

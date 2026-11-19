@@ -62,8 +62,10 @@ function Gallery({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 // The widget board on 概览 (owner 2026-10-29, UI-POLISH-M10-20261029.md: the customizable widgets move from
 // the right column to the home page), in the person's saved layout, flowing down columns so widgets of
-// different heights pack without gaps. 编辑 shows the tools: drag (or Alt + arrow) to reorder, S/M/L,
-// settings, remove, the library.
+// different heights pack without gaps. Reordering works whether or not edit mode is on — the same board,
+// the same gesture: hold briefly or move deliberately, and the card lifts. 编辑 adds the tools (S/M/L,
+// settings, remove, the library) beside the grip. A tap still opens the page a widget summarizes; only a
+// real drag suppresses that click.
 // A widget opens the page it summarizes; the quota widgets, already on 概览, bring the Agent cards into view.
 const PAGE_OF: Record<string, string> = { cost: "cost", usage: "usage", sessions: "sessions", agents: "sources" };
 function openFor(type: WidgetType) {
@@ -75,6 +77,8 @@ export function WidgetBoard() {
   const state = useWidgetState(), model = widgetModel(), layout = model.activeLayout(state), [editing, setEditing] = useState(false);
   const [settings, setSettings] = useState<string | null>(null), [gallery, setGallery] = useState(false);
   const chosen = layout.widgets.find(item => item.key === settings) ?? null;
+  // The tool strip lines up with the card's CONTENT, not its outer box: the card is p-4 on
+  // every side, so the strip takes the same inline inset (px-4) to sit on the title's column.
   const slot = (config: WidgetConfig, index: number) => <div className="mb-4 flex min-w-0 break-inside-avoid flex-col gap-1" data-widget-slot={config.key}>
     {editing ? <WidgetTools index={index}>
       <WidgetGrip />
@@ -93,9 +97,10 @@ export function WidgetBoard() {
       <Button variant={editing ? "primary" : "secondary"} size="compact" onClick={() => setEditing(!editing)}>{editing ? "完成" : "编辑"}</Button>
     </header>
     <div className="ff-home-columns">
-      {editing ? <Sortable aria-label="小组件顺序（按住拖动，或 Alt + 方向键）" onReorder={keys => changeWidgets((m, s) => m.reorder(s, keys))}
+      <Sortable eager={!editing} immediate={editing} focusable={editing}
+        aria-label={editing ? "小组件顺序（按住拖动，或 Alt + 方向键）" : "小组件（按住或拖动可调整顺序，Alt + 方向键）"}
+        onReorder={keys => changeWidgets((m, s) => m.reorder(s, keys))}
         items={layout.widgets.map((config, index) => ({ key: config.key, label: model.TYPES[config.type].name, node: slot(config, index) }))} />
-        : layout.widgets.map((config, index) => <div key={config.key}>{slot(config, index)}</div>)}
       {editing || !layout.widgets.length ? <WidgetAddSlot onClick={() => setGallery(true)}><IconPlus size={16} aria-hidden="true" />添加小组件</WidgetAddSlot> : null}
     </div>
     <WidgetSettings config={chosen} onClose={() => setSettings(null)} />

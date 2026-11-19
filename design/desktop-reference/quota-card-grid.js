@@ -44,8 +44,8 @@
   // An estimate, labelled as one: the share of quota left against the share of time left, once a
   // tenth of the window has passed. It never colours usage as good or bad.
   function pace(item) {return model.pace(item);}
-  // What a card is called: the short name where the catalogue's is long; a mark that needs no name shows alone (the GLM and OpenCode references).
-  const CARD_NAMES = { deepseek: 'DeepSeek', copilot: 'Copilot' }, MARK_ONLY = new Set(['zcode', 'opencode']);
+  // What a card is called: the short name where the catalogue's is long; all cards show their titles cleanly.
+  const CARD_NAMES = { deepseek: 'DeepSeek', copilot: 'Copilot' };
   const CASH = { USD: '$', CNY: '¥' };
   // The same tones the app's other marks take (kit/data-display.tsx), so a black mark reads on a dark card.
   const MARK_TONE = { claude: ' ff-mark-claude', codex: ' ff-mark-mono', opencode: ' ff-mark-mono', cursor: ' ff-mark-mono', mimo: ' ff-mark-mono', copilot: ' ff-mark-mono', pi: ' ff-mark-mono', continue: ' ff-mark-mono' };
@@ -157,23 +157,25 @@
     const failing = card.members.find(member => member.status.warn) || card, reason = failing.status.title || failing.status.text;
     return '<div class="quota-problem"><div><b title="' + esc(reason) + '">' + esc(brief(reason)) + '</b>' + (card.quota ? '' : '<span>还没有读到额度</span>') + '</div>' + fix(failing, capability) + '</div>';
   }
-  function card(capability, item, many) {
-    const key = item.key, renamed = Boolean(prefs().names[key]), name = esc(displayName(key, CARD_NAMES[capability.provider] || capability.name)), hidden = prefs().hidden.includes(key), merged = item.members.length > 1;
+  function card(capability, item, many, indexInProvider) {
+    const key = item.key, name = esc(displayName(key, CARD_NAMES[capability.provider] || capability.name)), hidden = prefs().hidden.includes(key), merged = item.members.length > 1;
     const plan = '<span class="quota-plan-slot">' + (item.plan ? '<span class="quota-plan" title="' + esc(item.plan) + '">' + esc(String(item.plan).toUpperCase()) + '</span>' : '') + '</span>';
-    const head = '<header class="quota-card-head"' + (MARK_ONLY.has(capability.provider) && !renamed ? ' data-mark-only' : '') + '><img class="quota-card-logo' + (MARK_TONE[capability.provider] || '') + '" src="' + logo(capability.provider) + '" alt=""><h3>' + name + '</h3>' + plan + '<button class="quota-age' + (outdated(item.quota) ? ' is-old' : '') + '" ' + (item.agent === 'codex' ? 'data-quota-refresh="' + esc(item.lead.id) + '"' : 'data-provider-action="refresh" data-id="' + esc(item.lead.id) + '"') + ' aria-label="刷新 ' + name + ' 额度" title="最近成功 ' + esc(at(item.quota?.fetchedAt)) + '"' + (item.refresh.disabled ? ' disabled' : '') + '>' + icon('refresh') + '<span>' + esc(age(item.quota)) + '</span></button></header>';
+    const head = '<header class="quota-card-head"><img class="quota-card-logo' + (MARK_TONE[capability.provider] || '') + '" src="' + logo(capability.provider) + '" alt=""><h3>' + name + '</h3>' + plan + '<button class="quota-age' + (outdated(item.quota) ? ' is-old' : '') + '" ' + (item.agent === 'codex' ? 'data-quota-refresh="' + esc(item.lead.id) + '"' : 'data-provider-action="refresh" data-id="' + esc(item.lead.id) + '"') + ' aria-label="刷新 ' + name + ' 额度" title="最近成功 ' + esc(at(item.quota?.fetchedAt)) + '"' + (item.refresh.disabled ? ' disabled' : '') + '>' + icon('refresh') + '<span>' + esc(age(item.quota)) + '</span></button></header>';
     // Only where it tells cards apart: connections sharing one card, or one of several accounts.
-    // An alias that only repeats the card's name tells nothing apart and takes a line from a square card.
-    const given = many ? item.alias || '账号' : '', subtitle = merged ? item.members.length + ' 个连接 · 同一账号' : given.toLowerCase() === String(CARD_NAMES[capability.provider] || capability.name).toLowerCase() ? '' : given;
+    // When several accounts share one provider, ensure each card has a clear unique alias/account tag.
+    const customAlias = item.alias && item.alias.toLowerCase() !== String(CARD_NAMES[capability.provider] || capability.name).toLowerCase() ? item.alias : '';
+    const fallbackAlias = many ? (customAlias || '账号 ' + (indexInProvider || 1)) : customAlias;
+    const subtitle = merged ? item.members.length + ' 个连接 · 同一账号' : fallbackAlias;
     const alias = subtitle ? '<p class="quota-alias" title="' + esc(merged ? sharedNote(item) : subtitle) + '">' + esc(subtitle) + '</p>' : '';
     const mark = '<img class="quota-card-mark" src="' + logo(capability.provider) + '" alt="" aria-hidden="true">';
     // A shared card keeps its full reading while one of its connections still reads; the footer and
     // the attention line name the one that needs action.
     const warn = item.status.warn, compact = Boolean(item.lead.status.warn), content = body(item, compact), status = item.status, statusTitle = [status.title || status.text, sharedNote(item)].filter(Boolean).join(' · ');
-    return '<article class="card quota-card' + (warn ? ' needs-action' : '') + '" data-key="' + esc(key) + '" data-provider-row="' + esc(capability.provider) + '" data-connection="' + esc(item.id) + '" data-connections="' + esc(item.members.map(member => member.id).join(' ')) + '" data-card-key="' + esc(key) + '"' + (hidden ? ' data-hidden-card' : '') + (item.busy ? ' aria-busy="true"' : '') + '>' + head + alias + '<div class="quota-card-body">' + (compact ? problem(item, capability) : '') + (content.html ? '<div class="quota-card-content' + (compact ? ' is-dim' : '') + '">' + content.html + '</div>' : '') + '</div><footer class="quota-card-foot' + (!warn && !compact && !(content.more > 0) && status.text === '已更新' ? ' is-quiet' : '') + '"><span class="quota-status' + (warn ? ' is-warn' : '') + '" title="' + esc(statusTitle) + '">' + esc(compact ? '需要处理' : status.text) + '</span><button class="quota-sheet-open" data-quota-sheet="' + esc(capability.provider) + '" data-account="' + esc(item.id) + '" data-quota-details="' + esc(item.id) + '" aria-label="账号详情">' + (content.more > 0 ? '另 ' + content.more + ' 项 · ' : '') + '详情</button></footer>' + mark + '</article>';
+    return '<article class="card quota-card' + (warn ? ' needs-action' : '') + '" tabindex="0" data-key="' + esc(key) + '" data-provider-row="' + esc(capability.provider) + '" data-connection="' + esc(item.id) + '" data-connections="' + esc(item.members.map(member => member.id).join(' ')) + '" data-card-key="' + esc(key) + '"' + (hidden ? ' data-hidden-card' : '') + (item.busy ? ' aria-busy="true"' : '') + '>' + head + alias + '<div class="quota-card-body">' + (compact ? problem(item, capability) : '') + (content.html ? '<div class="quota-card-content' + (compact ? ' is-dim' : '') + '">' + content.html + '</div>' : '') + '</div><footer class="quota-card-foot' + (!warn && !compact && !(content.more > 0) && status.text === '已更新' ? ' is-quiet' : '') + '"><span class="quota-status' + (warn ? ' is-warn' : '') + '" title="' + esc(statusTitle) + '">' + esc(compact ? '需要处理' : status.text) + '</span><button class="quota-sheet-open" data-quota-sheet="' + esc(capability.provider) + '" data-account="' + esc(item.id) + '" data-quota-details="' + esc(item.id) + '" aria-label="账号详情">' + (content.more > 0 ? '另 ' + content.more + ' 项 · ' : '') + '详情</button></footer>' + mark + '</article>';
   }
 
   // ── Rendering ────────────────────────────────────────────────────────────────────────────────
-  let renderedKey = null, renderFrame = 0, drag = null;
+  let renderedKey = null, renderFrame = 0, drag = null, landing = false;
   function inputKey() {
     const snapshot = host.get(), display = { ...snapshot.prefs }; delete display.slide; delete display.range;
     return JSON.stringify([host.gridVersion(), display, snapshot.showHidden, Math.floor(Date.now() / 30000)]);
@@ -181,11 +183,22 @@
   function render() {
     cancelAnimationFrame(renderFrame); renderFrame = 0;
     // A card being dragged keeps the grid as the pointer arranges it; the page catches up on drop.
-    if (drag) return;
+    // The same holds while a dropped card settles: the flying card and its placeholder are still in
+    // the grid, and rebuilding the list underneath them would strand both.
+    if (drag || landing) return;
     if ($('quota').hidden || document.hidden) return;
     const key = inputKey(); if (key === renderedKey) return;
-    const grid = model.gridView(), decorate = entry => ({ ...entry, html: card(entry.capability, entry.item, entry.many) });
-    const shown = grid.shown.map(decorate), filtered = grid.filtered.map(decorate);
+    const grid = model.gridView();
+    const providerCounts = new Map();
+    const decorate = entry => {
+      const p = entry.capability.provider;
+      const cur = (providerCounts.get(p) || 0) + 1;
+      providerCounts.set(p, cur);
+      return { ...entry, html: card(entry.capability, entry.item, entry.many, cur) };
+    };
+    const shown = grid.shown.map(decorate);
+    providerCounts.clear();
+    const filtered = grid.filtered.map(decorate);
     $('quotaCardsBar').hidden = shown.length + grid.visibleIdle.length < 2;
     window.quotaCardDom.update($('quotaCards'), filtered.length ? filtered.map(item => item.html).join('') : shown.length && prefs().filter !== 'idle' ? '<p class="quota-filter-empty" data-key="empty">' + (prefs().filter === 'action' ? '没有需要处理的卡片。' : '没有状态正常的卡片。') + '</p>' : '', window.quotaProgress.release);
     $('quotaCards').hidden = !shown.length;
@@ -197,58 +210,346 @@
   }
   const schedule = () => { if (!renderFrame) renderFrame = requestAnimationFrame(render); };
 
-  // ── Moving cards (owner, 2026-10-22, UI-QUOTA-V4-SHEET-20261022.md) ──────────────────────────
-  // A long press picks a card up and the others make room as it passes them; Escape puts it back.
-  // Alt + an arrow key does the same from the keyboard. Cards the page does not show (hidden or
-  // filtered out) keep their places in the saved order.
-  const LONG_PRESS = 350, SLOP = 6;
-  let press = null, suppressClick = false;
-  const shownKeys = () => [...$('quotaCards').querySelectorAll('.quota-card')].map(item => item.dataset.cardKey);
-  // The cards a move displaced glide from where they were (full motion only).
+  // ── Moving cards (Video 1:1 Motion, Synced with Sortable) ────────────────────
+  let press = null, suppressClick = false, placeholder = null;
+  // Pointer travel that still counts as a click, not a drag (same value as the widget Sortable).
+  const DRAG_SLOP = 8;
+
+  function createTracker() {
+    let samples = [];
+    return {
+      reset(val, time = performance.now()) { samples = [{ val, time }]; },
+      add(val, time = performance.now()) {
+        samples.push({ val, time });
+        while (samples.length > 2 && time - samples[0].time > 100) samples.shift();
+      },
+      velocity() {
+        if (samples.length < 2) return 0;
+        const first = samples[0], last = samples[samples.length - 1];
+        const span = last.time - first.time;
+        return span > 0 ? ((last.val - first.val) / span) * 1000 : 0;
+      }
+    };
+  }
+  const trackerX = createTracker(), trackerY = createTracker();
+  const shownKeys = () => [...$('quotaCards').querySelectorAll('.quota-card:not([data-sort-placeholder])')].map(item => item.dataset.cardKey);
+
+  // One motion decision for the whole drag: only "full" moves. "reduced" (the app setting or the
+  // system's preference) and "off" both keep every decorative move out - no glide, no tilt, no
+  // landing spring. The card still follows the pointer, because that is the person's own hand.
+  const still = () => { const mode = window.uiMotion?.mode; return mode === 'off' || mode === 'reduced'; };
+
   function slide(cards, before) {
-    if (window.uiMotion?.mode !== 'full') return;
+    if (still()) return;
     for (const item of cards) {
       const old = before.get(item), now = item.getBoundingClientRect(); if (!old) continue;
       const dx = old.left - now.left, dy = old.top - now.top;
-      if (dx || dy) item.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px)' }, { transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.23,1,.32,1)' });
+      if (dx || dy) item.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px)' }, { transform: 'none' }], { duration: 240, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
     }
   }
+
   function shift(moving, over, after) {
-    const grid = $('quotaCards'), others = [...grid.querySelectorAll('.quota-card')].filter(value => value !== moving), before = new Map(others.map(value => [value, value.getBoundingClientRect()]));
-    grid.insertBefore(moving, after ? over.nextSibling : over); slide(others, before);
+    const grid = $('quotaCards');
+    const others = [...grid.querySelectorAll('.quota-card')].filter(value => value !== moving);
+    const before = new Map(others.map(value => [value, value.getBoundingClientRect()]));
+    grid.insertBefore(moving, after ? over.nextSibling : over);
+    slide(others, before);
   }
-  // The card under the pointer by layout slot, not by what is drawn there, so cards still gliding
-  // out of the way never decide where the dragged one lands.
-  function follow(x, y) {
-    const grid = $('quotaCards'), moving = drag.card, frame = grid.getBoundingClientRect(), px = x - frame.left, py = y - frame.top;
-    const over = [...grid.querySelectorAll('.quota-card')].find(value => value !== moving && px >= value.offsetLeft && px < value.offsetLeft + value.offsetWidth && py >= value.offsetTop && py < value.offsetTop + value.offsetHeight);
-    if (over && over !== moving) { const cards = [...grid.querySelectorAll('.quota-card')]; shift(moving, over, cards.indexOf(moving) < cards.indexOf(over)); }
-    moving.style.transform = 'translate(' + (x - drag.x - (moving.offsetLeft - drag.left)) + 'px,' + (y - drag.y - (moving.offsetTop - drag.top)) + 'px)';
-  }
+
   function pickUp() {
+    if (!press) return;
     const { card: moving, id, x, y } = press; press = null;
-    drag = { card: moving, id, x, y, left: moving.offsetLeft, top: moving.offsetTop };
-    try { moving.setPointerCapture(id); } catch { /* The pointer already left; window listeners still follow it. */ }
-    moving.classList.add('is-dragging'); document.body.classList.add('quota-dragging');
+    const grid = $('quotaCards');
+    if (!grid) return;
+
+    // 1. 测量记录网格中所有卡片当前的固定几何槽位 (Static Slot Geometry, exactly like Sortable)
+    const cards = [...grid.querySelectorAll('.quota-card:not(.is-flying):not([data-sort-placeholder])')];
+    const initialKeys = cards.map(el => el.dataset.cardKey);
+    const movingKey = moving.dataset.cardKey;
+    const originalIndex = initialKeys.indexOf(movingKey);
+    if (originalIndex === -1) return;
+
+    const slots = cards.map(el => {
+      const b = el.getBoundingClientRect();
+      return {
+        left: b.left,
+        top: b.top,
+        width: b.width,
+        height: b.height,
+        cx: b.left + b.width / 2,
+        cy: b.top + b.height / 2,
+      };
+    });
+
+    const rect = slots[originalIndex];
+
+    // 2. 创建 1:1 45° 斑马对角斜纹占位槽 (Solid border & fine diagonal stripes)
+    placeholder = document.createElement('div');
+    placeholder.className = 'ff-drag-placeholder quota-card';
+    placeholder.dataset.sortPlaceholder = 'true';
+    placeholder.dataset.cardKey = movingKey;
+    placeholder.style.width = rect.width + 'px';
+    placeholder.style.height = rect.height + 'px';
+    moving.parentNode.insertBefore(placeholder, moving);
+
+    // 3. 将原卡片升格为 fixed 飞卡 (Elevation & Scale 1.025)
+    moving.classList.add('is-flying');
+    moving.style.position = 'fixed';
+    moving.style.left = rect.left + 'px';
+    moving.style.top = rect.top + 'px';
+    moving.style.width = rect.width + 'px';
+    moving.style.height = rect.height + 'px';
+    moving.style.zIndex = '9999';
+    moving.style.pointerEvents = 'none';
+    moving.style.margin = '0';
+    moving.style.transform = 'translate3d(0, 0, 0) scale(' + (still() ? 1 : 1.025) + ')';
+
+    trackerX.reset(x);
+    trackerY.reset(y);
+
+    drag = {
+      card: moving,
+      movingKey,
+      id,
+      startX: x,
+      startY: y,
+      originLeft: rect.left,
+      originTop: rect.top,
+      width: rect.width,
+      height: rect.height,
+      slots,
+      currentOrder: [...initialKeys],
+      tilt: 0,
+      dx: 0,
+      dy: 0,
+    };
+
+    try { grid.setPointerCapture(id); } catch { /* Pointer already left */ }
+    document.body.classList.add('quota-dragging');
   }
+
+  function follow(x, y) {
+    if (!drag) return;
+    const { card: moving, movingKey, startX, startY, originLeft, originTop, width, height, slots } = drag;
+    const now = performance.now();
+    trackerX.add(x, now);
+    trackerY.add(y, now);
+
+    const dx = x - startX;
+    const dy = y - startY;
+    drag.dx = dx;
+    drag.dy = dy;
+
+    // 动态速率侧倾 (Velocity-based Dynamic Tilt)
+    const vx = trackerX.velocity();
+    const targetTilt = still() ? 0 : Math.max(-5, Math.min(5, (vx / 1000) * 14));
+    drag.tilt = (drag.tilt || 0) * 0.75 + targetTilt * 0.25;
+    const tilt = still() ? '0' : drag.tilt.toFixed(2);
+
+    moving.style.transform = 'translate3d(' + dx + 'px, ' + dy + 'px, 0) rotate(' + tilt + 'deg) scale(' + (still() ? 1 : 1.025) + ')';
+
+    // 靠近磁吸平滑让位 (Proximity Snapping & FLIP Glide, exactly like Sortable)
+    const grid = $('quotaCards');
+    if (!grid || slots.length <= 1) return;
+
+    const flyingCx = originLeft + width / 2 + dx;
+    const flyingCy = originTop + height / 2 + dy;
+
+    // 计算飞卡几何中心距离每个固定槽位中心点的欧氏距离平方
+    const distances = slots.map(slot => (flyingCx - slot.cx) ** 2 + (flyingCy - slot.cy) ** 2);
+    const toIndex = distances.indexOf(Math.min(...distances));
+
+    if (toIndex !== -1) {
+      const currentPos = drag.currentOrder.indexOf(movingKey);
+      if (toIndex !== currentPos) {
+        const nextOrder = drag.currentOrder.filter(k => k !== movingKey);
+        nextOrder.splice(toIndex, 0, movingKey);
+        drag.currentOrder = nextOrder;
+
+        // 执行 FLIP 平滑让位
+        const cardsInGrid = [...grid.querySelectorAll('.quota-card:not(.is-flying)')];
+        const cardMap = new Map(cardsInGrid.map(el => [el.dataset.cardKey, el]));
+        const before = new Map(cardsInGrid.map(el => [el, el.getBoundingClientRect()]));
+
+        // 取消正在进行的旧动画，以防污染真实自然布局测算
+        for (const el of cardsInGrid) {
+          for (const anim of el.getAnimations()) anim.cancel();
+        }
+
+        // 按新顺序排布 DOM 元素
+        for (const k of nextOrder) {
+          const el = (k === movingKey) ? placeholder : cardMap.get(k);
+          if (el) grid.appendChild(el);
+        }
+
+        // 让所有位移改变的卡片以 Apple fluid 物理阻尼曲线平滑滑开
+        if (!still()) {
+          for (const el of grid.querySelectorAll('.quota-card:not(.is-flying)')) {
+            const oldR = before.get(el);
+            if (!oldR) continue;
+            const newR = el.getBoundingClientRect();
+            const dX = oldR.left - newR.left;
+            const dY = oldR.top - newR.top;
+            if (dX || dY) {
+              el.animate([
+                { transform: 'translate3d(' + dX + 'px, ' + dY + 'px, 0)' },
+                { transform: 'translate3d(0, 0, 0)' }
+              ], {
+                duration: 260,
+                easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
   function drop(save) {
-    const moving = drag.card; drag = null; suppressClick = true; setTimeout(() => { suppressClick = false; }, 0);
-    moving.classList.remove('is-dragging'); moving.style.transform = ''; document.body.classList.remove('quota-dragging');
-    if (save) { host.reorder(shownKeys()); host.setMessage('卡片顺序已保存。'); }
-    // Dragging rearranged nodes without changing the saved facts; cancelling must put them back.
-    renderedKey = null; render();
+    if (!drag) return;
+    const { card: moving, id, originLeft, originTop, dx, dy, tilt, currentOrder } = drag;
+    drag = null;
+    landing = true;
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 50);
+
+    const grid = $('quotaCards');
+    try { if (grid?.hasPointerCapture(id)) grid.releasePointerCapture(id); } catch { /* ignore */ }
+    document.body.classList.remove('quota-dragging');
+
+    if (!placeholder) {
+      landing = false;
+      moving.classList.remove('is-flying');
+      moving.style.position = '';
+      moving.style.left = '';
+      moving.style.top = '';
+      moving.style.width = '';
+      moving.style.height = '';
+      moving.style.transform = '';
+      moving.style.zIndex = '';
+      moving.style.pointerEvents = '';
+      moving.style.margin = '';
+      return;
+    }
+
+    // 4. 落位期间把飞卡交给文档搬运，而不是每帧追一次滚动。
+    // 拖拽时飞卡是 fixed（指针在视口空间，跟手零误差）；一松手就换成 absolute + 网格坐标，
+    // 这样页面滚动时浏览器直接搬运飞卡和占位槽两者，弹簧只需要收敛它们之间那点差值。
+    // 补偿式做法（监听 scroll 每帧改 transform）注定落后合成器一帧，滚快一点就被看成粘在屏幕上。
+    const targetRect = placeholder.getBoundingClientRect();
+    const targetDx = targetRect.left - originLeft;
+    const targetDy = targetRect.top - originTop;
+
+    // 卡片此刻在视口里的位置换算到网格坐标系；换完视觉位置不变，但从此跟随文档。
+    const gridRect = grid.getBoundingClientRect();
+    moving.style.position = 'absolute';
+    moving.style.left = (originLeft - gridRect.left) + 'px';
+    moving.style.top = (originTop - gridRect.top) + 'px';
+
+    // 释放瞬时的初速度
+    const vx = save ? trackerX.velocity() : 0;
+    const vy = save ? trackerY.velocity() : 0;
+
+    // 标记 settling，柔和收拢阴影
+    moving.dataset.settling = 'true';
+
+    // 欠阻尼物理弹簧解析求解器（k=320, c=24, m=0.85 -> omega0=19.4, zeta=0.727, omegad=13.3）
+    const omega0 = 19.4, zeta = 0.727, omegad = 13.3;
+    const x0 = dx - targetDx;
+    const C1_x = x0, C2_x = (vx + zeta * omega0 * C1_x) / omegad;
+
+    const y0 = dy - targetDy;
+    const C1_y = y0, C2_y = (vy + zeta * omega0 * C1_y) / omegad;
+
+    const r0 = Number(tilt) || 0;
+    const C1_r = r0, C2_r = (zeta * omega0 * C1_r) / omegad;
+
+    const s0 = 0.025; // scale 从 1.025 回归到 1.0
+    const C1_s = s0, C2_s = (zeta * omega0 * C1_s) / omegad;
+
+    const startTime = performance.now();
+    const duration = 380; // ms
+
+    function settleFrame(now) {
+      const t = (now - startTime) / 1000;
+      // Under reduced/off motion the card goes straight into its slot: no spring, no tilt, no scale.
+      if (still() || t >= duration / 1000) {
+        finishDrop();
+        return;
+      }
+      const decay = Math.exp(-zeta * omega0 * t);
+      const cos = Math.cos(omegad * t);
+      const sin = Math.sin(omegad * t);
+
+      const curX = targetDx + decay * (C1_x * cos + C2_x * sin);
+      const curY = targetDy + decay * (C1_y * cos + C2_y * sin);
+      const curR = decay * (C1_r * cos + C2_r * sin);
+      const curS = 1 + decay * (C1_s * cos + C2_s * sin);
+
+      moving.style.transform = 'translate3d(' + curX + 'px, ' + curY + 'px, 0) rotate(' + curR.toFixed(2) + 'deg) scale(' + curS.toFixed(4) + ')';
+      requestAnimationFrame(settleFrame);
+    }
+
+    function finishDrop() {
+      // 提取最新顺序：以 currentOrder 为准
+      const finalKeys = save ? currentOrder : shownKeys();
+
+      // 将真实卡片插入 placeholder 的位置，然后清理 placeholder
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.insertBefore(moving, placeholder);
+        placeholder.parentNode.removeChild(placeholder);
+      }
+      placeholder = null;
+
+      moving.classList.remove('is-flying');
+      delete moving.dataset.settling;
+      moving.style.position = '';
+      moving.style.left = '';
+      moving.style.top = '';
+      moving.style.width = '';
+      moving.style.height = '';
+      moving.style.transform = '';
+      moving.style.zIndex = '';
+      moving.style.pointerEvents = '';
+      moving.style.margin = '';
+
+      if (save) {
+        host.reorder(finalKeys);
+        host.setMessage('卡片顺序已保存。');
+      }
+
+      landing = false;
+      renderedKey = null;
+      render();
+    }
+
+    requestAnimationFrame(settleFrame);
   }
   $('quotaCards').addEventListener('pointerdown', event => {
     const target = event.target.closest('.quota-card');
-    if (!target || event.button !== 0 || drag || event.target.closest('button, input, a, summary')) return;
-    press = { card: target, id: event.pointerId, x: event.clientX, y: event.clientY, timer: setTimeout(pickUp, LONG_PRESS) };
+    if (!target || event.button !== 0 || drag || event.target.closest('button, input, a, textarea, select, summary, [role="button"], [role="switch"], [role="slider"], [contenteditable]')) return;
+    press = { card: target, id: event.pointerId, x: event.clientX, y: event.clientY, timer: setTimeout(pickUp, 350) };
   });
   window.addEventListener('pointermove', event => {
-    if (press && event.pointerId === press.id && Math.hypot(event.clientX - press.x, event.clientY - press.y) > SLOP) { clearTimeout(press.timer); press = null; }
-    if (drag && event.pointerId === drag.id) { event.preventDefault(); follow(event.clientX, event.clientY); }
+    if (press && event.pointerId === press.id) {
+      const dist = Math.hypot(event.clientX - press.x, event.clientY - press.y);
+      // DRAG_SLOP: a card is also a click target (its details open on click), so a couple of pixels
+      // of hand shake must not turn a tap into a drag.
+      if (dist >= DRAG_SLOP) {
+        clearTimeout(press.timer);
+        pickUp();
+      }
+    }
+    if (drag && event.pointerId === drag.id) {
+      event.preventDefault();
+      follow(event.clientX, event.clientY);
+    }
   });
   for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, event => {
-    if (press && event.pointerId === press.id) { clearTimeout(press.timer); press = null; }
+    if (press && event.pointerId === press.id) {
+      clearTimeout(press.timer);
+      press = null;
+    }
     if (drag && event.pointerId === drag.id) drop(type === 'pointerup');
   });
   window.addEventListener('keydown', event => { if (drag && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); drop(false); } }, true);

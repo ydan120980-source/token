@@ -67,8 +67,8 @@ export function Projects() {
         </span> : null}
       </div>
       <div className="flex gap-2">
-        <Button variant="secondary" disabled={off} onClick={() => void host.projects.load()}>{"刷新项目"}</Button>
-        <Button variant="secondary" disabled={off} onClick={() => void host.projects.export()}>{"导出项目 CSV"}</Button>
+        <Button variant="secondary" loading={busy} disabled={off} onClick={() => host.projects.load()}>{"刷新项目"}</Button>
+        <Button variant="secondary" disabled={off} onClick={() => host.projects.export()}>{"导出项目 CSV"}</Button>
       </div>
     </div>
     {snapshot.error ? <div data-cost-project-error><Banner tone="error">{snapshot.error}</Banner></div> : null}

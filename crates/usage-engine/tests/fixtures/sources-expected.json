@@ -1,0 +1,1951 @@
+{
+ "salt": "fixture-salt",
+ "cases": [
+  {
+   "name": "codex-parse",
+   "kind": "objects",
+   "agent": "codex",
+   "objects": [
+    {
+     "type": "session_meta",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "payload": {
+      "id": "sess-1",
+      "cwd": "E:/work/demo",
+      "originator": "Codex Desktop",
+      "model_provider": "openai"
+     }
+    },
+    {
+     "type": "turn_context",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "payload": {
+      "model": "gpt-5.1-codex"
+     }
+    },
+    {
+     "type": "event_msg",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "payload": {
+      "type": "token_count",
+      "info": {
+       "total_token_usage": {
+        "input_tokens": 100,
+        "output_tokens": 20,
+        "cached_input_tokens": 40,
+        "reasoning_output_tokens": 5,
+        "total_tokens": 120
+       },
+       "last_token_usage": {
+        "input_tokens": 100,
+        "output_tokens": 20,
+        "cached_input_tokens": 40,
+        "reasoning_output_tokens": 5,
+        "total_tokens": 120
+       }
+      },
+      "rate_limits": {
+       "limit_id": "primary"
+      }
+     }
+    },
+    {
+     "type": "event_msg",
+     "timestamp": "2026-10-05T12:01:00Z",
+     "payload": {
+      "type": "token_count",
+      "info": {
+       "total_token_usage": {
+        "input_tokens": 150,
+        "output_tokens": 30,
+        "cached_input_tokens": 60,
+        "reasoning_output_tokens": 8,
+        "total_tokens": 180
+       }
+      },
+      "rate_limits": {
+       "limit_id": "primary"
+      }
+     }
+    },
+    {
+     "type": "event_msg",
+     "timestamp": "2026-10-05T12:01:00Z",
+     "payload": {
+      "type": "token_count",
+      "info": {
+       "total_token_usage": {
+        "input_tokens": 150,
+        "output_tokens": 30,
+        "cached_input_tokens": 60,
+        "reasoning_output_tokens": 8,
+        "total_tokens": 180
+       }
+      },
+      "rate_limits": {
+       "limit_id": "secondary"
+      }
+     }
+    },
+    {
+     "type": "event_msg",
+     "timestamp": "2026-10-05T12:02:00Z",
+     "payload": {
+      "type": "token_count",
+      "info": {
+       "total_token_usage": {
+        "input_tokens": 10,
+        "output_tokens": 2,
+        "total_tokens": 12
+       }
+      }
+     }
+    }
+   ],
+   "fallback": "file.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "7d4e49b0db4fffb03a5dc56391f530c24c55a1ef6142187e5d4cd351553cc877",
+      "sessionKey": "2aa37e3b496e9710fdd5c9462a06ddde885ee21f9e803d091dc96de039fd66db",
+      "agent": "codex",
+      "entry": "desktop",
+      "model": "gpt-5.1-codex",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 60,
+      "output": 20,
+      "cacheRead": 40,
+      "cacheWrite": null,
+      "reasoning": 5,
+      "totalTokens": 120,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "requestInputTokens": 100
+     },
+     {
+      "id": "4a2b6ea4216538f94e8d048f3f89ba431a2647a5c1db0ffabd187717bf1707af",
+      "sessionKey": "2aa37e3b496e9710fdd5c9462a06ddde885ee21f9e803d091dc96de039fd66db",
+      "agent": "codex",
+      "entry": "desktop",
+      "model": "gpt-5.1-codex",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:01:00.000Z",
+      "inputUncached": 30,
+      "output": 10,
+      "cacheRead": 20,
+      "cacheWrite": null,
+      "reasoning": 3,
+      "totalTokens": 60,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "requestInputTokens": null
+     },
+     {
+      "id": "fb89338b541b07c789a6b69e8504eaefd9e6e2f889d45cc2ec343279eab921db",
+      "sessionKey": "2aa37e3b496e9710fdd5c9462a06ddde885ee21f9e803d091dc96de039fd66db",
+      "agent": "codex",
+      "entry": "desktop",
+      "model": "gpt-5.1-codex",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:02:00.000Z",
+      "inputUncached": 10,
+      "output": 2,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 12,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "requestInputTokens": null
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "2aa37e3b496e9710fdd5c9462a06ddde885ee21f9e803d091dc96de039fd66db",
+      "id": "sess-1",
+      "cwd": "E:/work/demo",
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "codex-fork",
+   "kind": "objects",
+   "agent": "codex",
+   "objects": [
+    {
+     "type": "session_meta",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "payload": {
+      "id": "fork-1",
+      "forked_from_id": "sess-1",
+      "originator": "cli"
+     }
+    },
+    {
+     "type": "event_msg",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "payload": {
+      "type": "token_count",
+      "info": {
+       "total_token_usage": {
+        "input_tokens": 90,
+        "output_tokens": 9,
+        "total_tokens": 99
+       }
+      }
+     }
+    },
+    {
+     "type": "event_msg",
+     "timestamp": "2026-10-05T12:03:00Z",
+     "payload": {
+      "type": "token_count",
+      "info": {
+       "total_token_usage": {
+        "input_tokens": 120,
+        "output_tokens": 12,
+        "total_tokens": 132
+       }
+      }
+     }
+    }
+   ],
+   "fallback": "fork.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "201689e9124fd19bdeee57ab9c67103f448dacbfb375d04d9b55c522d56b5a7b",
+      "sessionKey": "e2c741084a95edbdbf2f8ff6d3e220e503106c35a27bd06b2302bd249d9fa4c7",
+      "agent": "codex",
+      "entry": "cli",
+      "model": "unknown",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:03:00.000Z",
+      "inputUncached": 30,
+      "output": 3,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 33,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "requestInputTokens": null
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "e2c741084a95edbdbf2f8ff6d3e220e503106c35a27bd06b2302bd249d9fa4c7",
+      "id": "fork-1",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "claude-parse",
+   "kind": "objects",
+   "agent": "claude",
+   "objects": [
+    {
+     "type": "assistant",
+     "sessionId": "cl-1",
+     "cwd": "E:/work/demo",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "uuid": "u-1",
+     "message": {
+      "id": "m-1",
+      "model": "claude-sonnet-4-5",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 20,
+       "cache_read_input_tokens": 5,
+       "cache_creation_input_tokens": 2
+      }
+     }
+    },
+    {
+     "type": "custom-title",
+     "sessionId": "cl-1",
+     "customTitle": "renamed session"
+    },
+    {
+     "type": "assistant",
+     "sessionId": "cl-1",
+     "timestamp": "2026-10-05T12:04:00Z",
+     "message": {
+      "model": "claude-sonnet-4-5",
+      "usage": {
+       "input_tokens": 1,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "fallback": "p.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "19e5b9e4a90cb1636de3f8c298ab28e033e9bb14ba5199def0248126e3826532",
+      "sessionKey": "ca672c73581fca1cff37f9ccc00f9d73d232088b16c682eafbd8470538ce226f",
+      "agent": "claude",
+      "entry": "cli",
+      "model": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 10,
+      "output": 20,
+      "cacheRead": 5,
+      "cacheWrite": 2,
+      "reasoning": null,
+      "totalTokens": 37,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     },
+     {
+      "id": "abf9e454253e84f52ef41925fc18d515af06c6d3a647d73f8812b1f8dc7490a0",
+      "sessionKey": "ca672c73581fca1cff37f9ccc00f9d73d232088b16c682eafbd8470538ce226f",
+      "agent": "claude",
+      "entry": "cli",
+      "model": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "timestamp": "2026-10-05T12:04:00.000Z",
+      "inputUncached": 1,
+      "output": 2,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 3,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "ca672c73581fca1cff37f9ccc00f9d73d232088b16c682eafbd8470538ce226f",
+      "id": "cl-1",
+      "cwd": "E:/work/demo",
+      "title": "renamed session"
+     }
+    ]
+   }
+  },
+  {
+   "name": "workbuddy-parse",
+   "kind": "objects",
+   "agent": "workbuddy",
+   "objects": [
+    {
+     "sessionId": "wb-1",
+     "cwd": "E:/work/demo",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "id": "r-1",
+     "providerData": {
+      "messageId": "pm-1",
+      "requestModelId": "gpt-4.1",
+      "rawUsage": {
+       "input_tokens": 30,
+       "output_tokens": 7,
+       "cached_input_tokens": 3
+      }
+     }
+    },
+    {
+     "sessionId": "wb-1",
+     "timestamp": "2026-10-05T12:05:00Z",
+     "usage": {
+      "total_tokens": 40
+     }
+    }
+   ],
+   "fallback": "wb.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "20a3abe31897a0b90186ec6a68b9b00f9575614c571e31aac3fe811b826b63b0",
+      "sessionKey": "8d980807db672c6b5d04c8268c60da8c8c8938c2f57ae3f92d68e5d049c19422",
+      "agent": "workbuddy",
+      "entry": "unknown",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 27,
+      "output": 7,
+      "cacheRead": 3,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 37,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     },
+     {
+      "id": "9bb64db953796b126c6fbcd202f5e4dec5433bf5725f35f8cde4fb613c20417c",
+      "sessionKey": "8d980807db672c6b5d04c8268c60da8c8c8938c2f57ae3f92d68e5d049c19422",
+      "agent": "workbuddy",
+      "entry": "unknown",
+      "model": "unknown",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:05:00.000Z",
+      "inputUncached": null,
+      "output": null,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 40,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "partial"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "8d980807db672c6b5d04c8268c60da8c8c8938c2f57ae3f92d68e5d049c19422",
+      "id": "wb-1",
+      "cwd": "E:/work/demo",
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "opencode-parse",
+   "kind": "objects",
+   "agent": "opencode",
+   "objects": [
+    {
+     "role": "assistant",
+     "id": "oc-1",
+     "sessionID": "oc-s",
+     "modelID": "gpt-4.1",
+     "providerID": "openai",
+     "time": {
+      "created": 1791201600000
+     },
+     "tokens": {
+      "input": 100,
+      "output": 20,
+      "reasoning": 5,
+      "cache": {
+       "read": 10,
+       "write": 0
+      }
+     }
+    },
+    {
+     "role": "assistant",
+     "id": "oc-2",
+     "sessionID": "oc-s",
+     "modelID": "gpt-4.1",
+     "time": {
+      "created": 1791201960000
+     },
+     "tokens": {
+      "input": 50,
+      "output": 10,
+      "reasoning": 0,
+      "cache": {
+       "read": 0,
+       "write": 0
+      }
+     }
+    }
+   ],
+   "fallback": "database",
+   "expected": {
+    "records": [
+     {
+      "id": "53242f6d0a251f1220b30efe9707ebd3750600d71121790dda6e9f6e95449127",
+      "sessionKey": "1dae03d34997df449c96b7a2607fb2487fa191f93dd66b4812a45cac5237282b",
+      "agent": "opencode",
+      "entry": "unknown",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 100,
+      "output": 25,
+      "cacheRead": 10,
+      "cacheWrite": 0,
+      "reasoning": 5,
+      "totalTokens": 135,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "excludes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": "e1a2687c7a79deeff5798ea30c46cdcb876c9c7a3e210adb260f692c0ff7801a",
+      "sharedRecordIds": [
+       "53242f6d0a251f1220b30efe9707ebd3750600d71121790dda6e9f6e95449127",
+       "5d7da5846464644c733b8633f7a3d04f34b5f2ba2ab109fa7cb35d112a4e9654"
+      ],
+      "quality": "measured"
+     },
+     {
+      "id": "27e347bdd035a01d89a83f2736a9fb57fd6aa13bbec9923e8a4800fd52e15e11",
+      "sessionKey": "1dae03d34997df449c96b7a2607fb2487fa191f93dd66b4812a45cac5237282b",
+      "agent": "opencode",
+      "entry": "unknown",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:06:00.000Z",
+      "inputUncached": 50,
+      "output": 10,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "reasoning": 0,
+      "totalTokens": 60,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "excludes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": "d6996914a0f76ffde7b0c4746cfdfef33dd49dfd0728be069e1321365cb71482",
+      "sharedRecordIds": [
+       "27e347bdd035a01d89a83f2736a9fb57fd6aa13bbec9923e8a4800fd52e15e11",
+       "be41a167fd872a5bdd13a95af2863b18eccef5f5f1e8aea5f2579503eb5df88c"
+      ],
+      "quality": "measured"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "1dae03d34997df449c96b7a2607fb2487fa191f93dd66b4812a45cac5237282b",
+      "id": "oc-s",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "gemini-parse",
+   "kind": "gemini",
+   "objects": [
+    {
+     "sessionId": "gm-1",
+     "messages": [
+      {
+       "type": "gemini",
+       "id": "g-1",
+       "model": "gemini-2.5-pro",
+       "timestamp": "2026-10-05T12:00:00Z",
+       "tokens": {
+        "input": 80,
+        "output": 12,
+        "cached": 20,
+        "thoughts": 4,
+        "total": 92
+       }
+      },
+      {
+       "type": "gemini",
+       "id": "g-2",
+       "model": "gemini-2.5-pro",
+       "timestamp": "2026-10-05T12:07:00Z",
+       "tokens": {
+        "input": 10,
+        "output": 2,
+        "tool": 3,
+        "total": 15
+       }
+      }
+     ]
+    },
+    {
+     "$set": {
+      "sessionId": "gm-1",
+      "messages": [
+       {
+        "type": "gemini",
+        "id": "g-1",
+        "model": "gemini-2.5-pro",
+        "timestamp": "2026-10-05T12:00:00Z",
+        "tokens": {
+         "input": 80,
+         "output": 12,
+         "cached": 20,
+         "thoughts": 4,
+         "total": 92
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "fallback": "session-x.json",
+   "expected": {
+    "records": [
+     {
+      "id": "2c85f1797e6d0f223de46fdf4f52014ad3852ac7be572e605834e411de725df9",
+      "sessionKey": "2b0d5edebc6ad6e3a72ea2c22fc8b66986f5c413916f0cfe3b0d26c382d97a12",
+      "agent": "gemini",
+      "entry": "cli",
+      "model": "gemini-2.5-pro",
+      "provider": "google",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 60,
+      "output": 16,
+      "cacheRead": 20,
+      "cacheWrite": null,
+      "reasoning": 4,
+      "totalTokens": 96,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "excludes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "total-mismatch"
+     },
+     {
+      "id": "ab08c365e11556d15638e037a65a54473305f9b7b6b575ba8faa495c7ae9654b",
+      "sessionKey": "2b0d5edebc6ad6e3a72ea2c22fc8b66986f5c413916f0cfe3b0d26c382d97a12",
+      "agent": "gemini",
+      "entry": "cli",
+      "model": "gemini-2.5-pro",
+      "provider": "google",
+      "timestamp": "2026-10-05T12:07:00.000Z",
+      "inputUncached": 10,
+      "output": 2,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 15,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "excludes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "partial"
+     }
+    ],
+    "warnings": [],
+    "sessions": []
+   }
+  },
+  {
+   "name": "cursor-parse",
+   "kind": "cursor",
+   "objects": [
+    {
+     "runId": "run-1",
+     "agentId": "ag-1",
+     "model": {
+      "id": "gpt-4.1"
+     },
+     "createdAt": "2026-10-05T12:00:00Z",
+     "startedAt": "2026-10-05T12:00:00Z",
+     "usage": {
+      "inputTokens": 60,
+      "outputTokens": 9,
+      "cacheReadTokens": 4,
+      "totalTokens": 69
+     }
+    },
+    {
+     "runId": "run-2",
+     "usage": {
+      "inputTokens": 1
+     }
+    },
+    {
+     "agentId": "ag-1",
+     "usage": {
+      "inputTokens": 1
+     }
+    }
+   ],
+   "expected": {
+    "records": [
+     {
+      "id": "0c06fa305c0bbc5e13b5713c016df1be4109dd38cd1d7722ea9fb85c13540fef",
+      "sessionKey": "247e6de90cb0971f06e6b2fc6e545baac9c1517e788a771fd06b4e266fb19c92",
+      "agent": "cursor",
+      "entry": "sdk",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 60,
+      "output": 9,
+      "cacheRead": 4,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 73,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "total-mismatch"
+     }
+    ],
+    "warnings": [
+     "SOURCE_ROW_INVALID"
+    ],
+    "sessions": []
+   }
+  },
+  {
+   "name": "cursor-csv",
+   "kind": "csv",
+   "text": "Date,Model,Input Tokens,Cache Read Tokens,Cache Write Tokens,Output Tokens,Total Tokens,Request ID\n2026-10-05T12:00:00Z,gpt-4.1,100,10,5,20,135,req-1\n2026-10-05T12:00:00Z,gpt-4.1,100,10,5,20,135,\n2026-10-05T12:00:00Z,gpt-4.1,100,10,5,20,135,\nbad-date,gpt-4.1,1,0,0,1,2,\n2026-10-06T00:00:00Z,gpt-4.1,7,0,0,3,\n",
+   "expected": {
+    "records": [
+     {
+      "id": "7a07106b0247f0eb3935c0af11b66b497e00479653c1ed41df7062ec8374659c",
+      "sessionKey": null,
+      "agent": "cursor",
+      "entry": "export",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 100,
+      "output": 20,
+      "cacheRead": 10,
+      "cacheWrite": 5,
+      "reasoning": null,
+      "totalTokens": 135,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "csvIdentity": null
+     },
+     {
+      "id": "f924361506da6d2d197b5206e7fc17008e9fef7ca39fe41f58ab65ea8718b49e",
+      "sessionKey": null,
+      "agent": "cursor",
+      "entry": "export",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 100,
+      "output": 20,
+      "cacheRead": 10,
+      "cacheWrite": 5,
+      "reasoning": null,
+      "totalTokens": 135,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "csvIdentity": "ecc948717bacb326124f155b2b25b7549eac1c74a72184da9c5593ffd4e17522"
+     },
+     {
+      "id": "97c7d16582c94c7ea2ded530c1fa1f87794adeda45425c940089ca5f836babd9",
+      "sessionKey": null,
+      "agent": "cursor",
+      "entry": "export",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 100,
+      "output": 20,
+      "cacheRead": 10,
+      "cacheWrite": 5,
+      "reasoning": null,
+      "totalTokens": 135,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "csvIdentity": "ee2a4c53ea4f303ff325438dcbfb56e38abde7cbf4efc15edde9ebfd3f898ba8"
+     }
+    ],
+    "warnings": [
+     "SOURCE_ROW_INVALID"
+    ],
+    "sessions": []
+   }
+  },
+  {
+   "name": "deepseek-parse",
+   "kind": "deepseek",
+   "objects": [
+    {
+     "type": "session",
+     "id": "ds-1",
+     "isSeeded": false,
+     "version": 2,
+     "cwd": "E:/work/demo"
+    },
+    {
+     "seq": 0,
+     "type": "request/header",
+     "time": "2026-10-05T12:00:00Z",
+     "data": {
+      "header": {
+       "config": {
+        "model": "deepseek-chat",
+        "provider": "deepseek"
+       }
+      }
+     }
+    },
+    {
+     "seq": 1,
+     "type": "assistant/message",
+     "time": "2026-10-05T12:00:00Z",
+     "data": {
+      "turn": 0,
+      "step": 0,
+      "usage": {
+       "inputTokens": 40,
+       "outputTokens": 6,
+       "cacheReadTokens": 2,
+       "totalTokens": 46
+      }
+     }
+    },
+    {
+     "seq": 2,
+     "type": "assistant/attempt",
+     "time": "2026-10-05T12:08:00Z",
+     "data": {
+      "turn": 0,
+      "step": 0,
+      "stream": [
+       {
+        "type": "chunk",
+        "chunk": {
+         "type": "usage",
+         "usage": {
+          "inputTokens": 41,
+          "outputTokens": 7,
+          "totalTokens": 48
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "seq": 3,
+     "type": "assistant/message",
+     "time": "2026-10-05T12:09:00Z",
+     "data": {
+      "turn": 1,
+      "step": 0
+     }
+    }
+   ],
+   "file": "E:/home/.dsh/sessions/session.v2.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "74bc3ad09192e7940d3ccf6bb951735d7a6434acd84bc7e718c4b4ea3ee40ef7",
+      "sessionKey": "45e37893e1727a5511f178efce0a7f93fdaa9988b132ae57ad24593ae06bd563",
+      "agent": "deepseek",
+      "entry": "harness",
+      "model": "deepseek-chat",
+      "provider": "deepseek",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 40,
+      "output": 6,
+      "cacheRead": 2,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 48,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "total-mismatch"
+     },
+     {
+      "id": "0ff32cc717abd4eba29d09a1cb2833ca4e7caaa641ca365ded37624535a567b0",
+      "sessionKey": "45e37893e1727a5511f178efce0a7f93fdaa9988b132ae57ad24593ae06bd563",
+      "agent": "deepseek",
+      "entry": "harness",
+      "model": "deepseek-chat",
+      "provider": "deepseek",
+      "timestamp": "2026-10-05T12:08:00.000Z",
+      "inputUncached": 41,
+      "output": 7,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 48,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     }
+    ],
+    "warnings": [
+     "USAGE_UNREPORTED"
+    ],
+    "sessions": []
+   }
+  },
+  {
+   "name": "zcode-parse",
+   "kind": "zcode",
+   "rows": [
+    {
+     "id": "z-1",
+     "session_id": "zs-1",
+     "provider_id": "zai",
+     "model_id": "glm-4.6",
+     "started_at": "2026-10-05T12:00:00Z",
+     "input_tokens": 50,
+     "output_tokens": 8,
+     "reasoning_tokens": 2,
+     "cache_read_input_tokens": 5,
+     "cache_creation_input_tokens": 0,
+     "provider_total_tokens": 63,
+     "computed_total_tokens": 63
+    },
+    {
+     "id": "z-2",
+     "session_id": "zs-1",
+     "model_id": "glm-4.6",
+     "started_at": "2026-10-05T12:10:00Z",
+     "input_tokens": 20,
+     "output_tokens": 4,
+     "reasoning_tokens": 1,
+     "computed_total_tokens": 25
+    },
+    {
+     "id": 7,
+     "input_tokens": 1
+    }
+   ],
+   "expected": {
+    "records": [
+     {
+      "id": "efdf60e96730e3057191b384ee2690e13c62af505f5f7f45812ec3faf065d8af",
+      "sessionKey": "5eb888b163971d9ed10f93dd57c5712900fe0e056285cbf010f90a46d94af2f1",
+      "agent": "zcode",
+      "entry": "cli",
+      "model": "glm-4.6",
+      "provider": "zai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 50,
+      "output": 8,
+      "cacheRead": 5,
+      "cacheWrite": 0,
+      "reasoning": 2,
+      "totalTokens": 63,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     },
+     {
+      "id": "4388be81f88d0c231c2f6a9960314c0d0c651ec4fbdc0cf7b545c2f2b9e38fb4",
+      "sessionKey": "5eb888b163971d9ed10f93dd57c5712900fe0e056285cbf010f90a46d94af2f1",
+      "agent": "zcode",
+      "entry": "cli",
+      "model": "glm-4.6",
+      "provider": "zai",
+      "timestamp": "2026-10-05T12:10:00.000Z",
+      "inputUncached": 20,
+      "output": 5,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": 1,
+      "totalTokens": 25,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "excludes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     }
+    ],
+    "warnings": [
+     "SOURCE_ROW_INVALID"
+    ],
+    "sessions": []
+   }
+  },
+  {
+   "name": "pi-parse",
+   "kind": "batch1",
+   "agent": "pi",
+   "objects": [
+    {
+     "type": "session",
+     "version": 3,
+     "id": "pi-1",
+     "cwd": "E:/work/demo"
+    },
+    {
+     "type": "message",
+     "id": "pm-1",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "message": {
+      "role": "assistant",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00Z",
+      "usage": {
+       "input": 20,
+       "output": 4,
+       "cacheRead": 2,
+       "reasoning": 1,
+       "totalTokens": 24
+      }
+     }
+    }
+   ],
+   "file": "E:/home/.pi/agent/sessions/pi.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "1dc16c38f1202bc5c1fdb541b156a79142e241ebd3850b1cd1ee2ceb3546fa65",
+      "sessionKey": "5a62147a67c53464ef39c5df3b1a424c0380174891f83c90aa3ed975c073ba1f",
+      "agent": "pi",
+      "entry": "cli",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 20,
+      "output": 4,
+      "cacheRead": 2,
+      "cacheWrite": null,
+      "reasoning": 1,
+      "totalTokens": 26,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "total-mismatch"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "5a62147a67c53464ef39c5df3b1a424c0380174891f83c90aa3ed975c073ba1f",
+      "id": "pi-1",
+      "cwd": "E:/work/demo",
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "cline-ide",
+   "kind": "batch1",
+   "agent": "cline",
+   "objects": [
+    {
+     "type": "say",
+     "say": "api_req_started",
+     "ts": 1791201600000,
+     "text": "{\"tokensIn\":30,\"tokensOut\":6,\"cacheReads\":2,\"cacheWrites\":1}",
+     "modelInfo": {
+      "modelId": "gpt-4.1",
+      "providerId": "openai"
+     }
+    },
+    {
+     "type": "say",
+     "say": "api_req_started",
+     "ts": 1791202260000,
+     "text": "{\"tokensIn\":null,\"tokensOut\":null}"
+    }
+   ],
+   "file": "E:/home/tasks/task-1/ui_messages.json",
+   "expected": {
+    "records": [],
+    "warnings": [
+     "SOURCE_FORMAT_UNSUPPORTED"
+    ],
+    "sessions": []
+   }
+  },
+  {
+   "name": "cline-cli",
+   "kind": "batch1",
+   "agent": "cline",
+   "objects": [
+    {
+     "sessionId": "cli-s",
+     "messages": [
+      {
+       "role": "assistant",
+       "id": "cm-1",
+       "ts": "2026-10-05T12:00:00Z",
+       "modelInfo": {
+        "id": "gpt-4.1",
+        "provider": "openai"
+       },
+       "metrics": {
+        "inputTokens": 12,
+        "outputTokens": 3,
+        "cacheReadTokens": 1,
+        "cacheWriteTokens": 0
+       }
+      }
+     ]
+    }
+   ],
+   "file": "E:/home/.cline/data/sessions/cli-s.messages.json",
+   "expected": {
+    "records": [
+     {
+      "id": "beb4f937381ccec818c5dd4c9cdcf9ad3f2de71198a7d2bb3bc583c8dc9854f5",
+      "sessionKey": "fbf01b1f5816088d7845b38c053c88ce6afe307c6ad65ebd2f52590a2b55cc8c",
+      "agent": "cline",
+      "entry": "cli",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 11,
+      "output": 3,
+      "cacheRead": 1,
+      "cacheWrite": 0,
+      "reasoning": null,
+      "totalTokens": 15,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "fbf01b1f5816088d7845b38c053c88ce6afe307c6ad65ebd2f52590a2b55cc8c",
+      "id": "cli-s",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "copilot-state",
+   "kind": "batch1",
+   "agent": "copilot",
+   "objects": [
+    {
+     "type": "session.shutdown",
+     "id": "sh-1",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "data": {
+      "modelMetrics": {
+       "gpt-4.1": {
+        "usage": {
+         "inputTokens": 50,
+         "outputTokens": 10,
+         "cacheReadTokens": 5,
+         "reasoningTokens": 2
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "session.shutdown",
+     "id": "sh-2",
+     "timestamp": "2026-10-05T12:12:00Z",
+     "data": {
+      "modelMetrics": {
+       "gpt-4.1": {
+        "usage": {
+         "inputTokens": 80,
+         "outputTokens": 16,
+         "cacheReadTokens": 8,
+         "reasoningTokens": 3
+        }
+       }
+      }
+     }
+    }
+   ],
+   "file": "E:/home/.copilot/session-state/s-1/events.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "8977a938fdd0903692de8e28ae8aee80ce82c7c704c8280231b75bb5411ae27b",
+      "sessionKey": "4b3b742331a7146cafe245f6370c16cd3888daed3c29319c58d17d2363636839",
+      "agent": "copilot",
+      "entry": "cli",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 45,
+      "output": 10,
+      "cacheRead": 5,
+      "cacheWrite": null,
+      "reasoning": 2,
+      "totalTokens": 60,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     },
+     {
+      "id": "34c6b98b31b27a76a9e8fef790caa822222c86bc6ddc35a2142b76e6d204ac62",
+      "sessionKey": "4b3b742331a7146cafe245f6370c16cd3888daed3c29319c58d17d2363636839",
+      "agent": "copilot",
+      "entry": "cli",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:12:00.000Z",
+      "inputUncached": 72,
+      "output": 16,
+      "cacheRead": 8,
+      "cacheWrite": null,
+      "reasoning": 3,
+      "totalTokens": 96,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "4b3b742331a7146cafe245f6370c16cd3888daed3c29319c58d17d2363636839",
+      "id": "s-1",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "copilot-intervals",
+   "kind": "intervals",
+   "records": [
+    {
+     "id": "8977a938fdd0903692de8e28ae8aee80ce82c7c704c8280231b75bb5411ae27b",
+     "sessionKey": "4b3b742331a7146cafe245f6370c16cd3888daed3c29319c58d17d2363636839",
+     "agent": "copilot",
+     "entry": "cli",
+     "model": "gpt-4.1",
+     "provider": "openai",
+     "timestamp": "2026-10-05T12:00:00.000Z",
+     "inputUncached": 45,
+     "output": 10,
+     "cacheRead": 5,
+     "cacheWrite": null,
+     "reasoning": 2,
+     "totalTokens": 60,
+     "semantics": {
+      "input": "inclusive",
+      "sourceOutput": "includes-reasoning",
+      "reasoning": "subset-of-normalized-output"
+     },
+     "sharedKey": null,
+     "sharedRecordIds": null,
+     "quality": "measured"
+    },
+    {
+     "id": "34c6b98b31b27a76a9e8fef790caa822222c86bc6ddc35a2142b76e6d204ac62",
+     "sessionKey": "4b3b742331a7146cafe245f6370c16cd3888daed3c29319c58d17d2363636839",
+     "agent": "copilot",
+     "entry": "cli",
+     "model": "gpt-4.1",
+     "provider": "openai",
+     "timestamp": "2026-10-05T12:12:00.000Z",
+     "inputUncached": 72,
+     "output": 16,
+     "cacheRead": 8,
+     "cacheWrite": null,
+     "reasoning": 3,
+     "totalTokens": 96,
+     "semantics": {
+      "input": "inclusive",
+      "sourceOutput": "includes-reasoning",
+      "reasoning": "subset-of-normalized-output"
+     },
+     "sharedKey": null,
+     "sharedRecordIds": null,
+     "quality": "measured"
+    }
+   ],
+   "expected": {
+    "records": [
+     {
+      "id": "8977a938fdd0903692de8e28ae8aee80ce82c7c704c8280231b75bb5411ae27b",
+      "sessionKey": "4b3b742331a7146cafe245f6370c16cd3888daed3c29319c58d17d2363636839",
+      "agent": "copilot",
+      "entry": "cli",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 45,
+      "output": 10,
+      "cacheRead": 5,
+      "cacheWrite": null,
+      "reasoning": 2,
+      "totalTokens": 60,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "copilotCumulative": {
+       "inputUncached": 45,
+       "output": 10,
+       "cacheRead": 5,
+       "cacheWrite": null,
+       "reasoning": 2,
+       "totalTokens": 60,
+       "quality": "measured"
+      },
+      "accountingKind": "session-model-interval"
+     },
+     {
+      "id": "34c6b98b31b27a76a9e8fef790caa822222c86bc6ddc35a2142b76e6d204ac62",
+      "sessionKey": "4b3b742331a7146cafe245f6370c16cd3888daed3c29319c58d17d2363636839",
+      "agent": "copilot",
+      "entry": "cli",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:12:00.000Z",
+      "inputUncached": 27,
+      "output": 6,
+      "cacheRead": 3,
+      "cacheWrite": null,
+      "reasoning": 1,
+      "totalTokens": 36,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured",
+      "copilotCumulative": {
+       "inputUncached": 72,
+       "output": 16,
+       "cacheRead": 8,
+       "cacheWrite": null,
+       "reasoning": 3,
+       "totalTokens": 96,
+       "quality": "measured"
+      },
+      "accountingKind": "session-model-interval"
+     }
+    ],
+    "warnings": [],
+    "sessions": []
+   }
+  },
+  {
+   "name": "copilot-otel",
+   "kind": "batch1",
+   "agent": "copilot",
+   "objects": [
+    {
+     "type": "span",
+     "traceId": "tr-1",
+     "spanId": "sp-1",
+     "startTime": [
+      1791230400,
+      500000000
+     ],
+     "attributes": {
+      "gen_ai.operation.name": "chat",
+      "gen_ai.conversation.id": "otel-s",
+      "gen_ai.response.id": "resp-1",
+      "gen_ai.response.model": "gpt-4.1",
+      "gen_ai.usage.input_tokens": 22,
+      "gen_ai.usage.output_tokens": 4,
+      "gen_ai.usage.cache_read.input_tokens": 2
+     }
+    },
+    {
+     "type": "span",
+     "traceId": "tr-2",
+     "spanId": "sp-2",
+     "attributes": {
+      "gen_ai.operation.name": "invoke_agent",
+      "gen_ai.usage.input_tokens": 999
+     }
+    }
+   ],
+   "file": "E:/home/otel/x.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "cb347b075c315af721a8cf83d0947fb5129386e2b16887e5d6e9a17b0f6f7ba1",
+      "sessionKey": "78c85910a911dc21c744f458f2f1121d7c12e5b5dfbb76157fac15b55c03ebcc",
+      "agent": "copilot",
+      "entry": "otel",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T20:00:00.500Z",
+      "inputUncached": 20,
+      "output": 4,
+      "cacheRead": 2,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 26,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     }
+    ],
+    "warnings": [],
+    "sessions": []
+   }
+  },
+  {
+   "name": "qwen-parse",
+   "kind": "extra",
+   "agent": "qwen",
+   "objects": [
+    {
+     "type": "assistant",
+     "sessionId": "qw-1",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "model": "qwen3-coder",
+     "usageMetadata": {
+      "promptTokenCount": 60,
+      "candidatesTokenCount": 8,
+      "cachedContentTokenCount": 10,
+      "thoughtsTokenCount": 3,
+      "totalTokenCount": 71
+     }
+    },
+    {
+     "type": "assistant",
+     "sessionId": "qw-1",
+     "timestamp": "2026-10-05T12:00:00Z",
+     "model": "qwen3-coder",
+     "usageMetadata": {
+      "promptTokenCount": 60,
+      "candidatesTokenCount": 8,
+      "thoughtsTokenCount": 3,
+      "totalTokenCount": 71
+     }
+    }
+   ],
+   "expected": {
+    "records": [
+     {
+      "id": "6a7c6e1cf3ac4dc3e9823ec5cb74101de6245d78cc408a1eb2f8df0a95e77e3f",
+      "sessionKey": "a4126ef42730af0ddfe4839eaa021971108e152029047bc21035db6fa971fefd",
+      "agent": "qwen",
+      "entry": "cli",
+      "model": "qwen3-coder",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 50,
+      "output": 11,
+      "cacheRead": 10,
+      "cacheWrite": null,
+      "reasoning": 3,
+      "totalTokens": 71,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "excludes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     },
+     {
+      "id": "e1882c59f8d05006566304193e7e33a2b27ca1ae23f41ae21ceb3e7b7357b7ee",
+      "sessionKey": "a4126ef42730af0ddfe4839eaa021971108e152029047bc21035db6fa971fefd",
+      "agent": "qwen",
+      "entry": "cli",
+      "model": "qwen3-coder",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 60,
+      "output": 11,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": 3,
+      "totalTokens": 71,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "excludes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "a4126ef42730af0ddfe4839eaa021971108e152029047bc21035db6fa971fefd",
+      "id": "qw-1",
+      "cwd": null,
+      "title": null
+     },
+     {
+      "key": "a4126ef42730af0ddfe4839eaa021971108e152029047bc21035db6fa971fefd",
+      "id": "qw-1",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "kilo-parse",
+   "kind": "extra",
+   "agent": "kilo",
+   "objects": [
+    {
+     "role": "assistant",
+     "id": "kl-1",
+     "sessionID": "kl-s",
+     "modelID": "gpt-4.1",
+     "providerID": "openai",
+     "time": {
+      "created": 1791201600000
+     },
+     "tokens": {
+      "input": 40,
+      "output": 6,
+      "reasoning": 2,
+      "cache": {
+       "read": 3,
+       "write": 0
+      },
+      "total": 46
+     }
+    }
+   ],
+   "expected": {
+    "records": [
+     {
+      "id": "ced2fd3c2cc1c2d795517e3b6996def59d3d0eb2eedc6dccaac3f754f409372d",
+      "sessionKey": "39fe39b97dbfb8a249c04dfa55d0d586e85fd99a30c149115501339444edf749",
+      "agent": "kilo",
+      "entry": "cli",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 40,
+      "output": null,
+      "cacheRead": 3,
+      "cacheWrite": 0,
+      "reasoning": 2,
+      "totalTokens": 46,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": "922cd28ad2efab65dec99c77291b5d402bbf0368a74c67aa9f6d5572b24be3fd",
+      "sharedRecordIds": [
+       "c296d3b7aad171f3600b91eb0c1828ef274fd5e2d6fb60c0059f9763e211b64d",
+       "40ab925befbd4363bd076b5ce3fb9efe825b1e5d3f37ed4e3331d560630adadc",
+       "ced2fd3c2cc1c2d795517e3b6996def59d3d0eb2eedc6dccaac3f754f409372d"
+      ],
+      "quality": "total-mismatch"
+     }
+    ],
+    "warnings": [
+     "USAGE_UNREPORTED"
+    ],
+    "sessions": [
+     {
+      "key": "39fe39b97dbfb8a249c04dfa55d0d586e85fd99a30c149115501339444edf749",
+      "id": "kl-s",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "kimi-parse",
+   "kind": "extra",
+   "agent": "kimi",
+   "objects": [
+    {
+     "type": "usage.record",
+     "usageScope": "turn",
+     "time": "2026-10-05T12:00:00Z",
+     "model": "kimi-k2",
+     "usage": {
+      "inputOther": 30,
+      "output": 5,
+      "inputCacheRead": 4,
+      "inputCacheCreation": 1
+     }
+    },
+    {
+     "message": {
+      "type": "StatusUpdate",
+      "payload": {
+       "message_id": "km-1",
+       "token_usage": {
+        "input_other": 10,
+        "output": 2,
+        "input_cache_read": 1,
+        "total": 12
+       }
+      }
+     },
+     "timestamp": 1791201600
+    }
+   ],
+   "file": "E:/home/.kimi/sessions/k-s/wire.jsonl",
+   "expected": {
+    "records": [],
+    "warnings": [
+     "SOURCE_ROW_INVALID"
+    ],
+    "sessions": []
+   }
+  },
+  {
+   "name": "kimi-parse-win",
+   "kind": "extra",
+   "agent": "kimi",
+   "objects": [
+    {
+     "type": "usage.record",
+     "usageScope": "turn",
+     "time": "2026-10-05T12:00:00Z",
+     "model": "kimi-k2",
+     "usage": {
+      "inputOther": 30,
+      "output": 5,
+      "inputCacheRead": 4,
+      "inputCacheCreation": 1
+     }
+    },
+    {
+     "message": {
+      "type": "StatusUpdate",
+      "payload": {
+       "message_id": "km-1",
+       "token_usage": {
+        "input_other": 10,
+        "output": 2,
+        "input_cache_read": 1,
+        "total": 12
+       }
+      }
+     },
+     "timestamp": 1791201600
+    }
+   ],
+   "file": "E:\\home\\.kimi\\sessions\\k-s\\wire.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "b329bb00037aba51d9e5f6384a1765f328c3f9f07fb69afab9d7227f56092edb",
+      "sessionKey": "7db0973223785cf1e3fb0d92314dc3d227dd255080477a81d0caa55b40ce2f46",
+      "agent": "kimi",
+      "entry": "cli",
+      "model": "kimi-k2",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 30,
+      "output": 5,
+      "cacheRead": 4,
+      "cacheWrite": 1,
+      "reasoning": null,
+      "totalTokens": 40,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     },
+     {
+      "id": "bcb4b595d955f8e09df954964f5bedc32f2afec53d1921e4fa8c5572513897eb",
+      "sessionKey": "7db0973223785cf1e3fb0d92314dc3d227dd255080477a81d0caa55b40ce2f46",
+      "agent": "kimi",
+      "entry": "cli",
+      "model": "unknown",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 10,
+      "output": 2,
+      "cacheRead": 1,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 13,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "total-mismatch"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "7db0973223785cf1e3fb0d92314dc3d227dd255080477a81d0caa55b40ce2f46",
+      "id": "k-s",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "kimi-agents-layout",
+   "kind": "extra",
+   "agent": "kimi",
+   "objects": [
+    {
+     "type": "usage.record",
+     "usageScope": "turn",
+     "time": "2026-10-05T12:00:00Z",
+     "model": "kimi-k2",
+     "usage": {
+      "inputOther": 30,
+      "output": 5,
+      "inputCacheRead": 4,
+      "inputCacheCreation": 1
+     }
+    },
+    {
+     "message": {
+      "type": "StatusUpdate",
+      "payload": {
+       "message_id": "km-1",
+       "token_usage": {
+        "input_other": 10,
+        "output": 2,
+        "input_cache_read": 1,
+        "total": 12
+       }
+      }
+     },
+     "timestamp": 1791201600
+    }
+   ],
+   "file": "E:\\home\\agents\\k-s\\wire.jsonl",
+   "expected": {
+    "records": [
+     {
+      "id": "1f339bf172c8c496e546ada9b206f30585385b6f13f08dac459ad93ea01bb61b",
+      "sessionKey": "21d604be4d1406fab63eb9c6fdab0eab1b956d8a4bc24e80a7be25ed4b59cc01",
+      "agent": "kimi",
+      "entry": "cli",
+      "model": "kimi-k2",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 30,
+      "output": 5,
+      "cacheRead": 4,
+      "cacheWrite": 1,
+      "reasoning": null,
+      "totalTokens": 40,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "measured"
+     },
+     {
+      "id": "f79752752f655693840e076ed70a13cf951f8a2aa6e67d846ed47f80a2ea030e",
+      "sessionKey": "21d604be4d1406fab63eb9c6fdab0eab1b956d8a4bc24e80a7be25ed4b59cc01",
+      "agent": "kimi",
+      "entry": "cli",
+      "model": "unknown",
+      "provider": "unknown",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 10,
+      "output": 2,
+      "cacheRead": 1,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 13,
+      "semantics": {
+       "input": "exclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "total-mismatch"
+     }
+    ],
+    "warnings": [],
+    "sessions": [
+     {
+      "key": "21d604be4d1406fab63eb9c6fdab0eab1b956d8a4bc24e80a7be25ed4b59cc01",
+      "id": "home",
+      "cwd": null,
+      "title": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "continue-parse",
+   "kind": "extra",
+   "agent": "continue",
+   "rows": [
+    {
+     "id": 1,
+     "model": "gpt-4.1",
+     "provider": "openai",
+     "tokens_prompt": 20,
+     "tokens_generated": 4,
+     "timestamp": "2026-10-05 12:00:00"
+    },
+    {
+     "id": 2,
+     "model": "gpt-4.1",
+     "tokens_prompt": 5,
+     "tokens_generated": 1,
+     "timestamp": "bad"
+    }
+   ],
+   "expected": {
+    "records": [
+     {
+      "id": "f8ada738de2ae342ee6b07ff473d9eee177f17d072c1a75de8c40569fa208cbc",
+      "sessionKey": null,
+      "agent": "continue",
+      "entry": "desktop",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "timestamp": "2026-10-05T12:00:00.000Z",
+      "inputUncached": 20,
+      "output": 4,
+      "cacheRead": null,
+      "cacheWrite": null,
+      "reasoning": null,
+      "totalTokens": 24,
+      "semantics": {
+       "input": "inclusive",
+       "sourceOutput": "includes-reasoning",
+       "reasoning": "subset-of-normalized-output"
+      },
+      "sharedKey": null,
+      "sharedRecordIds": null,
+      "quality": "partial",
+      "measurementBasis": "client-estimated"
+     }
+    ],
+    "warnings": [
+     "SOURCE_USAGE_ESTIMATED",
+     "SOURCE_ROW_INVALID"
+    ],
+    "sessions": []
+   }
+  }
+ ]
+}

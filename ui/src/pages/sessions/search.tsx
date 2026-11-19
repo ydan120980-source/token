@@ -27,14 +27,14 @@ export function ContentSearch({ phrase, range, agent, rangeLabel, sessions, onCl
   useEffect(() => { batch(0, []); return () => { seq.current++; }; }, [phrase, range, agent]);
   const byKey = new Map(sessions.map(session => [session.key, session]));
   const rows = run.found.flatMap(result => { const session = byKey.get(result.key); return session ? [{ result, session }] : []; });
-  const more = run.next !== null && run.state !== "loading";
+  const more = run.next !== null;
   const status = run.state === "error" ? "搜索失败，稍后再试。"
     : (run.state === "loading" && !run.searched ? "正在搜索…" : rows.length + " 个会话有“" + phrase + "”") + (run.total ? " · 已搜 " + run.searched + " / " + run.total + " 个会话" : "");
   return <div className="flex flex-col gap-3" data-content-search>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-caption text-muted-foreground" role="status" aria-live="polite" data-content-search-status>{rangeLabel + " · " + status}</p>
       <div className="flex items-center gap-2">
-        {more ? <Button variant="secondary" size="compact" onClick={() => batch(run.next!, run.found)}>{"继续搜索更早的会话"}</Button> : null}
+        {more ? <Button variant="secondary" size="compact" loading={run.state === "loading"} disabled={run.state === "loading"} onClick={() => batch(run.next!, run.found)}>{"继续搜索更早的会话"}</Button> : null}
         <Button variant="tertiary" size="compact" onClick={onClose}>{"返回会话列表"}</Button>
       </div>
     </div>

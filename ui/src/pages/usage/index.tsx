@@ -23,7 +23,7 @@ const periods = [
 export function UsagePage() {
   const { active, visible, mounted, reveal } = usePageStages("usage", 3);
   const host = useUsageHost(), root = useRef<HTMLDivElement>(null);
-  const scheduled = useRef(0), held = useRef<{ element: HTMLElement; top: number } | null>(null);
+  const scheduled = useRef(0), held = useRef<{ element: HTMLElement; top: number; scrollY: number } | null>(null);
   useEffect(() => {
     let locating = false;
     const interrupt = () => {
@@ -70,16 +70,23 @@ export function UsagePage() {
   }, [host, reveal]);
   useLayoutEffect(() => {
     const anchor = held.current;
-    if (!active || !anchor?.element.isConnected) return;
+    if (!active || !anchor?.element.isConnected) { held.current = null; return; }
+    // The anchor keeps a section still when a commit reflows the page above it. A scroll of the
+    // person's own does the same thing to that rect, and correcting for it would silently undo
+    // their scroll, so an anchor only survives a commit at the scroll position it was taken at.
+    // The scroll may also arrive before this commit (a test's scrollIntoView, a smooth scroll), so
+    // an anchor that is already out of date never moves the page at all.
+    const scrolled = Math.abs(window.scrollY - anchor.scrollY) > .5;
+    held.current = null;
+    if (scrolled) return;
     const delta = anchor.element.getBoundingClientRect().top - anchor.top;
     if (Math.abs(delta) > .5) window.scrollBy({ top: delta, behavior: "instant" });
-    held.current = null;
   });
   if (!active && mounted === 0) return null;
   const snapshot = host.get(), { state, view } = snapshot;
   const remember = () => {
     const section = document.activeElement?.closest<HTMLElement>("[data-usage-trend],[data-usage-activity]");
-    if (section) held.current = { element: section, top: section.getBoundingClientRect().top };
+    if (section) held.current = { element: section, top: section.getBoundingClientRect().top, scrollY: window.scrollY };
   };
   return <ReactActivity mode={active ? "visible" : "hidden"}><div ref={root} className="flex w-full min-w-0 flex-col gap-6" data-usage-page
     onClickCapture={remember} onKeyDownCapture={remember}>
@@ -89,7 +96,7 @@ export function UsagePage() {
           <Segmented value={state.period} onChange={period => host.set({ period })} items={periods} aria-label="统计时间范围" />
         </div>
         <div data-usage-refresh title={snapshot.busy ? "正在采集…" : "刷新统计"}>
-          <IconButton icon={IconRefresh} label="刷新统计" disabled={snapshot.busy} onClick={() => void host.refresh()} />
+          <IconButton icon={IconRefresh} label="刷新统计" loading={snapshot.busy} disabled={snapshot.busy} onClick={() => host.refresh()} />
         </div>
         <div data-usage-export title="导出统计">
           <IconButton icon={IconDownload} label="导出统计" onClick={host.export} />

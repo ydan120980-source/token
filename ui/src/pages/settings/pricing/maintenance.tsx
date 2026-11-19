@@ -49,7 +49,7 @@ export function CodexMaintenance() {
       <Disclosure summary="重建说明"><p className="text-caption text-muted-foreground">先预览差额，再备份并重建本应用中可重读的 Codex 会话。保留原始日志、其他来源、账号连接及无法重读的历史。缺失旧日志无法凭个人页总量恢复。</p></Disclosure>
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="secondary" loading={scanning} disabled={scanning} onClick={() => void preview()}>扫描并预览重建</Button>
-        <Button variant="primary" disabled={!candidate || applying} onClick={() => void apply()}>备份并应用重建</Button>
+        <Button variant="primary" loading={applying} disabled={!candidate || applying} onClick={() => void apply()}>备份并应用重建</Button>
       </div>
       <p className="text-caption text-foreground" role="status" data-codex-status>{message}</p>
     </div>

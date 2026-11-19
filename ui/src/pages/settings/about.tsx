@@ -25,7 +25,7 @@ export function About() {
       ? <Button variant="secondary" size="compact" onClick={() => { void updateActions.cancel(); }}>取消下载</Button>
       : update.status === "available" && update.latest?.url
         ? <Button variant="primary" size="compact" onClick={() => updateActions.open(update.latest!.url!)}>打开下载页</Button>
-        : <Button variant="secondary" size="compact" disabled={!update.supported || busy} onClick={() => { void updateActions.check(); }}>检查更新</Button>;
+        : <Button variant="secondary" size="compact" loading={busy} disabled={!update.supported || busy} onClick={() => { void updateActions.check(); }}>检查更新</Button>;
   useEffect(() => { if (active) void bridge?.dataInfo?.().then(info => setVersion(info.version)).catch(() => {}); }, [active, bridge]);
   return <Section name="about" title="关于">
     <Block>

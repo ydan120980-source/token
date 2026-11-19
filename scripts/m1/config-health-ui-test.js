@@ -24,7 +24,7 @@ const output = process.env.CONFIG_UI_EVIDENCE || path.join(os.tmpdir(), 'config-
       await page.getByRole('tablist', { name: 'Agent 管理分类', exact: true }).getByRole('tab', { name: /MCP/ }).click();
       await page.locator('[data-agent-admin]').getByRole('button', { name: '按目录逐项检查和编辑' }).click(); await page.locator('[data-config-center]').waitFor();
       if (scale === 1.5) await page.evaluate(() => document.body.classList.add('dark'));
-      assert.match(page.url(), /^file:/); assert.match(await page.title(), /Agent Usage/);
+      assert.match(page.url(), /^file:/); assert.match(await page.title(), /QuotaDock/);
       assert.match(await page.locator('[data-config-center]').innerText(), /尚未选择/); assert(await page.locator('[data-source-config-action="configCheck"] button').isDisabled());
       await app.evaluate(({ dialog }, selected) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] }); }, home);
       await page.locator('[data-source-config-action="configChoose"] button').click(); await until(page, () => !document.querySelector('[data-source-config-action="configChoose"] button').disabled);

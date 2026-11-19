@@ -42,6 +42,7 @@ const { fixtures } = require('../../tests/m1/fixtures');
       await page.waitForFunction(() => document.querySelector('[data-usage-today]').textContent.includes('2026-12-31'));
       assert.equal(await page.title(), 'QuotaDock · 额度台');
       assert.match(await usageUi.value(page, 'today-tokens'), /2\.0M/);
+      await usageUi.calendarCells(page).first().waitFor();
       const gridDates = await usageUi.calendarCells(page).evaluateAll(buttons => buttons.map(button => button.dataset.heatKey));
       for (const period of ['30', '7', 'today', 'all']) {
         await usageUi.period(page, period);

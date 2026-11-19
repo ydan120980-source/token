@@ -58,7 +58,7 @@ const output = process.env.LIFECYCLE_EVIDENCE_DIR || path.join(os.tmpdir(), 'age
     fs.writeFileSync(path.join(output, 'checks.json'), JSON.stringify({ ...checks, errors }, null, 2));
     assert.deepEqual(checks.failures, []);
     assert.deepEqual(errors, []); assert.deepEqual(fs.readFileSync(path.join(usage, 'statistics.json')), before);
-    assert.match(await page.title(), /Agent Usage/); assert.match(page.url(), /desktop-reference.*index\.html/);
+    assert.match(await page.title(), /QuotaDock/); assert.match(page.url(), /desktop-reference.*index\.html/);
     await page.screenshot({ path: path.join(output, 'empty-cost-after-lifecycle.png') });
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify({ packaged: Boolean(process.env.QUOTA_PACKAGED_EXE), ...checks, emptyMonthNavigates: true, noErrors: true, ledgerUnchanged: true, realAccountRequests: 0 }, null, 2));
     console.log('PASS: renderer lifecycle, empty month, live hover, IME and cancelled swipe; ' + output);

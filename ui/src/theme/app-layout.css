@@ -1239,15 +1239,115 @@ html:has(body.dark)::-webkit-scrollbar-thumb:hover {
   cursor: pointer;
   user-select: none;
 }
-#quotaCards .quota-card.is-dragging {
-  z-index: 2;
-  box-shadow: var(--pop-shadow);
-  cursor: grabbing;
+/* Drag physics (owner 2026-11-16): a card keeps still on hover and only deepens its shadow, lifts
+   while held, and the slot it left behind is a striped outline. Values are the --drag-* tokens. */
+#quotaCards .quota-card {
+  cursor: grab;
+  transition: box-shadow var(--drag-feedback) var(--drag-ease), border-color var(--drag-feedback) ease;
+}
+#quotaCards .quota-card:hover:not(.is-flying) {
+  transform: none;
+  box-shadow: var(--drag-hover);
+}
+#quotaCards .quota-card:active:not(.is-flying) {
+  transform: none;
+  transition: none;
+}
+/* A card is reachable with Tab (Alt + arrows move it), so it draws the same focus ring as its own
+   controls. It never lifts or scales - only the outline appears. */
+#quotaCards .quota-card:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 3px;
+}
+/* The card in hand is lifted out of the grid. Its position is NOT set here: the script owns it,
+   because it changes with the phase - `fixed` while the pointer carries it (viewport space, no
+   arithmetic), `absolute` once released (grid space, so the page scroll moves it with the document
+   instead of leaving it pinned to the screen). A `position: fixed !important` here would silently
+   override the second one. */
+#quotaCards .quota-card.is-flying {
+  z-index: 9999 !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  box-shadow: var(--drag-lift);
+  border-radius: var(--radius-sheet);
+  transform-origin: center center;
+  will-change: transform, box-shadow;
+  transition: box-shadow var(--drag-lift-time) var(--drag-ease);
+}
+#quotaCards .quota-card.is-flying[data-settling="true"] {
+  box-shadow: var(--drag-land);
+}
+#quotaCards .quota-card.ff-drag-placeholder {
+  border-radius: var(--radius-sheet);
+  aspect-ratio: 1;
+}
+body.quota-dragging, body.quota-dragging *,
+body.is-sorting, body.is-sorting * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+/* The slot a picked-up card left behind: a micro-outlined box with 45° zebra stripes. */
+.ff-drag-placeholder {
+  border: 1.5px solid var(--drag-slot-edge);
+  border-radius: var(--radius-sheet);
+  background-color: var(--drag-slot-fill);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--drag-slot-stripe) 0px,
+    var(--drag-slot-stripe) 1.5px,
+    transparent 1.5px,
+    transparent 10px
+  );
+  box-sizing: border-box;
   pointer-events: none;
 }
-body.quota-dragging, body.quota-dragging * {
-  cursor: grabbing;
-  user-select: none;
+
+/* The card in hand: lifted, tilted by its own velocity, settling back onto its shadow before it lands. */
+.ff-drag-flying {
+  box-shadow: var(--drag-lift);
+  border-radius: var(--radius-sheet);
+  pointer-events: none;
+  transform-origin: center center;
+  will-change: transform, box-shadow;
+  transition: box-shadow var(--drag-lift-time) var(--drag-ease);
+}
+.ff-drag-flying[data-settling="true"] {
+  box-shadow: var(--drag-land);
+}
+.ff-drag-flying [data-widget-slot] {
+  margin-bottom: 0;
+}
+
+/* Draggable widgets follow the same rules as the cards. */
+[data-sortable] [data-sort-key] {
+  cursor: grab;
+}
+[data-sortable] [data-sort-key] > * {
+  transition: box-shadow var(--drag-feedback) var(--drag-ease), border-color var(--drag-feedback) ease;
+  border-radius: var(--radius-sheet);
+}
+[data-sortable] [data-sort-key]:not([data-sort-placeholder]):hover > * {
+  transform: none;
+  box-shadow: var(--drag-hover);
+}
+[data-sortable] [data-sort-key]:not([data-sort-placeholder]):active > * {
+  transform: none;
+  transition: none;
+}
+[data-sortable] [data-sort-key] button,
+[data-sortable] [data-sort-key] a,
+[data-sortable] [data-sort-key] input,
+[data-sortable] [data-sort-key] select,
+[data-sortable] [data-sort-key] [role="button"],
+[data-sortable] [data-sort-key] summary {
+  cursor: pointer;
+}
+#quotaCards .quota-card button,
+#quotaCards .quota-card a,
+#quotaCards .quota-card input,
+#quotaCards .quota-card [role="button"] {
+  cursor: pointer;
 }
 .quota-card-mark {
   position: absolute;
@@ -1270,13 +1370,6 @@ body.dark .quota-card-mark {
   align-items: center;
   gap: 6px;
   min-width: 0;
-}
-.quota-card-head[data-mark-only] h3 {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
 }
 /* The chip shows whole or not at all: when it does not fit it wraps past the one line this slot shows. */
 .quota-plan-slot {

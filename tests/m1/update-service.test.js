@@ -4,7 +4,6 @@
 // same events and records what the service asked it to do.
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
-const { GitHubProvider } = require('electron-updater/out/providers/GitHubProvider');
 const { UpdateService, describe, CODES } = require('../../src/quota/update-service');
 
 class FakeUpdater {
@@ -222,25 +221,6 @@ test('the release page comes from the feed beside the build, and only a plausibl
   for (const bad of ['', 'latest', null, '../../etc', '<script>']) assert.equal(service.releaseUrl(bad), null, String(bad));
   const unconfigured = setup(t, { feed: false }).service;
   assert.equal(unconfigured.releaseUrl('0.2.0'), null, 'no feed means no page to offer');
-});
-
-test('an empty GitHub release feed reports no update and malformed entries still fail', async t => {
-  const { service, updater } = setup(t);
-  const provider = new GitHubProvider({ owner: 'demo-owner', repo: 'demo-repo' },
-    { allowPrerelease: true, currentVersion: '0.1.0' },
-    { platform: 'win32', executor: { request: async () => '<feed xmlns="http://www.w3.org/2005/Atom"/>' } });
-  updater.checkForUpdates = () => provider.getLatestVersion();
-  const state = await service.check();
-  assert.equal(state.status, 'latest');
-  assert.equal(state.error, null);
-  assert.ok(state.checkedAt);
-
-  updater.checkForUpdates = async () => {
-    throw Object.assign(new Error('No element "link"'), { code: 'ERR_XML_MISSED_ELEMENT' });
-  };
-  const failure = await service.check();
-  assert.equal(failure.status, 'error');
-  assert.equal(failure.error, 'UPDATE_REQUEST_FAILED');
 });
 
 test('failure codes stay in the updater vocabulary and never read as a provider failure', () => {

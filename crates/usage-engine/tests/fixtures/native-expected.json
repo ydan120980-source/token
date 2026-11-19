@@ -1,0 +1,2458 @@
+{
+ "engine": "tokscale/4.17.0",
+ "sha256": "bea88fa095e89aea988067729c4c05c8c72fa6760c975ad7a1dd4fbeac60d085",
+ "cases": {
+  "basic": {
+   "rows": [
+    {
+     "id": "r1",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 120
+    },
+    {
+     "id": "r2",
+     "timestamp": "2026-11-11T00:00:00Z",
+     "totalTokens": 300
+    },
+    {
+     "id": "zero",
+     "timestamp": "2026-11-11T00:00:00Z",
+     "totalTokens": 0
+    }
+   ],
+   "wireSha256": "6f90748534c34dc78d2d23bf146df8392db7943fd341103e65e9ff455323f12e",
+   "wireBytes": 842,
+   "eligible": 3,
+   "expected": 420,
+   "totals": {
+    "totalInput": 420,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 3,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 420,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 3,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "empty": {
+   "rows": [],
+   "wireSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+   "wireBytes": 1,
+   "eligible": 0,
+   "expected": 0,
+   "totals": {
+    "totalInput": 0,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 0,
+   "entries": []
+  },
+  "only-zero": {
+   "rows": [
+    {
+     "id": "z1",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 0
+    },
+    {
+     "id": "z2",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 0
+    }
+   ],
+   "wireSha256": "1136153d406e1d8b50cf75ed62b63c6b1f135088bd73993c55934c0092ebbced",
+   "wireBytes": 556,
+   "eligible": 2,
+   "expected": 0,
+   "totals": {
+    "totalInput": 0,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 2,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 0,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 2,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "excluded": {
+   "rows": [
+    {
+     "id": "neg",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": -1
+    },
+    {
+     "id": "null",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": null
+    },
+    {
+     "id": "missing",
+     "timestamp": "2026-11-10T00:00:00Z"
+    },
+    {
+     "id": "nan",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": "NaN"
+    },
+    {
+     "id": "ok",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 50
+    }
+   ],
+   "wireSha256": "434a9b52651ae644acdaf38a172c67892a5b1209b8562dc641fbc3dbe0e32a4d",
+   "wireBytes": 564,
+   "eligible": 2,
+   "expected": 50,
+   "totals": {
+    "totalInput": 50,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 2,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 50,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 2,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "js-test-401": {
+   "rows": [
+    {
+     "id": "synthetic-0",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 1
+    },
+    {
+     "id": "synthetic-1",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 2
+    },
+    {
+     "id": "synthetic-2",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 3
+    },
+    {
+     "id": "synthetic-3",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 4
+    },
+    {
+     "id": "synthetic-4",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 5
+    },
+    {
+     "id": "synthetic-5",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 6
+    },
+    {
+     "id": "synthetic-6",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 7
+    },
+    {
+     "id": "synthetic-7",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 8
+    },
+    {
+     "id": "synthetic-8",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 9
+    },
+    {
+     "id": "synthetic-9",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 10
+    },
+    {
+     "id": "synthetic-10",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 11
+    },
+    {
+     "id": "synthetic-11",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 12
+    },
+    {
+     "id": "synthetic-12",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 13
+    },
+    {
+     "id": "synthetic-13",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 14
+    },
+    {
+     "id": "synthetic-14",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 15
+    },
+    {
+     "id": "synthetic-15",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 16
+    },
+    {
+     "id": "synthetic-16",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 17
+    },
+    {
+     "id": "synthetic-17",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 18
+    },
+    {
+     "id": "synthetic-18",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 19
+    },
+    {
+     "id": "synthetic-19",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 20
+    },
+    {
+     "id": "synthetic-20",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 21
+    },
+    {
+     "id": "synthetic-21",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 22
+    },
+    {
+     "id": "synthetic-22",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 23
+    },
+    {
+     "id": "synthetic-23",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 24
+    },
+    {
+     "id": "synthetic-24",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 25
+    },
+    {
+     "id": "synthetic-25",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 26
+    },
+    {
+     "id": "synthetic-26",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 27
+    },
+    {
+     "id": "synthetic-27",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 28
+    },
+    {
+     "id": "synthetic-28",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 29
+    },
+    {
+     "id": "synthetic-29",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 30
+    },
+    {
+     "id": "synthetic-30",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 31
+    },
+    {
+     "id": "synthetic-31",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 32
+    },
+    {
+     "id": "synthetic-32",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 33
+    },
+    {
+     "id": "synthetic-33",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 34
+    },
+    {
+     "id": "synthetic-34",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 35
+    },
+    {
+     "id": "synthetic-35",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 36
+    },
+    {
+     "id": "synthetic-36",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 37
+    },
+    {
+     "id": "synthetic-37",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 38
+    },
+    {
+     "id": "synthetic-38",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 39
+    },
+    {
+     "id": "synthetic-39",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 40
+    },
+    {
+     "id": "synthetic-40",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 41
+    },
+    {
+     "id": "synthetic-41",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 42
+    },
+    {
+     "id": "synthetic-42",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 43
+    },
+    {
+     "id": "synthetic-43",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 44
+    },
+    {
+     "id": "synthetic-44",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 45
+    },
+    {
+     "id": "synthetic-45",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 46
+    },
+    {
+     "id": "synthetic-46",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 47
+    },
+    {
+     "id": "synthetic-47",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 48
+    },
+    {
+     "id": "synthetic-48",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 49
+    },
+    {
+     "id": "synthetic-49",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 50
+    },
+    {
+     "id": "synthetic-50",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 51
+    },
+    {
+     "id": "synthetic-51",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 52
+    },
+    {
+     "id": "synthetic-52",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 53
+    },
+    {
+     "id": "synthetic-53",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 54
+    },
+    {
+     "id": "synthetic-54",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 55
+    },
+    {
+     "id": "synthetic-55",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 56
+    },
+    {
+     "id": "synthetic-56",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 57
+    },
+    {
+     "id": "synthetic-57",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 58
+    },
+    {
+     "id": "synthetic-58",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 59
+    },
+    {
+     "id": "synthetic-59",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 60
+    },
+    {
+     "id": "synthetic-60",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 61
+    },
+    {
+     "id": "synthetic-61",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 62
+    },
+    {
+     "id": "synthetic-62",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 63
+    },
+    {
+     "id": "synthetic-63",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 64
+    },
+    {
+     "id": "synthetic-64",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 65
+    },
+    {
+     "id": "synthetic-65",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 66
+    },
+    {
+     "id": "synthetic-66",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 67
+    },
+    {
+     "id": "synthetic-67",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 68
+    },
+    {
+     "id": "synthetic-68",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 69
+    },
+    {
+     "id": "synthetic-69",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 70
+    },
+    {
+     "id": "synthetic-70",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 71
+    },
+    {
+     "id": "synthetic-71",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 72
+    },
+    {
+     "id": "synthetic-72",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 73
+    },
+    {
+     "id": "synthetic-73",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 74
+    },
+    {
+     "id": "synthetic-74",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 75
+    },
+    {
+     "id": "synthetic-75",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 76
+    },
+    {
+     "id": "synthetic-76",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 77
+    },
+    {
+     "id": "synthetic-77",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 78
+    },
+    {
+     "id": "synthetic-78",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 79
+    },
+    {
+     "id": "synthetic-79",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 80
+    },
+    {
+     "id": "synthetic-80",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 81
+    },
+    {
+     "id": "synthetic-81",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 82
+    },
+    {
+     "id": "synthetic-82",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 83
+    },
+    {
+     "id": "synthetic-83",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 84
+    },
+    {
+     "id": "synthetic-84",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 85
+    },
+    {
+     "id": "synthetic-85",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 86
+    },
+    {
+     "id": "synthetic-86",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 87
+    },
+    {
+     "id": "synthetic-87",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 88
+    },
+    {
+     "id": "synthetic-88",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 89
+    },
+    {
+     "id": "synthetic-89",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 90
+    },
+    {
+     "id": "synthetic-90",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 91
+    },
+    {
+     "id": "synthetic-91",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 92
+    },
+    {
+     "id": "synthetic-92",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 93
+    },
+    {
+     "id": "synthetic-93",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 94
+    },
+    {
+     "id": "synthetic-94",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 95
+    },
+    {
+     "id": "synthetic-95",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 96
+    },
+    {
+     "id": "synthetic-96",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 97
+    },
+    {
+     "id": "synthetic-97",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 98
+    },
+    {
+     "id": "synthetic-98",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 99
+    },
+    {
+     "id": "synthetic-99",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 100
+    },
+    {
+     "id": "synthetic-100",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 101
+    },
+    {
+     "id": "synthetic-101",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 102
+    },
+    {
+     "id": "synthetic-102",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 103
+    },
+    {
+     "id": "synthetic-103",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 104
+    },
+    {
+     "id": "synthetic-104",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 105
+    },
+    {
+     "id": "synthetic-105",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 106
+    },
+    {
+     "id": "synthetic-106",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 107
+    },
+    {
+     "id": "synthetic-107",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 108
+    },
+    {
+     "id": "synthetic-108",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 109
+    },
+    {
+     "id": "synthetic-109",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 110
+    },
+    {
+     "id": "synthetic-110",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 111
+    },
+    {
+     "id": "synthetic-111",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 112
+    },
+    {
+     "id": "synthetic-112",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 113
+    },
+    {
+     "id": "synthetic-113",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 114
+    },
+    {
+     "id": "synthetic-114",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 115
+    },
+    {
+     "id": "synthetic-115",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 116
+    },
+    {
+     "id": "synthetic-116",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 117
+    },
+    {
+     "id": "synthetic-117",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 118
+    },
+    {
+     "id": "synthetic-118",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 119
+    },
+    {
+     "id": "synthetic-119",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 120
+    },
+    {
+     "id": "synthetic-120",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 121
+    },
+    {
+     "id": "synthetic-121",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 122
+    },
+    {
+     "id": "synthetic-122",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 123
+    },
+    {
+     "id": "synthetic-123",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 124
+    },
+    {
+     "id": "synthetic-124",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 125
+    },
+    {
+     "id": "synthetic-125",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 126
+    },
+    {
+     "id": "synthetic-126",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 127
+    },
+    {
+     "id": "synthetic-127",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 128
+    },
+    {
+     "id": "synthetic-128",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 129
+    },
+    {
+     "id": "synthetic-129",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 130
+    },
+    {
+     "id": "synthetic-130",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 131
+    },
+    {
+     "id": "synthetic-131",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 132
+    },
+    {
+     "id": "synthetic-132",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 133
+    },
+    {
+     "id": "synthetic-133",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 134
+    },
+    {
+     "id": "synthetic-134",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 135
+    },
+    {
+     "id": "synthetic-135",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 136
+    },
+    {
+     "id": "synthetic-136",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 137
+    },
+    {
+     "id": "synthetic-137",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 138
+    },
+    {
+     "id": "synthetic-138",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 139
+    },
+    {
+     "id": "synthetic-139",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 140
+    },
+    {
+     "id": "synthetic-140",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 141
+    },
+    {
+     "id": "synthetic-141",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 142
+    },
+    {
+     "id": "synthetic-142",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 143
+    },
+    {
+     "id": "synthetic-143",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 144
+    },
+    {
+     "id": "synthetic-144",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 145
+    },
+    {
+     "id": "synthetic-145",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 146
+    },
+    {
+     "id": "synthetic-146",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 147
+    },
+    {
+     "id": "synthetic-147",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 148
+    },
+    {
+     "id": "synthetic-148",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 149
+    },
+    {
+     "id": "synthetic-149",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 150
+    },
+    {
+     "id": "synthetic-150",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 151
+    },
+    {
+     "id": "synthetic-151",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 152
+    },
+    {
+     "id": "synthetic-152",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 153
+    },
+    {
+     "id": "synthetic-153",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 154
+    },
+    {
+     "id": "synthetic-154",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 155
+    },
+    {
+     "id": "synthetic-155",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 156
+    },
+    {
+     "id": "synthetic-156",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 157
+    },
+    {
+     "id": "synthetic-157",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 158
+    },
+    {
+     "id": "synthetic-158",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 159
+    },
+    {
+     "id": "synthetic-159",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 160
+    },
+    {
+     "id": "synthetic-160",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 161
+    },
+    {
+     "id": "synthetic-161",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 162
+    },
+    {
+     "id": "synthetic-162",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 163
+    },
+    {
+     "id": "synthetic-163",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 164
+    },
+    {
+     "id": "synthetic-164",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 165
+    },
+    {
+     "id": "synthetic-165",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 166
+    },
+    {
+     "id": "synthetic-166",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 167
+    },
+    {
+     "id": "synthetic-167",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 168
+    },
+    {
+     "id": "synthetic-168",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 169
+    },
+    {
+     "id": "synthetic-169",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 170
+    },
+    {
+     "id": "synthetic-170",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 171
+    },
+    {
+     "id": "synthetic-171",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 172
+    },
+    {
+     "id": "synthetic-172",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 173
+    },
+    {
+     "id": "synthetic-173",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 174
+    },
+    {
+     "id": "synthetic-174",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 175
+    },
+    {
+     "id": "synthetic-175",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 176
+    },
+    {
+     "id": "synthetic-176",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 177
+    },
+    {
+     "id": "synthetic-177",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 178
+    },
+    {
+     "id": "synthetic-178",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 179
+    },
+    {
+     "id": "synthetic-179",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 180
+    },
+    {
+     "id": "synthetic-180",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 181
+    },
+    {
+     "id": "synthetic-181",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 182
+    },
+    {
+     "id": "synthetic-182",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 183
+    },
+    {
+     "id": "synthetic-183",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 184
+    },
+    {
+     "id": "synthetic-184",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 185
+    },
+    {
+     "id": "synthetic-185",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 186
+    },
+    {
+     "id": "synthetic-186",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 187
+    },
+    {
+     "id": "synthetic-187",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 188
+    },
+    {
+     "id": "synthetic-188",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 189
+    },
+    {
+     "id": "synthetic-189",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 190
+    },
+    {
+     "id": "synthetic-190",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 191
+    },
+    {
+     "id": "synthetic-191",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 192
+    },
+    {
+     "id": "synthetic-192",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 193
+    },
+    {
+     "id": "synthetic-193",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 194
+    },
+    {
+     "id": "synthetic-194",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 195
+    },
+    {
+     "id": "synthetic-195",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 196
+    },
+    {
+     "id": "synthetic-196",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 197
+    },
+    {
+     "id": "synthetic-197",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 198
+    },
+    {
+     "id": "synthetic-198",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 199
+    },
+    {
+     "id": "synthetic-199",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 200
+    },
+    {
+     "id": "synthetic-200",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 201
+    },
+    {
+     "id": "synthetic-201",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 202
+    },
+    {
+     "id": "synthetic-202",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 203
+    },
+    {
+     "id": "synthetic-203",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 204
+    },
+    {
+     "id": "synthetic-204",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 205
+    },
+    {
+     "id": "synthetic-205",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 206
+    },
+    {
+     "id": "synthetic-206",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 207
+    },
+    {
+     "id": "synthetic-207",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 208
+    },
+    {
+     "id": "synthetic-208",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 209
+    },
+    {
+     "id": "synthetic-209",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 210
+    },
+    {
+     "id": "synthetic-210",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 211
+    },
+    {
+     "id": "synthetic-211",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 212
+    },
+    {
+     "id": "synthetic-212",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 213
+    },
+    {
+     "id": "synthetic-213",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 214
+    },
+    {
+     "id": "synthetic-214",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 215
+    },
+    {
+     "id": "synthetic-215",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 216
+    },
+    {
+     "id": "synthetic-216",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 217
+    },
+    {
+     "id": "synthetic-217",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 218
+    },
+    {
+     "id": "synthetic-218",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 219
+    },
+    {
+     "id": "synthetic-219",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 220
+    },
+    {
+     "id": "synthetic-220",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 221
+    },
+    {
+     "id": "synthetic-221",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 222
+    },
+    {
+     "id": "synthetic-222",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 223
+    },
+    {
+     "id": "synthetic-223",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 224
+    },
+    {
+     "id": "synthetic-224",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 225
+    },
+    {
+     "id": "synthetic-225",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 226
+    },
+    {
+     "id": "synthetic-226",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 227
+    },
+    {
+     "id": "synthetic-227",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 228
+    },
+    {
+     "id": "synthetic-228",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 229
+    },
+    {
+     "id": "synthetic-229",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 230
+    },
+    {
+     "id": "synthetic-230",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 231
+    },
+    {
+     "id": "synthetic-231",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 232
+    },
+    {
+     "id": "synthetic-232",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 233
+    },
+    {
+     "id": "synthetic-233",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 234
+    },
+    {
+     "id": "synthetic-234",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 235
+    },
+    {
+     "id": "synthetic-235",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 236
+    },
+    {
+     "id": "synthetic-236",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 237
+    },
+    {
+     "id": "synthetic-237",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 238
+    },
+    {
+     "id": "synthetic-238",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 239
+    },
+    {
+     "id": "synthetic-239",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 240
+    },
+    {
+     "id": "synthetic-240",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 241
+    },
+    {
+     "id": "synthetic-241",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 242
+    },
+    {
+     "id": "synthetic-242",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 243
+    },
+    {
+     "id": "synthetic-243",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 244
+    },
+    {
+     "id": "synthetic-244",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 245
+    },
+    {
+     "id": "synthetic-245",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 246
+    },
+    {
+     "id": "synthetic-246",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 247
+    },
+    {
+     "id": "synthetic-247",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 248
+    },
+    {
+     "id": "synthetic-248",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 249
+    },
+    {
+     "id": "synthetic-249",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 250
+    },
+    {
+     "id": "synthetic-250",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 251
+    },
+    {
+     "id": "synthetic-251",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 252
+    },
+    {
+     "id": "synthetic-252",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 253
+    },
+    {
+     "id": "synthetic-253",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 254
+    },
+    {
+     "id": "synthetic-254",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 255
+    },
+    {
+     "id": "synthetic-255",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 256
+    },
+    {
+     "id": "synthetic-256",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 257
+    },
+    {
+     "id": "synthetic-257",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 258
+    },
+    {
+     "id": "synthetic-258",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 259
+    },
+    {
+     "id": "synthetic-259",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 260
+    },
+    {
+     "id": "synthetic-260",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 261
+    },
+    {
+     "id": "synthetic-261",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 262
+    },
+    {
+     "id": "synthetic-262",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 263
+    },
+    {
+     "id": "synthetic-263",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 264
+    },
+    {
+     "id": "synthetic-264",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 265
+    },
+    {
+     "id": "synthetic-265",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 266
+    },
+    {
+     "id": "synthetic-266",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 267
+    },
+    {
+     "id": "synthetic-267",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 268
+    },
+    {
+     "id": "synthetic-268",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 269
+    },
+    {
+     "id": "synthetic-269",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 270
+    },
+    {
+     "id": "synthetic-270",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 271
+    },
+    {
+     "id": "synthetic-271",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 272
+    },
+    {
+     "id": "synthetic-272",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 273
+    },
+    {
+     "id": "synthetic-273",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 274
+    },
+    {
+     "id": "synthetic-274",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 275
+    },
+    {
+     "id": "synthetic-275",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 276
+    },
+    {
+     "id": "synthetic-276",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 277
+    },
+    {
+     "id": "synthetic-277",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 278
+    },
+    {
+     "id": "synthetic-278",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 279
+    },
+    {
+     "id": "synthetic-279",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 280
+    },
+    {
+     "id": "synthetic-280",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 281
+    },
+    {
+     "id": "synthetic-281",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 282
+    },
+    {
+     "id": "synthetic-282",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 283
+    },
+    {
+     "id": "synthetic-283",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 284
+    },
+    {
+     "id": "synthetic-284",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 285
+    },
+    {
+     "id": "synthetic-285",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 286
+    },
+    {
+     "id": "synthetic-286",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 287
+    },
+    {
+     "id": "synthetic-287",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 288
+    },
+    {
+     "id": "synthetic-288",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 289
+    },
+    {
+     "id": "synthetic-289",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 290
+    },
+    {
+     "id": "synthetic-290",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 291
+    },
+    {
+     "id": "synthetic-291",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 292
+    },
+    {
+     "id": "synthetic-292",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 293
+    },
+    {
+     "id": "synthetic-293",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 294
+    },
+    {
+     "id": "synthetic-294",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 295
+    },
+    {
+     "id": "synthetic-295",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 296
+    },
+    {
+     "id": "synthetic-296",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 297
+    },
+    {
+     "id": "synthetic-297",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 298
+    },
+    {
+     "id": "synthetic-298",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 299
+    },
+    {
+     "id": "synthetic-299",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 300
+    },
+    {
+     "id": "synthetic-300",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 301
+    },
+    {
+     "id": "synthetic-301",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 302
+    },
+    {
+     "id": "synthetic-302",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 303
+    },
+    {
+     "id": "synthetic-303",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 304
+    },
+    {
+     "id": "synthetic-304",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 305
+    },
+    {
+     "id": "synthetic-305",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 306
+    },
+    {
+     "id": "synthetic-306",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 307
+    },
+    {
+     "id": "synthetic-307",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 308
+    },
+    {
+     "id": "synthetic-308",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 309
+    },
+    {
+     "id": "synthetic-309",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 310
+    },
+    {
+     "id": "synthetic-310",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 311
+    },
+    {
+     "id": "synthetic-311",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 312
+    },
+    {
+     "id": "synthetic-312",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 313
+    },
+    {
+     "id": "synthetic-313",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 314
+    },
+    {
+     "id": "synthetic-314",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 315
+    },
+    {
+     "id": "synthetic-315",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 316
+    },
+    {
+     "id": "synthetic-316",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 317
+    },
+    {
+     "id": "synthetic-317",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 318
+    },
+    {
+     "id": "synthetic-318",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 319
+    },
+    {
+     "id": "synthetic-319",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 320
+    },
+    {
+     "id": "synthetic-320",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 321
+    },
+    {
+     "id": "synthetic-321",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 322
+    },
+    {
+     "id": "synthetic-322",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 323
+    },
+    {
+     "id": "synthetic-323",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 324
+    },
+    {
+     "id": "synthetic-324",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 325
+    },
+    {
+     "id": "synthetic-325",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 326
+    },
+    {
+     "id": "synthetic-326",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 327
+    },
+    {
+     "id": "synthetic-327",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 328
+    },
+    {
+     "id": "synthetic-328",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 329
+    },
+    {
+     "id": "synthetic-329",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 330
+    },
+    {
+     "id": "synthetic-330",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 331
+    },
+    {
+     "id": "synthetic-331",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 332
+    },
+    {
+     "id": "synthetic-332",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 333
+    },
+    {
+     "id": "synthetic-333",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 334
+    },
+    {
+     "id": "synthetic-334",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 335
+    },
+    {
+     "id": "synthetic-335",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 336
+    },
+    {
+     "id": "synthetic-336",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 337
+    },
+    {
+     "id": "synthetic-337",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 338
+    },
+    {
+     "id": "synthetic-338",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 339
+    },
+    {
+     "id": "synthetic-339",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 340
+    },
+    {
+     "id": "synthetic-340",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 341
+    },
+    {
+     "id": "synthetic-341",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 342
+    },
+    {
+     "id": "synthetic-342",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 343
+    },
+    {
+     "id": "synthetic-343",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 344
+    },
+    {
+     "id": "synthetic-344",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 345
+    },
+    {
+     "id": "synthetic-345",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 346
+    },
+    {
+     "id": "synthetic-346",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 347
+    },
+    {
+     "id": "synthetic-347",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 348
+    },
+    {
+     "id": "synthetic-348",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 349
+    },
+    {
+     "id": "synthetic-349",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 350
+    },
+    {
+     "id": "synthetic-350",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 351
+    },
+    {
+     "id": "synthetic-351",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 352
+    },
+    {
+     "id": "synthetic-352",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 353
+    },
+    {
+     "id": "synthetic-353",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 354
+    },
+    {
+     "id": "synthetic-354",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 355
+    },
+    {
+     "id": "synthetic-355",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 356
+    },
+    {
+     "id": "synthetic-356",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 357
+    },
+    {
+     "id": "synthetic-357",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 358
+    },
+    {
+     "id": "synthetic-358",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 359
+    },
+    {
+     "id": "synthetic-359",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 360
+    },
+    {
+     "id": "synthetic-360",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 361
+    },
+    {
+     "id": "synthetic-361",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 362
+    },
+    {
+     "id": "synthetic-362",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 363
+    },
+    {
+     "id": "synthetic-363",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 364
+    },
+    {
+     "id": "synthetic-364",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 365
+    },
+    {
+     "id": "synthetic-365",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 366
+    },
+    {
+     "id": "synthetic-366",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 367
+    },
+    {
+     "id": "synthetic-367",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 368
+    },
+    {
+     "id": "synthetic-368",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 369
+    },
+    {
+     "id": "synthetic-369",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 370
+    },
+    {
+     "id": "synthetic-370",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 371
+    },
+    {
+     "id": "synthetic-371",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 372
+    },
+    {
+     "id": "synthetic-372",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 373
+    },
+    {
+     "id": "synthetic-373",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 374
+    },
+    {
+     "id": "synthetic-374",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 375
+    },
+    {
+     "id": "synthetic-375",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 376
+    },
+    {
+     "id": "synthetic-376",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 377
+    },
+    {
+     "id": "synthetic-377",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 378
+    },
+    {
+     "id": "synthetic-378",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 379
+    },
+    {
+     "id": "synthetic-379",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 380
+    },
+    {
+     "id": "synthetic-380",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 381
+    },
+    {
+     "id": "synthetic-381",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 382
+    },
+    {
+     "id": "synthetic-382",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 383
+    },
+    {
+     "id": "synthetic-383",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 384
+    },
+    {
+     "id": "synthetic-384",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 385
+    },
+    {
+     "id": "synthetic-385",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 386
+    },
+    {
+     "id": "synthetic-386",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 387
+    },
+    {
+     "id": "synthetic-387",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 388
+    },
+    {
+     "id": "synthetic-388",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 389
+    },
+    {
+     "id": "synthetic-389",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 390
+    },
+    {
+     "id": "synthetic-390",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 391
+    },
+    {
+     "id": "synthetic-391",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 392
+    },
+    {
+     "id": "synthetic-392",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 393
+    },
+    {
+     "id": "synthetic-393",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 394
+    },
+    {
+     "id": "synthetic-394",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 395
+    },
+    {
+     "id": "synthetic-395",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 396
+    },
+    {
+     "id": "synthetic-396",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 397
+    },
+    {
+     "id": "synthetic-397",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 398
+    },
+    {
+     "id": "synthetic-398",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 399
+    },
+    {
+     "id": "synthetic-399",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 400
+    },
+    {
+     "id": "zero",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": 0
+    },
+    {
+     "id": "excluded",
+     "timestamp": "2026-11-04T00:00:00Z",
+     "totalTokens": -1
+    }
+   ],
+   "wireSha256": "e3de138574e4aedadd782b859363fe70668546e86b0423dcddf547fd7a99545b",
+   "wireBytes": 120754,
+   "eligible": 401,
+   "expected": 80200,
+   "totals": {
+    "totalInput": 80200,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 401,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 80200,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 401,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "max-safe": {
+   "rows": [
+    {
+     "id": "big",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 9007199254740991
+    }
+   ],
+   "wireSha256": "61595cceb6a489636f9eea94316157e696d722b93bbc2fbd7fcb4d360e9026f7",
+   "wireBytes": 295,
+   "eligible": 1,
+   "expected": 9007199254740991,
+   "totals": {
+    "totalInput": 9007199254740991,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 1,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 9007199254740991,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 1,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "duplicate-uuid": {
+   "rows": [
+    {
+     "id": "same",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 100
+    },
+    {
+     "id": "same",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 200
+    }
+   ],
+   "wireSha256": "1d8fe4077cb5af301a0a8bd8284f2cd4be9160325aadcec1ac2a8e75df033a36",
+   "wireBytes": 568,
+   "eligible": 2,
+   "expected": 300,
+   "totals": {
+    "totalInput": 200,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 1,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 200,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 1,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "fractional-time": {
+   "rows": [
+    {
+     "id": "f1",
+     "timestamp": "2026-11-10T00:00:00.123Z",
+     "totalTokens": 10
+    },
+    {
+     "id": "f2",
+     "timestamp": "2026-11-10T01:02:03.456+08:00",
+     "totalTokens": 20
+    }
+   ],
+   "wireSha256": "166ba32fc7c64f844e299bb621b766d14fcbee7e8fb38034c509249130671bf6",
+   "wireBytes": 571,
+   "eligible": 2,
+   "expected": 30,
+   "totals": {
+    "totalInput": 30,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 2,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 30,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 2,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "unicode-id": {
+   "rows": [
+    {
+     "id": "会话-α",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 7
+    },
+    {
+     "id": "id with space",
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 9
+    }
+   ],
+   "wireSha256": "e628303400129365589d97c75b642f200f91515ba817ce453ae40b3c2045834c",
+   "wireBytes": 592,
+   "eligible": 2,
+   "expected": 16,
+   "totals": {
+    "totalInput": 16,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 2,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 16,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 2,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  },
+  "non-string-id": {
+   "rows": [
+    {
+     "id": 42,
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 5
+    },
+    {
+     "id": null,
+     "timestamp": "2026-11-10T00:00:00Z",
+     "totalTokens": 6
+    }
+   ],
+   "wireSha256": "2be5f7791f1c86f5a96cb9ed20f8b8d6b9742e468bb11e2f29ba3bea023b6229",
+   "wireBytes": 552,
+   "eligible": 2,
+   "expected": 11,
+   "totals": {
+    "totalInput": 11,
+    "totalOutput": 0,
+    "totalCacheRead": 0,
+    "totalCacheWrite": 0
+   },
+   "totalMessages": 2,
+   "entries": [
+    {
+     "client": "claude",
+     "mergedClients": null,
+     "model": "m1-statistical-projection",
+     "provider": "unknown",
+     "input": 11,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "reasoning": 0,
+     "messageCount": 2,
+     "cost": 0,
+     "performance": {
+      "msPer1KTokens": null,
+      "totalDurationMs": 0,
+      "timedTokens": 0,
+      "sampleCount": 0,
+      "tokenCoverage": 0
+     }
+    }
+   ]
+  }
+ }
+}

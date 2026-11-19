@@ -191,7 +191,7 @@ const READERS = ['codex', 'claude', 'opencode', 'mimo', 'gemini', 'deepseek', 'a
         assert.deepEqual(fs.readFileSync(path.join(data.usage, 'statistics.json')), data.ledgerBytes, 'reader/search never persist conversation content or change usage');
         const audit = await page.evaluate(() => window.usageBridge.get().then(value => value.audit));
         assert.equal(audit, null, 'a reader-only run does not perform a collection or invent a collection audit');
-        assert.deepEqual(errors, []); assert.match(await page.title(), /Agent Usage/); assert.match(page.url(), /desktop-reference.*index\.html/);
+        assert.deepEqual(errors, []); assert.match(await page.title(), /QuotaDock/); assert.match(page.url(), /desktop-reference.*index\.html/);
         const fields = await app.evaluate(() => globalThis.readerFixture.partFields); assert(fields.includes('image') && fields.includes('output') && fields.includes('text'));
         reports.push({ scale, theme, packaged: Boolean(process.env.QUOTA_PACKAGED_EXE), readers: READERS, secondGroupReaders: ['opencode', 'mimo', 'gemini', 'deepseek', 'antigravity'], changesAndOwnTurnTokens: true, images: true, fullPages: true, findPastPreviewAndPage: true, changedReload: true, fullCopyAndExport: true, canceledExport: true, guardedLinks: true, latePartOwnership: true, realSearchResults: 7, continuationOffsets: [0, 1, 2, 3, 4, 5, 6], continuationFixture: 'one actual result per real search reply; not a deadline benchmark', sourceHashesUnchangedBeforeIntentionalAppend: true, ledgerUnchanged: true, collectorRun: false, errors });
         fs.writeFileSync(path.join(output, 'results.partial.json'), JSON.stringify(reports, null, 2));

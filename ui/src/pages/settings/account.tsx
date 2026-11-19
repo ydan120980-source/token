@@ -103,9 +103,9 @@ export function AccountSection({ active }: { active: boolean }) {
               : setup === "choose" ? "有多个可用仓库，请在下方选择一个。" : "选定仓库后即可手动同步每日用量。"}
             control={<div className="flex flex-wrap items-center gap-2">
               {setup === "authorize" ? <>
-                <Button variant="primary" size="compact" disabled={busy} onClick={() => { void configure(false); }}>检查授权</Button>
+                <Button variant="primary" size="compact" loading={busy} disabled={busy} onClick={() => { void configure(false); }}>检查授权</Button>
                 <Button variant="secondary" size="compact" disabled={busy} onClick={() => { void configure(true); }}>打开 GitHub</Button>
-              </> : setup !== "choose" ? <Button variant="primary" size="compact" disabled={busy} onClick={() => { void configure(true); }}>{checkingSetup ? "正在配置…" : "一键配置同步"}</Button> : null}
+              </> : setup !== "choose" ? <Button variant="primary" size="compact" loading={checkingSetup} disabled={busy} onClick={() => { void configure(true); }}>{checkingSetup ? "正在配置…" : "一键配置同步"}</Button> : null}
               {setup ? <Button variant="ghost" size="compact" disabled={busy} onClick={() => { setSetup(null); setBrowserFailed(false); }}>取消配置</Button> : null}
             </div>} /> : null}
           <SettingRow title="同步到我的私有仓库" control={<Switch labelHidden label="同步到我的私有仓库" checked={sync.enabled} disabled={!connected || busy || (!selected && !sync.enabled)} onChange={enabled => { void githubActions.setSync({ enabled, repository }); }} />} />
@@ -117,7 +117,7 @@ export function AccountSection({ active }: { active: boolean }) {
                 if (setup === "choose") void configure(false, value);
                 else void githubActions.setSync({ enabled: false, repository: value });
               }} aria-label="同步到哪个私有仓库" options={[{ value: "none", label: repositoryHint }, ...options]} /></div>
-              {connected && !setup ? <Button variant="secondary" size="compact" disabled={busy} onClick={() => { void githubActions.repositories(); }}>刷新仓库</Button> : null}
+              {connected && !setup ? <Button variant="secondary" size="compact" loading={repositoriesLoading} disabled={busy} onClick={() => { void githubActions.repositories(); }}>刷新仓库</Button> : null}
             </div>} />
           {connected && !setup ? <SettingRow title="仓库授权" control={<div className="flex flex-wrap gap-2">
             {state.installUrl ? <Button variant="secondary" size="compact" onClick={() => githubActions.open(state.installUrl!)}>授权仓库</Button> : null}
@@ -125,7 +125,7 @@ export function AccountSection({ active }: { active: boolean }) {
           </div>} /> : null}
           <SettingRow title="立即同步"
             description={sync.error ? githubMessage(sync.error) : sync.status === "syncing" ? "正在同步…" : sync.lastSuccess ? "最近同步 " + when(sync.lastSuccess) + (sync.days !== null ? " · " + sync.days + " 天的数据" : "") : undefined}
-            control={<Button variant="secondary" size="compact" disabled={!sync.enabled || !connected || !selected || busy || setup !== null} onClick={() => { void githubActions.syncNow(); }}>同步</Button>} />
+            control={<Button variant="secondary" size="compact" loading={syncing} disabled={!sync.enabled || !connected || !selected || busy || setup !== null} onClick={() => { void githubActions.syncNow(); }}>同步</Button>} />
         </div>
         <Disclosure flush summary="会同步什么">
           <div className="flex flex-col gap-1 text-caption text-muted-foreground" data-github-sync-scope>

@@ -9,7 +9,7 @@ function clippedText(root, { skip = null } = {}) {
     const walker = document.createTreeWalker(base, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const text = node.data.trim(), parent = node.parentElement;
-      if (!text || !visible(parent) || parent.closest('[aria-hidden="true"], .sr-only, [data-mark-only] h3') || skip && parent.closest(skip)) continue;
+      if (!text || !visible(parent) || parent.closest('[aria-hidden="true"], .sr-only') || skip && parent.closest(skip)) continue;
       const range = document.createRange(); range.selectNodeContents(node);
       const rects = [...range.getClientRects()].filter(rect => rect.width && rect.height);
       if (!rects.length) continue;

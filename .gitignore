@@ -61,3 +61,11 @@ docs/m2/UI-REFINEMENT-RESULTS-R6-20261006.md
 # Python bytecode left behind by the packaging scripts.
 __pycache__/
 *.pyc
+
+# Rust migration build artifacts
+target/
+/src-tauri/gen/
+# This built-in catalog is compiled into the Rust executable.
+!/crates/quota-engine/data/
+/crates/quota-engine/data/*
+!/crates/quota-engine/data/provider-catalog.json

@@ -36,7 +36,7 @@ export function QuickFixSheet() {
   return <Sheet scrollable open={fixOpen} onOpenChange={open => { if (!open) closeFix(); }} title="一键处理" size="lg"
     footer={<div className="flex w-full flex-wrap items-center justify-between gap-3">
       <p className="text-body text-foreground" role="status" data-fix-result>{failed ? "试算没有完成，什么都没有改变；请重试。" : plan ? "已计入 " + before + " → " + share + (plan.after.lower !== null ? " · 估算 " + model.money(plan.after.lower) : "") : "正在试算…"}</p>
-      <Button variant="primary" disabled={!plan || store.savingBilling} onClick={() => void apply()}>应用</Button>
+      <Button variant="primary" loading={store.savingBilling} disabled={!plan || store.savingBilling} onClick={() => void apply()}>应用</Button>
     </div>}>
     <div className="flex flex-col gap-6" data-quick-fix>
       <section className="flex flex-col gap-2" data-fix-auto>

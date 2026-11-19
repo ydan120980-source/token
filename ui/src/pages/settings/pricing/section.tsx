@@ -47,13 +47,13 @@ function PricingPanel() {
               </div> : null}
               {store.active?.fallbackTokens ? <p className="text-caption text-muted-foreground" data-fix-active="fallback">{"其中 " + view.short(store.active.fallbackTokens) + " Token 是保底估算（" + model.money(store.active.fallbackUsd) + "），按 " + store.billing.fallback + " 计算"}</p> : null}
               {store.active?.floorTokens ? <p className="text-caption text-destructive" data-fix-active="floor">{"其中 " + view.short(store.active.floorTokens) + " Token 只算了已报告字段，实际至少 " + model.money(store.active.floorUsd)}</p> : null}
-              {store.undo ? <div className="flex flex-wrap items-center gap-3" data-fix-undo><span className="text-caption text-muted-foreground">刚才的一键处理</span><Button variant="tertiary" size="compact" disabled={store.savingBilling} onClick={() => void undoFix()}>撤销</Button>{!gaps.length ? <Button variant="tertiary" size="compact" onClick={openFix}>调整</Button> : null}</div> : null}
+              {store.undo ? <div className="flex flex-wrap items-center gap-3" data-fix-undo><span className="text-caption text-muted-foreground">刚才的一键处理</span><Button variant="tertiary" size="compact" loading={store.savingBilling} disabled={store.savingBilling} onClick={() => void undoFix()}>撤销</Button>{!gaps.length ? <Button variant="tertiary" size="compact" onClick={openFix}>调整</Button> : null}</div> : null}
             </div>
             <div className="flex flex-col items-end gap-2">
               <p className="text-caption text-muted-foreground" role="status" data-sync-state>{model.syncText(store.syncing ? { enabled: store.billing.autoSync, syncing: true } : data?.sync, pricing)}</p>
               <div className="flex items-center gap-3">
                 <Switch checked={store.billing.autoSync} onChange={value => void setAutoSync(value)} label="自动同步" />
-                <Button variant="secondary" size="compact" disabled={store.syncing || Boolean(data?.sync?.syncing)} onClick={() => void syncNow()}>立即同步</Button>
+                <Button variant="secondary" size="compact" loading={Boolean(store.syncing || data?.sync?.syncing)} disabled={store.syncing || Boolean(data?.sync?.syncing)} onClick={() => void syncNow()}>立即同步</Button>
               </div>
             </div>
           </div>

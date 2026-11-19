@@ -20,7 +20,7 @@ async function runPageSmoke({ view, ready, dialogs = [], prepare, dispose, asser
   const session = await launch(), { page, errors } = session;
   try {
     assert.match(await page.url(), /^file:/);
-    assert.match(await page.title(), /Agent Usage/);
+    assert.match(await page.title(), /QuotaDock/);
     await showView(page, view);
     for (const theme of ['light', 'dark']) {
       await setTheme(page, theme); await settle(page);

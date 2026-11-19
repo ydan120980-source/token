@@ -11,6 +11,7 @@ const { Store, atomic } = require('../../src/m1/store');
 const { roots } = require('../../src/m1/policy');
 const { showView, settle, until, keepVisible, isolatePointer, cleanup } = require('./ui-settle');
 const { checkTextContrast } = require('./chart-hover-check');
+const { dragThenScroll } = require('./drag-landing');
 const output = process.env.QUOTA_V4_EVIDENCE_DIR || path.join(os.tmpdir(), 'agent-usage-quota-v4-evidence-' + process.pid);
 
 const { fixture } = require('../../tests/m1/quota-hero-fixture');
@@ -146,15 +147,30 @@ const order = page => page.locator('#quotaCards .quota-card').evaluateAll(cards 
       const pressAt = { x: first.x + first.width / 2, y: first.y + first.height - 30 };
       await page.mouse.move(pressAt.x, pressAt.y); await page.mouse.down(); await page.waitForTimeout(450);
       for (let i = 1; i <= 8; i++) await page.mouse.move(pressAt.x + (third.x - first.x) * i / 8, pressAt.y + (third.y - first.y) * i / 8);
-      assert.equal(await page.locator('#quotaCards .quota-card.is-dragging').count(), 1);
-      await page.mouse.up(); await settle(page);
+      assert.equal(await page.locator('#quotaCards .quota-card.is-flying').count(), 1, 'the card in hand is the lifted one');
+      await page.mouse.up(); await until(page, () => !document.querySelector('#quotaCards [data-sort-placeholder]')); await settle(page);
       const moved = await order(page); assert.equal(moved[2], before[0]); assert.equal(await sheet.count(), 0, 'a drag is not a click');
       assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('agentusage.quotaCards.v1')).order.length), 5);
       const again = await cards.nth(0).boundingBox(); await page.mouse.move(again.x + again.width / 2, again.y + again.height - 30); await page.mouse.down(); await page.waitForTimeout(450);
-      await page.mouse.move(third.x + third.width / 2, third.y + third.height / 2); await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
+      await page.mouse.move(third.x + third.width / 2, third.y + third.height / 2); await page.keyboard.press('Escape'); await page.mouse.up(); await until(page, () => !document.querySelector('#quotaCards [data-sort-placeholder]')); await settle(page);
       assert.deepEqual(await order(page), moved, 'Escape cancels the drag');
       await cards.nth(2).locator('.quota-sheet-open').focus(); await page.keyboard.press('Alt+ArrowLeft'); await settle(page);
       assert.equal((await order(page))[1], moved[2]); assert.equal(await q.message(page).innerText(), '已移到第 2 位。');
+
+      // A released card must travel with the page instead of staying glued to the viewport (owner
+      // report 2026-11-17). Scroll late in the 380ms landing, where the spring's own motion is
+      // nearly zero, so any jump in the gap to the slot is stickiness rather than physics. The
+      // order this leaves behind is not asserted - the drag below runs after every ordering check.
+      await cards.nth(0).scrollIntoViewIfNeeded(); await settle(page);
+      const landed = await dragThenScroll(page, {
+        from: cards.nth(0), to: cards.nth(2), flyer: '#quotaCards .is-flying', scrollDelay: 300,
+      });
+      fs.writeFileSync(path.join(evidence, 'landing-scroll.json'), JSON.stringify(landed, null, 2));
+      assert(landed.scrollFrames > 0, 'the measurement actually scrolled the page');
+      assert.equal(landed.fixedScrollFrames, 0, 'the card leaves viewport space before the page scrolls');
+      assert(landed.worstGapJumpPx <= 1, 'the released card keeps its gap to the slot through a scroll: ' + landed.worstGapJumpPx + 'px');
+      assert.equal(await page.locator('#quotaCards .quota-card.is-flying').count(), 0, 'nothing is left flying after the landing');
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' })); await settle(page);
 
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal page overflow');
       const fit = await assertQuotaCardsFit(page, 5);

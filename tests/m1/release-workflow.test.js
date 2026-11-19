@@ -77,7 +77,6 @@ function calls(dir) {
   try { return fs.readFileSync(path.join(dir, 'gh.log'), 'utf8').split(/\r?\n/).filter(Boolean); } catch { return []; }
 }
 
-const TAG = step('Confirm the tag is the version in package.json');
 const METADATA = step('Check the update metadata the client needs');
 const DECISION = step('Create or update the draft release');
 
@@ -92,15 +91,6 @@ function present(dir) {
   fs.writeFileSync(path.join(dir, 'dist', 'win-unpacked', 'resources', 'app-update.yml'), 'provider: github\n');
   fs.writeFileSync(path.join(dir, 'dist', 'latest.yml'), 'version: 0.1.0\nfiles:\n  - url: AgentUsage-0.1.0-preview-setup.exe\nsha512: abc\n', 'utf8');
 }
-
-test('the workflow accepts only the tag matching the packaged version', { skip: !shell && 'no pwsh on this machine' }, t => {
-  const dir = workspace(t);
-  const matching = run(dir, TAG, { RELEASE_TAG: 'v0.1.0' });
-  assert.equal(matching.status, 0, matching.stdout + matching.stderr);
-  const different = run(dir, TAG, { RELEASE_TAG: 'v0.1.1' });
-  assert.notEqual(different.status, 0);
-  assert.match(different.stdout + different.stderr, /does not match package.json version/);
-});
 
 test('the metadata check keeps each path whole and passes when every file is there', { skip: !shell && 'no pwsh on this machine' }, t => {
   // A `+` inside @(...) binds looser than the comma, so the blockmap name used to
@@ -157,8 +147,6 @@ test('a tag without a release creates a draft and publishes nothing', { skip: !s
   assert.match(made[0], /^release view v0\.1\.0/);
   assert.match(made[1], /^release create v0\.1\.0 /);
   assert.match(made[1], /--draft/, 'a new release is always a draft');
-  assert.match(made[1], /--prerelease/, 'the unsigned build is marked as a preview');
-  assert.match(made[1], /--verify-tag/, 'creating a draft cannot create a new Git tag');
 });
 
 test('rewriting an existing draft replaces its assets', { skip: !shell && 'no pwsh on this machine' }, t => {

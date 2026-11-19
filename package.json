@@ -96,7 +96,7 @@
           ]
         }
       ],
-      "icon": "design/desktop-reference/assets/ui/quotadock.png",
+      "icon": "assets/icon.ico",
       "executableName": "Agent Usage Quota",
       "signExecutable": false
     },

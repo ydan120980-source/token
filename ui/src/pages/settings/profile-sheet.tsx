@@ -61,7 +61,7 @@ export function ProfileSheet({ open, onOpenChange }: { open: boolean; onOpenChan
       <div className="flex items-center gap-3"><Button variant="tertiary" onClick={() => { setDraft(current => ({ ...current, photo: null })); resetPick(null); setError(""); }}>使用字母头像</Button></div>
       <p className="text-caption text-muted-foreground" role="status" data-avatar-status>{status}</p>
       {error ? <p className="text-caption text-destructive" role="alert" data-profile-error>{error}</p> : null}
-      <Button variant="primary" type="submit" disabled={reading}>保存资料</Button>
+      <Button variant="primary" type="submit" loading={reading} disabled={reading}>保存资料</Button>
     </Form>
   </Sheet>;
 }

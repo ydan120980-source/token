@@ -35,7 +35,7 @@ async function scenario(scale,edge){
     page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
     await cost.openCost(page);await cost.section(page,'projects');
     await until(page,()=>document.querySelector('[data-cost-budget-state]').textContent.includes('预算'));
-    assert.equal(new URL(page.url()).protocol,'file:');assert((await page.title()).startsWith('Agent Usage'));
+    assert.equal(new URL(page.url()).protocol,'file:');assert((await page.title()).startsWith('QuotaDock'));
     assert.equal(await page.locator('#main').getAttribute('data-current-view'),'cost');
     await page.screenshot({path:path.join(output,tag+'-projects.png'),fullPage:true});
     assert.equal(await page.locator('[data-cost-budgets] button[aria-expanded]').count(),edge?5:3,'the global budget list must include unselected saved scopes');

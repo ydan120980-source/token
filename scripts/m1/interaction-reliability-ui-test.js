@@ -66,7 +66,7 @@ async function seed(root) {
         page.setDefaultTimeout(15000);
         page.on('pageerror', error => errors.push(error.message)); page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
         await showView(page, 'usage');
-        assert((await page.title()).includes('Agent Usage')); assert((await page.url()).includes('index.html'));
+        assert((await page.title()).includes('QuotaDock')); assert((await page.url()).includes('index.html'));
         await page.evaluate(() => window.uiMotion.setPreference('off'));
         // A real search Escape is dispatched while an event-based composition is
         // active. It may cancel a candidate, but must leave app text and layer alone.

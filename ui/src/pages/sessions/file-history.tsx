@@ -23,11 +23,11 @@ export function FileHistory({ sessionKey, path, slot, canOpen, ask }: { sessionK
   const status = run.state === "error" ? "查找失败，稍后再试" : run.state === "loading" && !run.searched ? "正在查找…" : run.state === "idle" ? "" : rows.length + " 个会话 · 已查 " + run.searched + " / " + run.total;
   return <div className="flex flex-col gap-2 pt-3" data-file-history data-state={run.state}>
     <h4 className="truncate px-2 text-caption font-medium text-foreground" title={path}>{path.split(/[\\/]/).pop()}</h4>
-    {run.state === "idle" ? <div className="px-2"><Button variant="secondary" size="compact" onClick={() => batch(0, [])}>{"还有哪些会话改过它"}</Button></div> :
+    {run.state === "idle" || (run.state === "loading" && !run.searched) ? <div className="px-2"><Button variant="secondary" size="compact" loading={run.state === "loading"} disabled={run.state === "loading"} onClick={() => batch(0, [])}>{"还有哪些会话改过它"}</Button></div> :
       <p className="px-2 text-caption text-muted-foreground" role="status" aria-live="polite" data-file-history-status>{status}</p>}
     {rows.length ? <OutlineNav fill={false} aria-label="改过这个文件的会话" active={null} onSelect={open} items={rows.map(({ hit, session }) => ({ key: hit.key,
       lead: <AgentMark agent={session.agent} variant="icon" size={16} />, label: session.name || session.project || model.span(session),
       meta: [agents[session.agent]?.name ?? session.agent, model.span(session), "+" + hit.added + " −" + hit.removed, hit.exact ? "" : "其他目录的同路径文件"].filter(Boolean).join(" · ") }))} /> : null}
-    {run.next !== null && run.state === "ready" ? <div className="px-2"><Button variant="tertiary" size="compact" onClick={() => batch(run.next!, run.found)}>{"继续查更早的会话"}</Button></div> : null}
+    {run.next !== null ? <div className="px-2"><Button variant="tertiary" size="compact" loading={run.state === "loading"} disabled={run.state === "loading"} onClick={() => batch(run.next!, run.found)}>{"继续查更早的会话"}</Button></div> : null}
   </div>;
 }

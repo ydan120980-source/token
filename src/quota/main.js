@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { app, BrowserWindow, ipcMain, session, shell, dialog, powerMonitor, clipboard, nativeTheme, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, dialog, powerMonitor, clipboard, nativeTheme, safeStorage, nativeImage } = require('electron');
 const { RefreshScheduler } = require('./refresh-scheduler');
 const { QuotaService } = require('./service');
 const { projectConnections } = require('./connection-state');
@@ -90,7 +90,40 @@ else {
     const dark = nativeTheme.shouldUseDarkColors;
     // Wide enough for the reading page with its outline and right column (a 720px text column), within the screen.
     const area = require('electron').screen.getPrimaryDisplay().workAreaSize;
-    window = new BrowserWindow({ show: false, width: Math.min(1480, area.width), height: Math.min(960, area.height), minWidth: 800, minHeight: 600, backgroundColor: GROUND[dark ? 'dark' : 'light'], title: 'QuotaDock · 额度台', icon: path.join(__dirname, '../../design/desktop-reference/assets/ui/quotadock.png'), titleBarStyle:'hidden', titleBarOverlay:titleBarOverlay(dark ? 'dark' : 'light'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+    const iconIco = path.join(__dirname, '../../design/desktop-reference/assets/ui/quotadock.ico');
+    const iconPng = path.join(__dirname, '../../design/desktop-reference/assets/ui/quotadock.png');
+    const iconFile = fs.existsSync(iconIco) ? iconIco : iconPng;
+    const appIcon = nativeImage.createFromPath(iconFile);
+    if (process.platform === 'win32') {
+      try {
+        const targetExe = process.execPath;
+        const iconTarget = app.isPackaged ? targetExe : (fs.existsSync(iconIco) ? iconIco : iconPng);
+        const shortcutOpts = {
+          target: targetExe,
+          cwd: path.dirname(targetExe),
+          icon: iconTarget,
+          iconIndex: 0,
+          appUserModelId: 'local.agentusage.quota',
+          description: 'QuotaDock · 额度台',
+        };
+        const programsDir = path.join(app.getPath('appData'), 'Microsoft/Windows/Start Menu/Programs');
+        const staleElectronLnk = path.join(programsDir, 'Electron.lnk');
+        if (fs.existsSync(staleElectronLnk)) {
+          try {
+            const stale = shell.readShortcutLink(staleElectronLnk);
+            if (!stale.target || stale.target.toLowerCase().includes('electron.exe') || stale.appUserModelId === 'local.agentusage.quota') {
+              fs.unlinkSync(staleElectronLnk);
+            }
+          } catch { /* best-effort cleanup of dev shortcut */ }
+        }
+        const startMenuLnk = path.join(programsDir, 'QuotaDock.lnk');
+        shell.writeShortcutLink(startMenuLnk, fs.existsSync(startMenuLnk) ? 'update' : 'create', shortcutOpts);
+        const desktopLnk = path.join(app.getPath('desktop'), 'QuotaDock.lnk');
+        if (fs.existsSync(desktopLnk)) shell.writeShortcutLink(desktopLnk, 'update', shortcutOpts);
+      } catch { /* best-effort shortcut alignment */ }
+    }
+    window = new BrowserWindow({ show: false, width: Math.min(1480, area.width), height: Math.min(960, area.height), minWidth: 800, minHeight: 600, backgroundColor: GROUND[dark ? 'dark' : 'light'], title: 'QuotaDock · 额度台', icon: appIcon, titleBarStyle:'hidden', titleBarOverlay:titleBarOverlay(dark ? 'dark' : 'light'), autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+    if (!appIcon.isEmpty()) window.setIcon(appIcon);
     const valid = event => event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame;
     configHealth = new ConfigHealthService(async (agent, scope) => {
       const result = await dialog.showOpenDialog(window, { title: '选择 ' + (agent === 'codex' ? 'Codex' : 'Claude Code') + (scope === 'home' ? ' 用户根目录（包含 .codex / .claude）' : ' 项目根目录'), properties: ['openDirectory'] });
@@ -132,7 +165,7 @@ else {
     const fixtureShell = Boolean(fixtureRoot) && !process.argv.includes('--desktop-shell-test');
     watch = new QuotaWatch(dataDir, { accounts: quotaAccounts, show: notice => desktopShell.notify(notice), changed: rows => desktopShell.update(rows) });
     desktopShell = new DesktopShell(dataDir, {
-      electron: require('electron'), window, valid, preload: path.join(__dirname, 'tray-preload.js'), cardFile: path.join(__dirname, '../../design/desktop-reference/tray/card.html'), iconFile: path.join(__dirname, '../../design/desktop-reference/assets/ui/quotadock.png'),
+      electron: require('electron'), window, valid, preload: path.join(__dirname, 'tray-preload.js'), cardFile: path.join(__dirname, '../../design/desktop-reference/tray/card.html'), iconFile: iconPng,
       packaged: app.isPackaged, hasAccounts: () => quotaAccounts().length > 0 || fixtureShell, exitPath: () => stopped, watch, enabled: !fixtureShell, quit: () => app.quit(),
     });
     desktopShell.install();
@@ -413,7 +446,10 @@ else {
     handle('quota:chooseExecutable', async () => { if (service.runtimeBusy()) throw new Error('RUNTIME_BUSY'); const result = await dialog.showOpenDialog(window, { title: '选择官方 Codex CLI 的 codex.exe', properties: ['openFile'], filters: [{ name: 'Codex', extensions: ['exe'] }] }); if (!result.canceled && path.basename(result.filePaths[0]).toLowerCase() === 'codex.exe') { if (service.runtimeBusy()) throw new Error('RUNTIME_BUSY'); service.executable = result.filePaths[0]; fs.writeFileSync(path.join(dataDir, 'runtime.json'), JSON.stringify({ executable: service.executable })); } return service.state(); });
     await window.loadFile(path.join(__dirname, '../../design/desktop-reference/index.html'));
     // Started by Windows at login: stays in the tray, with the window a click away.
-    if (!quitting && !window.isDestroyed() && !(process.argv.includes('--hidden') && desktopShell.tray)) window.show();
+    if (!quitting && !window.isDestroyed() && !(process.argv.includes('--hidden') && desktopShell.tray)) {
+      if (!appIcon.isEmpty()) window.setIcon(appIcon);
+      window.show();
+    }
     if (!quitting) { lookSoon(); void usage.start().catch(() => { if (!quitting && !window.isDestroyed()) window.webContents.send('usage:update'); }); }
     // Updates wait for the window: a check shortly after start-up, then every few hours. Only a packaged build does this.
     if (!quitting) updates.start();

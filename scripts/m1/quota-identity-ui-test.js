@@ -61,7 +61,7 @@ async function closeSheet(page) { await page.keyboard.press('Escape'); await q.d
     try {
       app = await electron.launch({ executablePath, args, timeout: 60000 }); page = await app.firstWindow(); await keepVisible(app); await isolatePointer(app); await showView(page, 'quota');
       const errors = []; page.on('pageerror', error => errors.push(error.message)); page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-      assert.match(page.url(), /^file:/); assert.match(await page.title(), /Agent Usage/); assert(await page.locator('[data-quota-idle]').first().innerText());
+      assert.match(page.url(), /^file:/); assert.match(await page.title(), /QuotaDock/); assert(await page.locator('[data-quota-idle]').first().innerText());
       await page.setViewportSize({ width: scale === 1 ? 1320 : 1000, height: 900 }); if (scale === 1.5) await page.evaluate(() => document.body.classList.add('dark'));
       await fixture(app);
       const a = await login(page, '甲一'), aa = await login(page, '甲二 <b>名称</b>'), b = await login(page, '乙一'), bb = await login(page, '乙二');

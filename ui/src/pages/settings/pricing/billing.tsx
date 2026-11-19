@@ -48,7 +48,7 @@ export function BillingRules() {
           {errors[agent] ? <span className="text-caption text-destructive" role="status">{errors[agent]}</span> : null}
         </div>;
       })}
-      <div className="flex justify-end"><Button variant="primary" disabled={savingBilling} onClick={() => void save()}>保存规则</Button></div>
+      <div className="flex justify-end"><Button variant="primary" loading={savingBilling} disabled={savingBilling} onClick={() => void save()}>保存规则</Button></div>
     </div>
   </Disclosure>;
 }

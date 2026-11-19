@@ -8,6 +8,7 @@
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { launch, setTheme, isolationViolations, semanticViolations } = require('./ui-smoke');
 const { showView, settle, until } = require('./ui-settle');
+const { dragThenScroll } = require('./drag-landing');
 const output = process.env.WIDGETS_EVIDENCE_DIR || 'artifacts/ui-widgets';
 const SIDEBAR = '#quota [data-widget-board]', SHEET = '[data-ui-portal] [role="dialog"]';
 const types = page => page.$$eval(SIDEBAR + ' [data-widget]', nodes => nodes.map(node => node.dataset.widget));
@@ -98,7 +99,22 @@ const saved = page => page.evaluate(() => JSON.parse(localStorage.getItem('agent
     await page.locator(SIDEBAR + ' header [aria-label="小组件布局"]').waitFor();
     await page.screenshot({ path: path.join(output, 'layouts.png') });
 
+    // A released widget must travel with the page, not stay glued to the viewport (owner report
+    // 2026-11-17: "the moved widget sticks to the screen for a few seconds"). The board is dragged
+    // out of edit mode on purpose - that is where the report happened - and the scroll is applied
+    // late in the landing, where the spring's own motion is nearly zero.
+    await showView(page, 'quota'); await page.locator(SIDEBAR).waitFor(); await settle(page);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' })); await settle(page);
+    const slots = page.locator(SIDEBAR + ' [data-sort-key]');
+    const stuck = await dragThenScroll(page, {
+      from: slots.first(), to: slots.nth(2), flyer: '[data-sort-flying]', scrollDelay: 320,
+    });
+    fs.writeFileSync(path.join(output, 'landing-scroll.json'), JSON.stringify(stuck, null, 2));
+    assert(stuck.scrollFrames > 0, 'the measurement actually scrolled the page');
+    assert.equal(stuck.fixedScrollFrames, 0, 'the layer is out of viewport space before the page scrolls');
+    assert(stuck.worstGapJumpPx <= 1, 'the released widget keeps its gap to the slot through a scroll: ' + stuck.worstGapJumpPx + 'px');
+    assert.equal(await page.locator('[data-sort-flying]').count(), 0, 'nothing is left flying after the landing');
+
     assert.deepEqual(errors, [], 'no renderer errors');
-    process.stdout.write('PASS: per-page summary column, widget board on 概览, default layout, edit, library, settings, readout, saved layouts.\n');
-  } finally { await session.close(); }
+    process.stdout.write('PASS: per-page summary column, widget board on 概览, default layout, edit, library, settings, readout, saved layouts, released widget travels with the page.\n');  } finally { await session.close(); }
 })().catch(error => { process.stderr.write(error.stack + '\n'); process.exitCode = 1; });

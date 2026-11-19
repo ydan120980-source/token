@@ -1,0 +1,78 @@
+.app-titlebar .tauri-caption {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  height: 44px;
+  app-region: no-drag;
+}
+
+.app-titlebar .tauri-caption button {
+  display: grid;
+  position: relative;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  border-radius: 0;
+  padding: 0;
+  color: #242426;
+}
+
+.dark .app-titlebar .tauri-caption button {
+  color: #f5f5f5;
+}
+
+.app-titlebar .tauri-caption button[data-caption="close"]:hover {
+  background: #c42b1c;
+  color: white;
+}
+
+.tauri-caption button::before, .tauri-caption button::after {
+  box-sizing: border-box;
+  grid-area: 1 / 1;
+}
+
+.tauri-caption [data-caption="minimize"]::before {
+  content: "";
+  width: 10px;
+  border-top: 1px solid currentColor;
+}
+
+.tauri-caption [data-caption="toggleMaximize"]::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border: 1px solid currentColor;
+}
+
+.tauri-caption [data-caption="toggleMaximize"][data-maximized="true"]::before,
+.tauri-caption [data-caption="toggleMaximize"][data-maximized="true"]::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border: 1px solid currentColor;
+}
+
+.tauri-caption [data-maximized="true"]::before {
+  transform: translate(1px, -1px);
+}
+
+.tauri-caption [data-maximized="true"]::after {
+  transform: translate(-1px, 1px);
+  background: var(--bg);
+}
+
+.tauri-caption [data-caption="close"]::before,
+.tauri-caption [data-caption="close"]::after {
+  content: "";
+  width: 13px;
+  border-top: 1px solid currentColor;
+}
+
+.tauri-caption [data-caption="close"]::before {
+  transform: rotate(45deg);
+}
+
+.tauri-caption [data-caption="close"]::after {
+  transform: rotate(-45deg);
+}

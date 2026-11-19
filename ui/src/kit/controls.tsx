@@ -1,4 +1,4 @@
-import { forwardRef, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState,
+import { forwardRef, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState,
   type ReactNode, type ReactElement, type FormEvent, type KeyboardEvent } from "react";
 import { IconSearch, IconX } from "@tabler/icons-react";
 import { Button as FluidButton } from "@/components/ui/button";
@@ -31,27 +31,82 @@ export interface ButtonProps {
   trailingIcon?: IconComponent;
   loading?: boolean;
   disabled?: boolean;
-  onClick?: () => void;
+  className?: string;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void | Promise<any>;
   children: ReactNode;
   "aria-label"?: string; "aria-expanded"?: boolean; "aria-controls"?: string;
 }
 
 // Construct the native fluid element once so Radix can compose its own trigger
 // attributes without widening the public kit Button API.
-function buttonElement({ variant, tone, size = "default", trimLabel, type = "button", leadingIcon, trailingIcon, loading, disabled, onClick, children, "aria-label": label, "aria-expanded": expanded, "aria-controls": controls }: ButtonProps) {
+function buttonElement({ variant, tone, size = "default", trimLabel, type = "button", leadingIcon, trailingIcon, loading, disabled, className, onClick, children, "aria-label": label, "aria-expanded": expanded, "aria-controls": controls }: ButtonProps) {
   return <FluidButton type={type} variant={tone === "danger" ? "ghost" : variant} size={size}
-    className={tone === "danger" ? "text-destructive hover:text-destructive" : undefined}
+    className={cn(tone === "danger" ? "text-destructive hover:text-destructive" : undefined, className)}
     leadingIcon={leadingIcon} trailingIcon={trailingIcon} loading={loading} disabled={disabled} trimLabel={trimLabel}
     aria-busy={loading || undefined} aria-label={label} aria-expanded={expanded} aria-controls={controls} onClick={onClick}>{children}</FluidButton>;
 }
-export function Button(props: ButtonProps) { return buttonElement(props); }
+export function Button(props: ButtonProps) {
+  const [asyncBusy, setAsyncBusy] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
+  const loading = props.loading !== undefined ? props.loading : asyncBusy;
+  const handleClick = props.onClick ? (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (props.disabled || loading) return;
+    const result = props.onClick!(event);
+    if (result && typeof (result as any).then === "function") {
+      setAsyncBusy(true);
+      (result as Promise<any>).finally(() => {
+        if (mounted.current) setAsyncBusy(false);
+      });
+    }
+  } : undefined;
 
-export interface IconButtonProps { icon: IconComponent; label: string; onClick: () => void; size?: Size; disabled?: boolean }
-function iconButtonElement({ icon: Icon, label, onClick, size = "default", disabled }: IconButtonProps) {
-  return <FluidButton type="button" variant="ghost" size={size === "compact" ? "icon-compact" : "icon"}
-    aria-label={label} onClick={onClick} disabled={disabled}><Icon size={size === "compact" ? 14 : 16} /></FluidButton>;
+  return buttonElement({
+    ...props,
+    loading,
+    disabled: props.disabled || loading,
+    onClick: handleClick,
+  });
 }
-export function IconButton(props: IconButtonProps) { return iconButtonElement(props); }
+
+export interface IconButtonProps {
+  icon: IconComponent;
+  label: string;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void | Promise<any>;
+  size?: Size;
+  disabled?: boolean;
+  loading?: boolean;
+  className?: string;
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
+}
+function iconButtonElement({ icon: Icon, label, onClick, size = "default", disabled, loading, className }: IconButtonProps) {
+  return <FluidButton type="button" variant="ghost" size={size === "compact" ? "icon-compact" : "icon"}
+    aria-label={label} onClick={onClick} disabled={disabled} loading={loading} aria-busy={loading || undefined} className={className}><Icon size={size === "compact" ? 14 : 16} /></FluidButton>;
+}
+export function IconButton(props: IconButtonProps) {
+  const [asyncBusy, setAsyncBusy] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
+  const loading = props.loading !== undefined ? props.loading : asyncBusy;
+  const handleClick = props.onClick ? (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (props.disabled || loading) return;
+    const result = props.onClick!(event);
+    if (result && typeof (result as any).then === "function") {
+      setAsyncBusy(true);
+      (result as Promise<any>).finally(() => {
+        if (mounted.current) setAsyncBusy(false);
+      });
+    }
+  } : undefined;
+
+  return iconButtonElement({
+    ...props,
+    loading,
+    disabled: props.disabled || loading,
+    onClick: handleClick,
+  });
+}
 
 export function Segmented<T extends string>({ value, onChange, items, size = "default", "aria-label": label }: {
   value: T; onChange: (value: T) => void; items: { value: T; label: string; icon?: IconComponent; disabled?: boolean }[]; size?: Size; "aria-label": string;

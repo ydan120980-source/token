@@ -117,6 +117,37 @@ async function usageFunctionalChecks(page, app, { scale, output, openSettings, p
   await page.screenshot({ path: path.join(output, 'trend-total-' + scale + '.png') });
   fs.writeFileSync(path.join(output, 'animation-' + scale + '.json'), JSON.stringify(motion, null, 2));
   fs.writeFileSync(path.join(output, 'agent-animation-' + scale + '.json'), JSON.stringify(agentMotion, null, 2));
+
+  // A commit reflows the page above the trend, so the page keeps that section still. It must not
+  // keep a section still that the person has already scrolled away from: correcting for their
+  // scroll would silently undo it (owner report 2026-11-17). Measured as the difference between
+  // the page's own scroll and the section's document position, taken either side of a commit.
+  // The measurement puts the page back the way it found it: the later checks depend on that.
+  const entry = await page.evaluate(() => ({ scrollY: window.scrollY, metric: window.usageHost.get().state.metric }));
+  await chart.scrollIntoViewIfNeeded(); await settle(page);
+  const drift = async ({ scrollFirst }) => page.evaluate(async scrollFirst => {
+    const before = window.scrollY;
+    if (scrollFirst) window.scrollBy({ top: -260, behavior: 'instant' });
+    const trend = document.querySelector('[data-usage-trend]');
+    const anchor = trend.getBoundingClientRect().top + window.scrollY;
+    const scrolledTo = window.scrollY;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    window.usageHost.set({ metric: scrollFirst ? 'cost' : 'tokens' });
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const after = trend.getBoundingClientRect().top + window.scrollY;
+    const result = { before, scrolledTo, scrollY: window.scrollY, anchor, after, drift: +(window.scrollY - scrolledTo).toFixed(1) };
+    window.scrollTo({ top: before, behavior: 'instant' });
+    return result;
+  }, scrollFirst);
+  // Control: a commit with no scroll of the person's own still keeps the section exactly where it was.
+  const anchored = await drift({ scrollFirst: false });
+  // The report's case: scroll first, then commit. The page must stay where the person put it.
+  const kept = await drift({ scrollFirst: true });
+  fs.writeFileSync(path.join(output, 'scroll-anchor-' + scale + '.json'), JSON.stringify({ anchored, kept }, null, 2));
+  await page.evaluate(state => { window.usageHost.set({ metric: state.metric }); window.scrollTo({ top: state.scrollY, behavior: 'instant' }); }, entry);
+  await settle(page);
+  assert(Math.abs(anchored.after - anchored.anchor) <= 1, 'an unscrolled commit keeps the section still: ' + JSON.stringify(anchored));
+  assert(Math.abs(kept.drift) <= 1, 'a commit never undoes the person\'s own scroll: ' + JSON.stringify(kept));
   return { rest, motion };
 }
 module.exports = { usageFunctionalChecks };

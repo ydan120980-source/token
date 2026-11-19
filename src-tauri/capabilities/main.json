@@ -1,0 +1,6 @@
+{
+  "identifier": "reader-window",
+  "description": "Local event subscriptions for the built-in reader window",
+  "windows": ["main", "tray-card"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

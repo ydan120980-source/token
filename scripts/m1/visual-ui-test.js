@@ -52,9 +52,13 @@ const { assertQuotaCardsFit } = require('./quota-card-fit-check');
         // Nothing inside a card is cut off: each card's content fits its body.
         await assertQuotaCardsFit(page, 3);
         const zero = page.locator('#quotaCards .quota-card').nth(1);
-        assert.equal(await zero.locator('.quota-segments').first().getAttribute('aria-valuenow'), '0');
-        assert.equal(await zero.locator('.quota-segments').nth(1).getAttribute('aria-valuenow'), null);
-        assert.equal(await zero.getByText('待刷新', { exact: true }).count(), 1);
+        // Windows are read by name, not by position: the card promotes the longest window to its
+        // main meter and keeps the shorter ones as compact rows under it (quota-model.js bodyView).
+        const segment = name => zero.locator('.quota-segments[aria-label^="' + name + '"]');
+        assert.equal(await segment('codex · 每周').getAttribute('aria-valuenow'), null, 'the weekly window reports no percentage');
+        assert.equal(await segment('codex · 5 小时').getAttribute('aria-valuenow'), '0', 'an exhausted window reads zero, not unknown');
+        assert.equal(await segment('codex-extra · 1 小时').getAttribute('aria-valuenow'), '85');
+        assert.equal(await zero.getByText('缓存已过期 · 请刷新', { exact: true }).count(), 1, 'a stale cache says so in the card head');
         await page.screenshot({ path: path.join(output, 'widgets-' + scale + '.png') });
         await page.locator('#quotaCards .quota-card').first().getByRole('button', { name: '账号详情' }).click();
         // The sheet's scroll lock may shift the page by a sub-pixel at 1.5x (Radix); the cards keep their size.

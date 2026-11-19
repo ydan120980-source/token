@@ -1,0 +1,31 @@
+[package]
+name = "usage-engine"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+num-bigint = "0.4"
+num-traits = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+ryu = "1"
+same-file = "1"
+sha2 = "0.10"
+hmac = "0.12"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+chrono-tz = { version = "0.10", default-features = false, features = ["std"] }
+rand = "0.8"
+regex = "1"
+indexmap = { version = "2", features = ["serde"] }
+rusqlite = { version = "0.32", features = ["bundled", "serialize"] }
+zstd = "0.13"
+iana-time-zone = "0.1"
+icu_collator = { version = "2", features = ["compiled_data"] }
+icu_locale = { version = "2", features = ["compiled_data"] }
+sys-locale = "0.3"
+tokio = { version = "1", features = ["rt", "sync", "time"] }
+tokscale-core = { path = "../../vendor/tokscale-core" }
+
+[dev-dependencies]
+zstd = "0.13"
+rand = "0.8"

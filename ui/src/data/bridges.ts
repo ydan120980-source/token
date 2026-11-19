@@ -109,10 +109,186 @@ export interface WindowBridge {
   onCommand(callback: (command: string) => void): T.Unsubscribe;
   onState(callback: (state: T.WindowState) => void): T.Unsubscribe;
 }
-declare global {
-  interface Window { usageBridge?: UsageBridge; quotaBridge?: QuotaBridge; windowBridge?: WindowBridge }
+interface TauriApi {
+  core: { invoke<Result>(command: string, args?: Record<string, unknown>): Promise<Result> };
+  event: { listen<Result>(event: string, callback: (event: { payload: Result }) => void): Promise<T.Unsubscribe> };
 }
-// These getters only return the existing object; no IPC occurs on import/read.
+declare global {
+  interface Window {
+    usageBridge?: UsageBridge;
+    quotaBridge?: QuotaBridge;
+    windowBridge?: WindowBridge;
+    __TAURI__?: TauriApi;
+  }
+}
+
+function installTauriReader(api: TauriApi) {
+  const invoke = <Result,>(command: string, args?: Record<string, unknown>) =>
+    api.core.invoke<Result>(command, args).catch((error: unknown) => {
+      throw error instanceof Error ? error : Error(String(error));
+    });
+  const listen = <Result,>(event: string, callback: (payload: Result) => void, ready?: () => void): T.Unsubscribe => {
+    let stopped = false;
+    const registration = api.event.listen<Result>(event, ({ payload }) => { if (!stopped) callback(payload); });
+    void registration.then(() => { if (!stopped) ready?.(); }, () => {});
+    return () => {
+      if (stopped) return;
+      stopped = true;
+      void registration.then(unlisten => unlisten(), () => {});
+    };
+  };
+  // usage-data.js consumes this transport after the classic bundle loads.
+  const transport = {
+    get: () => invoke<T.UsageState>("usage_get"),
+    refresh: () => invoke<T.UsageState>("usage_refresh"),
+    sessions: (selection?: Parameters<UsageBridge["sessions"]>[0]) => invoke<T.SessionList>("usage_sessions", { selection }),
+    sessionSummary: (selection: T.SessionSelection) => invoke<T.SessionSummary>("usage_session_summary", { selection }),
+    sources: () => invoke<T.SourceDiscovery>("usage_sources"),
+    connections: () => invoke<T.Connections>("usage_connections"),
+    connectionsV2: () => invoke<T.ConnectionsV2>("usage_connections_v2"),
+    setEnabled: (value: boolean) => invoke<T.UsageState>("usage_set_enabled", { value }),
+    chooseSource: (agent: string) => invoke<T.SourceChooseResult>("usage_choose_source", { agent }),
+    changeSource: (name: string, agent: string | null, value?: string | boolean) =>
+      invoke<T.SourceChangeResult>("usage_change_source", { name, agent, value }),
+    revealSourcePath: (file: string) => invoke<{ shown: boolean }>("usage_reveal_source", { file }),
+    pricing: () => invoke<T.Pricing>("usage_pricing"),
+    pricingCoverage: () => invoke<T.PriceCoverage | null>("usage_pricing", { view: "coverage" }),
+    workbench: (selection?: T.WorkbenchSelection) => invoke<T.Workbench>("usage_workbench", { selection }),
+    attention: () => invoke<T.Attention>("usage_attention"),
+    sessionLabels: () => invoke<T.SessionLabels>("usage_session_labels"),
+    // The shared shell asks for Agent admin state on mount. Report the
+    // unavailable feature through the error envelope that panel handles.
+    agents: async () => ({ error: "AGENT_ADMIN_UNAVAILABLE" }),
+    setSessionLabel: (key: string, patch: Parameters<UsageBridge["setSessionLabel"]>[1]) =>
+      invoke<T.SessionLabels>("usage_session_label", { key, patch }),
+    transcript: (key: string, proof?: unknown) => invoke<T.Transcript>("usage_transcript", { key, proof }),
+    transcriptPart: (key: string, request: T.TranscriptPartRequest) =>
+      invoke<T.TranscriptPart>("usage_transcript_part", { key, request }),
+    transcriptFind: (key: string, request: Parameters<UsageBridge["transcriptFind"]>[1]) =>
+      invoke<T.TranscriptFind>("usage_transcript_find", { key, request }),
+    transcriptStamp: (key: string) => invoke<{ stamp: string }>("usage_transcript_stamp", { key }),
+    transcriptFacts: (key: string) => invoke<T.TranscriptFacts>("usage_transcript_facts", { key }),
+    searchTranscripts: (request: Parameters<UsageBridge["searchTranscripts"]>[0]) =>
+      invoke<T.TranscriptSearch>("usage_search_transcripts", { request }),
+    transcriptFileHistory: (request: Parameters<UsageBridge["transcriptFileHistory"]>[0]) =>
+      invoke<Awaited<ReturnType<UsageBridge["transcriptFileHistory"]>>>("usage_transcript_file_history", { request }),
+    onUpdate: (callback: () => void) => listen("usage:update", callback),
+    exportStatistics: (payload: T.UsageSnapshot) => invoke<T.SavedFile>("usage_export_statistics", { payload }),
+    exportCost: (request: Parameters<UsageBridge["exportCost"]>[0]) => invoke<T.SavedFile>("usage_export_cost", { request }),
+    exportProjects: (selection?: T.WorkbenchSelection) => invoke<T.SavedFile>("usage_export_projects", { selection }),
+    transcriptCopy: (key: string, request: Parameters<UsageBridge["transcriptCopy"]>[1]) =>
+      invoke<{ copied: true }>("usage_transcript_copy", { key, request }),
+    transcriptExport: (key: string, request: Parameters<UsageBridge["transcriptExport"]>[1]) =>
+      invoke<T.SavedFile>("usage_transcript_export", { key, request }),
+    copyText: (text: string) => invoke<{ copied: true }>("usage_copy_text", { text }),
+    copyResume: (key: string) => invoke<{ copied: true }>("usage_copy_resume", { key }),
+    openLink: (url: string) => invoke<{ opened: true }>("usage_open_link", { url }),
+    openFolder: (key: string) => invoke<{ opened: true; path: string }>("usage_open_folder", { key }),
+  };
+  Object.defineProperty(window, "usageTransport", { enumerable: true, value: Object.freeze(transport) });
+  Object.defineProperty(window, "previewUsage", { enumerable: true, value: Object.freeze({
+    schemaVersion: "LocalUsagePreviewV1", sequence: 0,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    daily: [], hourly: [], sources: [], loading: true,
+  }) });
+  const windowBridge: WindowBridge = {
+    menu: name => invoke<true>("desktop_menu", { name }),
+    theme: (value: "light" | "dark") => invoke<true>("desktop_theme", { value }),
+    state: () => invoke<T.WindowState>("desktop_state"),
+    onCommand: callback => {
+      let live = true;
+      const consume = () => { void invoke<string | null>("desktop_take_open_command").then(command => {
+        if (live && command) callback(command);
+      }, () => {}); };
+      const native = listen("window:command", callback);
+      const pending = listen("window:openCommandPending", consume, consume);
+      return () => { live = false; native(); pending(); };
+    },
+    onState: callback => listen("window:state", callback),
+  };
+  Object.defineProperty(window, "windowBridge", { enumerable: true, value: Object.freeze(windowBridge) });
+  const providers = () => invoke<T.QuotaReply<T.ProviderState>>("quota_providers");
+  const quotaState = () => invoke<T.QuotaReply<T.QuotaState>>("quota_get", { versionTwo: false });
+  const providerUnavailable = async (): Promise<T.QuotaReply<T.ProviderState>> => {
+    const response = await providers();
+    if (!response.ok) return response;
+    return { ok: false, errorCode: "PROVIDER_LOGIN_UNAVAILABLE", error: "此连接方式尚未接通。", state: response.state };
+  };
+  const codexUnavailable = async (): Promise<T.QuotaReply<T.QuotaState>> => {
+    const response = await quotaState();
+    if (!response.ok) return response;
+    return { ok: false, errorCode: "CODEX_EXECUTABLE_REQUIRED", error: "当前没有可用的 Codex CLI 连接。", state: response.state };
+  };
+  const quotaBridge: QuotaBridge = {
+    providers,
+    providerExperimental: enabled => invoke("quota_provider_experimental", { enabled }),
+    providerConnect: request => invoke("quota_provider_connect", { request }),
+    providerAction: request => invoke("quota_provider_action", { request }),
+    providerGuide: providerUnavailable,
+    providerPassiveGuide: providerUnavailable,
+    providerWebsiteLogin: providerUnavailable,
+    providerClientLogin: providerUnavailable,
+    providerWebsiteCancel: providerUnavailable,
+    onProviderUpdate: callback => listen("quota:providerUpdate", callback),
+    discoverAntigravity: async () => ({ ok: false, errorCode: "AGY_EXECUTABLE_REQUIRED", discovery: null }),
+    antigravitySetup: async () => { throw Error("AGY_SETUP_UNAVAILABLE"); },
+    antigravitySetupAction: async () => { throw Error("AGY_SETUP_UNAVAILABLE"); },
+    getV2: () => invoke("quota_get", { versionTwo: true }),
+    get: quotaState,
+    login: codexUnavailable,
+    cancel: codexUnavailable,
+    refresh: codexUnavailable,
+    refreshAll: () => invoke("quota_refresh_all"),
+    setAutoRefresh: value => invoke("quota_set_auto_refresh", { value }),
+    remove: codexUnavailable,
+    chooseExecutable: codexUnavailable,
+    onUpdate: callback => listen("quota:update", callback),
+  };
+  Object.defineProperty(window, "quotaBridge", { enumerable: true, value: Object.freeze(quotaBridge) });
+  const caption = (action: "minimize" | "toggleMaximize" | "close" | "drag") =>
+    void invoke<void>("desktop_caption", { action }).catch(() => {});
+  document.addEventListener("DOMContentLoaded", () => {
+    const titlebar = document.querySelector("#appTitlebar");
+    if (!titlebar) return;
+    const controls = document.createElement("div");
+    controls.className = "tauri-caption";
+    const minimize = document.createElement("button");
+    const maximize = document.createElement("button");
+    const close = document.createElement("button");
+    for (const [button, action, label] of [
+      [minimize, "minimize", "最小化"],
+      [maximize, "toggleMaximize", "最大化"],
+      [close, "close", "关闭"],
+    ] as const) {
+      button.type = "button";
+      button.dataset.caption = action;
+      button.setAttribute("aria-label", label);
+      button.addEventListener("click", () => caption(action));
+      controls.append(button);
+    }
+    titlebar.append(controls);
+    const showMaximized = (state: T.WindowState) => {
+      maximize.dataset.maximized = String(state.maximized);
+      maximize.setAttribute("aria-label", state.maximized ? "向下还原" : "最大化");
+    };
+    const stop = windowBridge.onState(showMaximized);
+    void windowBridge.state().then(showMaximized).catch(() => {});
+    window.addEventListener("unload", stop, { once: true });
+    titlebar.addEventListener("mousedown", event => {
+      const mouse = event as MouseEvent;
+      if (mouse.button !== 0 || !(mouse.target instanceof Element) ||
+          mouse.target.closest("button, a, input, select, [data-ui-portal]")) return;
+      caption(mouse.detail === 2 ? "toggleMaximize" : "drag");
+    });
+  }, { once: true });
+}
+
+if (import.meta.env.VITE_QUOTADOCK_TAURI_READER === "1" && typeof window !== "undefined" &&
+    window.__TAURI__ && !Object.hasOwn(window, "usageTransport")) {
+  installTauriReader(window.__TAURI__);
+}
+
+// These getters only return the existing objects.
 export function getUsageBridge(): UsageBridge { if (!window.usageBridge) throw Error("UI_USAGE_BRIDGE_UNAVAILABLE"); return window.usageBridge; }
 export function getQuotaBridge(): QuotaBridge { if (!window.quotaBridge) throw Error("UI_QUOTA_BRIDGE_UNAVAILABLE"); return window.quotaBridge; }
 export function getWindowBridge(): WindowBridge { if (!window.windowBridge) throw Error("UI_WINDOW_BRIDGE_UNAVAILABLE"); return window.windowBridge; }

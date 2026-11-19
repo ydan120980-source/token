@@ -24,7 +24,7 @@ export function CollectionSection() {
           <SettingRow title="多久采集一次"
             control={<Select value={interval} onChange={changeInterval} options={intervals} disabled={collection.mode !== "desktop"} aria-label="用量自动刷新" />} />
           <SettingRow title={facts?.checkedAt ? "上次采集 " + ago(facts.checkedAt) : "还没有采集过"}
-            control={<Button variant="secondary" size="compact" disabled={busy || readOnly || Boolean(facts?.collecting)} onClick={() => void collectNow()}>{facts?.collecting || busy ? "正在采集" : "立即采集"}</Button>} />
+            control={<Button variant="secondary" size="compact" loading={Boolean(facts?.collecting || busy)} disabled={readOnly} onClick={() => void collectNow()}>立即采集</Button>} />
         </div>
       </Card>
     </Block>

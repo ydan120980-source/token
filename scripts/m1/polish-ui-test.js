@@ -42,7 +42,7 @@ const { version } = require('../../package.json');
     await app.evaluate(({Menu})=>{globalThis.polishPopup=null;globalThis.polishOriginalPopup=Menu.prototype.popup;Menu.prototype.popup=function(){globalThis.polishPopup=this.items.map(i=>i.type==='separator'?'|':i.label);};});
     await page.locator('#windowMenu').click();for(let i=0;i<60&&!(await app.evaluate(()=>globalThis.polishPopup));i++)await page.waitForTimeout(50);
     const popup=await app.evaluate(({Menu})=>{Menu.prototype.popup=globalThis.polishOriginalPopup;delete globalThis.polishOriginalPopup;return globalThis.polishPopup;});
-    assert.deepEqual(popup,['刷新当前页面','导出统计…','|','显示 / 隐藏侧栏','切换深浅外观','色彩外观','|','界面动效','设置','|','关于 QuotaDock']);
+    assert.deepEqual(popup,['刷新当前页面','导出统计…','|','显示 / 隐藏侧栏','显示 / 隐藏概要','切换深浅外观','色彩外观','|','界面动效','设置','|','关于 QuotaDock']);
     assert.equal(await page.locator('#theme').evaluate(e=>e.closest('#appTitlebar')!==null),true,'the light/dark switch lives in the title bar');
     await assert.rejects(page.evaluate(()=>window.windowBridge.menu('login')),/WINDOW_ACTION_REJECTED/);
     await assert.rejects(page.evaluate(()=>window.windowBridge.theme('red')),/WINDOW_ACTION_REJECTED/);

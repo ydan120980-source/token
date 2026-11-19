@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["crates/usage-engine", "crates/quota-engine", "src-tauri"]
+default-members = ["crates/usage-engine"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.8"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+opt-level = "z"

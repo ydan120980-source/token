@@ -128,8 +128,8 @@ export function PriceEditorSheet() {
           {model.verdict(trials[mappingTo], pricing).left.map(line => <span key={line} className="text-caption text-muted-foreground">{line}</span>)}
         </div> : null}
         <div className="flex items-center justify-end gap-3">
-          {billing.mappings[key] ? <Button variant="tertiary" disabled={store.savingBilling} onClick={() => void unmap()}>恢复自动匹配</Button> : null}
-          <Button variant="primary" type="submit" disabled={!mappingTo || store.savingBilling || handPriced || Boolean(mappingTo && trials[mappingTo] && model.verdict(trials[mappingTo], pricing).kind === "none")}>按此模型计费</Button>
+          {billing.mappings[key] ? <Button variant="tertiary" loading={store.savingBilling} disabled={store.savingBilling} onClick={() => void unmap()}>恢复自动匹配</Button> : null}
+          <Button variant="primary" type="submit" loading={store.savingBilling} disabled={!mappingTo || store.savingBilling || handPriced || Boolean(mappingTo && trials[mappingTo] && model.verdict(trials[mappingTo], pricing).kind === "none")}>按此模型计费</Button>
         </div>
       </Form> : null}
       {mode === "manual" ? <Form onSubmit={() => void submitPrice()} onInvalid={() => setProbe("请填写有效的模型标识与每百万 Token 非负价格（最高 100000）。输入和输出必填，缓存留空表示未知，明确免费请填 0。")} aria-label="手动价格">
@@ -148,7 +148,7 @@ export function PriceEditorSheet() {
         <p className="text-caption text-foreground" role="status" data-probe>{probe}</p>
         <div className="flex items-center justify-end gap-3">
           <Button variant="tertiary" tone="danger" disabled={!manual} onClick={() => void removePrice()}>移除手动价格</Button>
-          <Button variant="primary" type="submit" disabled={saving}>保存价格</Button>
+          <Button variant="primary" type="submit" loading={saving} disabled={saving}>保存价格</Button>
         </div>
       </Form> : null}
     </div>

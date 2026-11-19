@@ -1,0 +1,52 @@
+# Vendored from junhoyeo/tokscale tag v4.17.0 (MIT, (c) Junho Yeo).
+# Source files are byte-identical to the upstream tag; this manifest only
+# resolves the upstream workspace inheritance to the concrete values pinned in
+# the tag's root Cargo.toml (workspace.package 4.17.0 / edition 2021 and the
+# workspace.dependencies versions), the same normalization cargo applies when
+# publishing a crate. See MIGRATION_PLAN.md section 7 for fetch provenance.
+[package]
+name = "tokscale-core"
+version = "4.17.0"
+edition = "2021"
+authors = ["Junho Yeo <hello@junho.io>"]
+license = "MIT"
+repository = "https://github.com/junhoyeo/tokscale"
+description = "Core library for tokscale - session parsing, scanning, aggregation, pricing"
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+rayon = "1.10"
+simd-json = "0.14"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+walkdir = "2"
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = { version = "0.10", default-features = false, features = ["std"] }
+iana-time-zone = "0.1"
+thiserror = "2"
+reqwest = { version = "0.12", features = ["json", "rustls-tls-native-roots"], default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "fs"] }
+dirs = "5"
+once_cell = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+zstd = "0.13"
+tracing = "0.1"
+sha2 = "0.10"
+libc = "0.2"
+fs2 = "0.4"
+
+# Same per-target TLS gates as upstream tokscale-core/tokscale-cli: the Cursor
+# client needs native TLS, and a standalone core build must resolve the same
+# way the pinned CLI binary does.
+[target.'cfg(not(target_os = "android"))'.dependencies]
+reqwest = { version = "0.12", features = ["json", "rustls-tls-native-roots", "native-tls"], default-features = false }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+reqwest = { version = "0.12", features = ["json", "rustls-tls-native-roots", "native-tls-vendored"], default-features = false }
+
+[dev-dependencies]
+tempfile = "3"
+serial_test = "3"

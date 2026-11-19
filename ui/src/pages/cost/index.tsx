@@ -71,7 +71,7 @@ export function CostPage() {
       title="费用"
       inlineActions={<SubTabs value={section} onChange={setSection} items={["费用分析", "项目与预算"]} idPrefix="cost-sections" />}
       actions={section === 0 ?
-        <IconButton icon={IconDownload} label="导出费用 CSV" disabled={snapshot.exporting} onClick={() => void host.export()} /> : null} />
+        <IconButton icon={IconDownload} label="导出费用 CSV" loading={snapshot.exporting} disabled={snapshot.exporting} onClick={() => host.export()} /> : null} />
     {section === 0 ?
       <div className="flex flex-col gap-6" data-cost-analysis data-range-open={folds.rail ? "" : undefined}>
         <Hero host={host} snapshot={snapshot} onCoverage={showCoverage} />

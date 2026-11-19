@@ -80,3 +80,25 @@ export function velocityTracker(window = 100) {
     },
   };
 }
+
+// Drag drop physics tokens (video 1:1, underdamped drop). omega0 = 19.4, zeta = 0.727, the same
+// pair the native card grid solves analytically. The native grid cuts its solution at 380 ms;
+// Motion otherwise integrates the underdamped tail until the value is exactly at rest, which takes
+// roughly twice as long, and the flying layer is `position: fixed` for that whole time. Sub-pixel
+// travel is invisible, so stop at rest thresholds instead and land inside the same window.
+export const dragSpring = {
+  type: "spring" as const,
+  stiffness: 320,
+  damping: 24,
+  mass: 0.85,
+  restDelta: 0.5,
+  restSpeed: 2,
+} as const;
+
+export const dragSettle = {
+  type: "spring" as const,
+  stiffness: 360,
+  damping: 26,
+  restDelta: 0.5,
+  restSpeed: 2,
+} as const;

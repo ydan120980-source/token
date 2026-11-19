@@ -173,13 +173,7 @@ class UpdateService {
     }
     if (this.task?.cancelled) return;
     const text = String(error?.code || '') + ' ' + String(error?.message || '');
-    // GitHubProvider 6.8.11 looks for an Atom entry before reaching its own
-    // no-releases error. Match that empty-feed error without hiding malformed entries.
-    const emptyGitHubFeed = error?.code === 'ERR_XML_MISSED_ELEMENT' && error.message === 'No published versions on GitHub';
-    if (emptyGitHubFeed || UNPUBLISHED.test(text)) {
-      this.publish({ status: 'latest', latest: null, progress: null, checkedAt: new Date(this.now()).toISOString(), error: null });
-      return;
-    }
+    if (UNPUBLISHED.test(text)) { this.publish({ status: 'latest', latest: null, progress: null, checkedAt: new Date(this.now()).toISOString(), error: null }); return; }
     this.publish({ status: 'error', progress: null, error: describe(error) });
   }
 

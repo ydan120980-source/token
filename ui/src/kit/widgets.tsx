@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { IconChevronRight } from "@tabler/icons-react";
 import { data, instant, spring, staggerDelay } from "@ui/design/motion";
 import { useKitMotion } from "./motion-mode";
+import { INTERACTIVE } from "./sortable";
 import { chartTone, type ChartTone } from "./charts/tones";
 import { useHoverCard } from "./hover-card";
 
@@ -26,7 +27,6 @@ export function widgetTone(mode: WidgetColorMode, index: number, agent?: string 
 /** Where a widget sits on the home board (owner 2026-10-29, Apple-style interaction): its place in the
  * entrance order and what opening it does. Outside the board (library previews) a widget is still. */
 export const WidgetPlace = createContext<{ order?: number; onOpen?: () => void }>({});
-const INTERACTIVE = "button,a,input,select,textarea,summary,[role=button],[role=switch],[role=slider],[contenteditable]";
 const pressed = { scale: 0.98 };
 
 /** One widget: a card on the window ground with its title row. Background and accent are theme rules (theme/widgets.css).
@@ -279,14 +279,19 @@ export function WidgetGraph({ nodes, tone, flowing, "aria-label": label }: { nod
 }
 
 /** In edit mode, the row of tools above a widget enters in sequence. */
+/** The edit-mode tool strip above a widget. It carries the same inline inset as the card's own
+ * padding (p-4), so the grip sits on the title's column and the last tool on the card's right edge
+ * instead of hanging outside the content the strip belongs to. */
 export function WidgetTools({ index, children }: { index: number; children: ReactNode }) {
   const { full } = useKitMotion();
-  return <motion.div className="flex h-7 items-center gap-1" initial={full ? { opacity: 0, y: 4 } : false} animate={{ opacity: 1, y: 0 }} transition={full ? { ...spring.fast, delay: index * 0.03 } : instant} data-widget-tools>{children}</motion.div>;
+  return <motion.div className="flex h-7 items-center gap-1 px-4" initial={full ? { opacity: 0, y: 4 } : false} animate={{ opacity: 1, y: 0 }} transition={full ? { ...spring.fast, delay: index * 0.03 } : instant} data-widget-tools>{children}</motion.div>;
 }
-/** A small tool button in edit mode (size letters, settings, remove). */
+/** A small tool button in edit mode (size letters, settings, remove). One square size for all of them:
+ * a letter's glyph width and an icon's 12px must not decide the button's width, or the row reads as
+ * three different sizes instead of one segmented strip. */
 export function WidgetTool({ label, pressed, onClick, children }: { label: string; pressed?: boolean; onClick: () => void; children: ReactNode }) {
   return <button type="button" aria-label={label} title={label} aria-pressed={pressed} onClick={onClick}
-    className={"inline-flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-lg px-2 text-micro font-semibold outline-none ring-1 ring-border focus-visible:ring-ring " + (pressed ? "bg-foreground text-background" : "bg-card text-foreground")}>{children}</button>;
+    className={"inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg p-0 text-micro font-semibold outline-none ring-1 ring-border focus-visible:ring-ring " + (pressed ? "bg-foreground text-background" : "bg-card text-foreground")}>{children}</button>;
 }
 /** The drag grip; dragging works on the whole widget in edit mode (Sortable), this only shows where. */
 export function WidgetGrip() {

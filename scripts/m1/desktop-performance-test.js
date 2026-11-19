@@ -114,7 +114,7 @@ const c = require('./cost-ui-helpers');
         }
         await page.emulateMedia({ reducedMotion: 'reduce' }); await usageUi.period(page,'today'); await settle(page);
         assert.equal(await page.evaluate(() => window.uiDetail.activeCount), 0);
-        assert.deepEqual(errors, []); assert.match(await page.title(), /Agent Usage/); assert.match(page.url(), /desktop-reference.*index\.html/);
+        assert.deepEqual(errors, []); assert.match(await page.title(), /QuotaDock/); assert.match(page.url(), /desktop-reference.*index\.html/);
         await page.screenshot({ path: path.join(output, 'desktop-performance-' + scale + '.png') });
         results.push({ scale, packaged: Boolean(process.env.QUOTA_PACKAGED_EXE), baseline: Boolean(process.env.DESKTOP_BASELINE), rows: 20000, models: 100, days: 200, measurements, costMs,
           maxSyncMs: Math.max(...measurements.map(r => r.syncMs)), maxFrameMs: Math.max(...measurements.map(r => r.maxFrameMs)), chartReused: activeChartRetained, routeRemountHasOneChart: activeChartCount === 1, statusOnlySkipsChart, sameSequenceReprices, correctRangesAndCurves: true, noErrors: true, realAccountRequests: 0 });

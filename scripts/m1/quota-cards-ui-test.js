@@ -72,7 +72,7 @@ async function fits(page, label) {
     assert.match(await card(page, 'claude').locator('.quota-inside').innerText(), /Fable 剩余 60%/, 'a model limit is a line under its window');
     assert.equal(await card(page, 'claude').locator('.quota-meter').count(), 2);
     assert.equal(await card(page, 'zcode').locator('.quota-meters.is-thick .quota-segments.is-solid .quota-tick').count(), 2, 'thick bars with their time marker');
-    assert.equal(await card(page, 'zcode').locator('.quota-card-head[data-mark-only]').count(), 1);
+    assert.equal(await card(page, 'zcode').locator('.quota-card-head h3').count(), 1, 'the card keeps its own name in the head');
     assert.equal(await card(page, 'cursor').locator('.quota-subrow').count(), 2, 'one window and two rows');
     assert.equal(await card(page, 'opencode').locator('.quota-ring').count(), 2); assert.equal(await card(page, 'opencode').locator('.quota-thin').count(), 1);
     assert.match(await card(page, 'deepseek').locator('.quota-pocket strong').innerText(), /^\$42\.50$/); assert.equal(await card(page, 'deepseek').locator('.quota-ticket').count(), 2);
