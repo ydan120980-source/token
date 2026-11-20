@@ -25,7 +25,12 @@ icu_locale = { version = "2", features = ["compiled_data"] }
 sys-locale = "0.3"
 tokio = { version = "1", features = ["rt", "sync", "time"] }
 tokscale-core = { path = "../../vendor/tokscale-core" }
+url = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }
 
 [dev-dependencies]
+tempfile = "3"
 zstd = "0.13"
 rand = "0.8"

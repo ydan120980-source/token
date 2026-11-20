@@ -1,5 +1,11 @@
 # Agent Usage working rules
 
+## 最高优先级 · 本机编译产物即用即删
+
+- 编译、测试或打包前先检查可用 RAM 和目标盘剩余空间。一次只跑一项重构建，使用本次任务专用的输出目录并限制并行度。资源不足时先停止构建或缩小验证范围。
+- 编译目录（含 Cargo `target`）、中间文件、临时安装包和解包副本，在最后一个验证结束后立即清理。失败或取消也要先结束本次启动的进程，再清理；若中断使自动清理未执行，下次进入项目先检查残留。
+- 删除前核对绝对路径、归属和进程占用，只删除本次任务生成的临时产物。默认保留源码、用户数据、日志、哈希和验收数值，实体二进制仅在所有者明确要求交付或保留时留下。收尾前确认临时产物已移除，发现占用时记录具体路径。
+
 Windows-local usage statistics for local AI coding agents (the sources in `src/m1/agent-catalog.js`), plus explicitly connected provider-reported account quota with adapter-specific coverage.
 Human-facing overview: `README.md`. Contribution rules and data-semantics invariants: `CONTRIBUTING.md`.
 

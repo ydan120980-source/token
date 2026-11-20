@@ -17,9 +17,19 @@ pub fn atomic(file: &Path, value: &Value, ledger: bool) -> std::io::Result<()> {
         fs::create_dir_all(parent)?;
     }
     let suffix: String = rand::random::<[u8; 6]>().iter().map(|b| format!("{b:02x}")).collect();
-    let temporary = PathBuf::from(format!("{}.tmp-{suffix}", file.display()));
+    let mut temporary = file.as_os_str().to_os_string();
+    temporary.push(format!(".tmp-{suffix}"));
+    let temporary = PathBuf::from(temporary);
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut handle = options.open(&temporary)?;
+
     let result = (|| -> std::io::Result<()> {
-        let mut handle = fs::File::create(&temporary)?;
         let mut failure: Option<std::io::Error> = None;
         if ledger {
             write_statistics(value, &mut |text| {
@@ -35,25 +45,14 @@ pub fn atomic(file: &Path, value: &Value, ledger: bool) -> std::io::Result<()> {
         } else {
             handle.write_all(stringify(value).as_bytes())?;
         }
-        set_private(&temporary);
+        handle.sync_all()?;
+        drop(handle);
         fs::rename(&temporary, file)
     })();
     if result.is_err() {
         let _ = fs::remove_file(&temporary);
     }
     result
-}
-
-fn set_private(path: &Path) {
-    // Windows Node only maps the write bit to the read-only attribute; 0o600 keeps
-    // write, so the default ACL already matches. Unix needs the explicit mode.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
-    }
-    #[cfg(windows)]
-    let _ = path;
 }
 
 pub fn quarantine_file(file: &Path, code: &str) -> Recovery {

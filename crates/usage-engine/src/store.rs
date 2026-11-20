@@ -36,7 +36,7 @@ fn truthy(value: Option<&Value>) -> bool {
     value.map(crate::normalize::truthy).unwrap_or(false)
 }
 
-fn uuid_v4() -> String {
+pub(crate) fn uuid_v4() -> String {
     let mut bytes: [u8; 16] = rand::random();
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
@@ -67,6 +67,21 @@ fn sha256_text(text: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(text.as_bytes());
     hasher.finalize().iter().map(|b| format!("{b:02x}")).collect()
+}
+
+#[path = "codex_maintenance.rs"]
+mod maintenance;
+pub use maintenance::CodexMaintenance;
+
+fn default_billing() -> Value {
+    json!({"autoSync": true, "defaults": {}, "mappings": {}})
+}
+
+fn checked_catalog(billing: &Value, overrides: &Value, previous: &Value, catalog: &Value) -> Result<(Value, Value), String> {
+    let verified = runtime_catalog::verify(catalog)?;
+    let models = runtime_catalog::merged(Some(&verified));
+    valuation::check_price_references(billing, (overrides, previous), (overrides, &models))?;
+    Ok((verified, models))
 }
 
 #[derive(Clone)]
@@ -114,6 +129,13 @@ pub struct Batch {
     snapshot: Option<Value>,
 }
 
+fn refresh_interval_ms(value: &Value) -> Option<u64> {
+    let value = value.as_f64()?;
+    [0, 5_000, 15_000, 30_000, 60_000, 300_000]
+        .into_iter()
+        .find(|&interval| value == interval as f64)
+}
+
 impl Store {
     pub fn new(dir: &str, defaults: &Value) -> Result<Store, String> {
         let mut store = Store {
@@ -157,7 +179,7 @@ impl Store {
         store.check_roots(&store.source_roots())?;
         store.validation = load(Path::new(&path::join(&[dir, "validation.json"])), json!({}), Some(&mut store.recovered), false)?;
         store.overrides = load(Path::new(&path::join(&[dir, "pricing.json"])), json!({}), Some(&mut store.recovered), false)?;
-        store.billing = load(Path::new(&path::join(&[dir, "billing.json"])), json!({"autoSync": true, "defaults": {}, "mappings": {}}), Some(&mut store.recovered), false)?;
+        store.billing = load(Path::new(&path::join(&[dir, "billing.json"])), default_billing(), Some(&mut store.recovered), false)?;
         let workbench_file = path::join(&[dir, "workbench.json"]);
         let loaded = load(Path::new(&workbench_file), workbench::empty_settings(), Some(&mut store.recovered), false)?;
         match workbench::settings(&loaded) {
@@ -260,7 +282,7 @@ impl Store {
         if stale {
             self.workbench_cache = Some(WorkbenchCache { snapshot: snapshot_key, settings: settings_key, scope: scope_key, views: Map::new() });
         }
-        let mut cache = self.workbench_cache.take().unwrap();
+        let mut cache = self.workbench_cache.take().ok_or("WORKBENCH_SCOPE_INVALID")?;
         if !cache.views.contains_key(&key) {
             if cache.views.len() >= 8 {
                 cache.views.clear();
@@ -347,6 +369,17 @@ impl Store {
     pub fn set_enabled(&mut self, enabled: bool) -> Result<(), String> {
         let mut next = self.settings.clone();
         next["enabled"] = json!(enabled);
+        self.save_preferences(&next)
+    }
+
+    pub fn refresh_interval_ms(&self) -> u64 {
+        refresh_interval_ms(&self.settings["refreshIntervalMs"]).unwrap_or(15_000)
+    }
+
+    pub fn set_refresh_interval_ms(&mut self, value: &Value) -> Result<(), String> {
+        let interval = refresh_interval_ms(value).ok_or("REFRESH_INTERVAL_INVALID")?;
+        let mut next = self.settings.clone();
+        next["refreshIntervalMs"] = json!(interval);
         self.save_preferences(&next)
     }
 
@@ -1153,13 +1186,14 @@ impl Store {
 
     pub fn probe(&mut self, entry: &Value) -> Result<Value, String> {
         let value = validate(entry)?;
-        let key = format!("{}/{}", value["provider"].as_str().unwrap(), value["model"].as_str().unwrap());
+        let provider = value["provider"].as_str().ok_or("PRICE_IDENTIFIER_INVALID")?;
+        let model = value["model"].as_str().ok_or("PRICE_IDENTIFIER_INVALID")?;
+        let key = format!("{provider}/{model}");
         let previous = self.overrides.get(&key).filter(|v| !v.is_null()).cloned().or_else(|| self.model_catalog.get(&key).filter(|v| !v.is_null()).cloned());
-        let records = self.records();
         let mut affected_records = 0u64;
         let mut affected_tokens = 0i64;
         let mut matching: Vec<Value> = Vec::new();
-        for record in &records {
+        for record in self.record_refs() {
             if format!("{}/{}", record.get("provider").and_then(|v| v.as_str()).unwrap_or(""), record.get("model").and_then(|v| v.as_str()).unwrap_or("")) != key {
                 continue;
             }
@@ -1391,8 +1425,10 @@ impl Store {
             Some(fallback) => {
                 let mut view = json!({"target": fallback});
                 let gained = gain(&rules(&step_a), &rules(&step_b));
-                for (key, value) in gained.as_object().unwrap() {
-                    view[key] = value.clone();
+                if let Value::Object(gained) = gained {
+                    for (key, value) in gained {
+                        view[&key] = value;
+                    }
                 }
                 view
             }
@@ -1406,6 +1442,9 @@ impl Store {
     }
 
     pub fn set_price(&mut self, entry: &Value, remove: bool) -> Result<Value, String> {
+        if !entry.is_object() {
+            return Err("PRICE_SETTING_INVALID".to_owned());
+        }
         let mut checked = entry.clone();
         if remove {
             checked["inputUncached"] = json!(0);
@@ -1414,7 +1453,9 @@ impl Store {
             checked["cacheWrite"] = Value::Null;
         }
         let value = validate(&checked)?;
-        let key = format!("{}/{}", value["provider"].as_str().unwrap(), value["model"].as_str().unwrap());
+        let provider = value["provider"].as_str().ok_or("PRICE_SETTING_INVALID")?;
+        let model = value["model"].as_str().ok_or("PRICE_SETTING_INVALID")?;
+        let key = format!("{provider}/{model}");
         let mut next = self.overrides.as_object().cloned().unwrap_or_default();
         if remove {
             next.remove(&key);
@@ -1430,11 +1471,30 @@ impl Store {
         self.pricing(None)
     }
 
+    /// Price-only refresh while the host has released its statistics ledger.
+    pub fn install_catalog_in_directory(dir: &Path, value: &Value) -> Result<Value, String> {
+        let billing = load(&dir.join("billing.json"), default_billing(), None, false)?;
+        let overrides = load(&dir.join("pricing.json"), json!({}), None, false)?;
+        let saved = load(&dir.join("model-pricing.json"), Value::Null, None, false)?;
+        let previous = if saved.is_null() { runtime_catalog::embedded() } else { &saved };
+        let previous = runtime_catalog::verify(previous).or_else(|_| runtime_catalog::verify(runtime_catalog::embedded()))?;
+        if value["models"].as_object().map_or(0, Map::len) * 2 < previous["models"].as_object().map_or(0, Map::len) {
+            return Err("PRICE_DOWNLOAD_INCOMPLETE".to_owned());
+        }
+        let previous_models = runtime_catalog::merged(Some(&previous));
+        let (verified, _) = checked_catalog(&billing, &overrides, &previous_models, value)?;
+        atomic(&dir.join("model-pricing.json"), &verified, false).map_err(|_| "LOCAL_STORAGE_INVALID".to_owned())?;
+        Ok(json!({
+            "enabled": billing["autoSync"] == true,
+            "lastSuccess": verified["obtainedAt"],
+            "builtInAt": verified["obtainedAt"],
+            "modelCount": verified["models"].as_object().map_or(0, Map::len)
+        }))
+    }
+
     pub fn install_catalog(&mut self, value: &Value) -> Result<(), String> {
-        let verified = runtime_catalog::verify(value)?;
-        let models = runtime_catalog::merged(Some(&verified));
+        let (verified, models) = checked_catalog(&self.billing, &self.overrides, &self.model_catalog, value)?;
         let hash = runtime_catalog::hash(&models);
-        valuation::check_price_references(&self.billing, (&self.overrides, &self.model_catalog), (&self.overrides, &models))?;
         atomic(Path::new(&path::join(&[&self.dir, "model-pricing.json"])), &verified, false).map_err(|_| "LOCAL_STORAGE_INVALID".to_string())?;
         self.remote_catalog = Some(verified);
         self.downloaded_catalog = true;

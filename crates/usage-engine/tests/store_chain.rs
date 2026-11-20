@@ -235,12 +235,43 @@ fn wal_overlay_reads_committed_pages_and_rejects_damage() {
         db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE t(x INTEGER); INSERT INTO t VALUES(1),(2),(3);").unwrap();
         // Copy the main image and its WAL while the connection still owns them.
         fs::copy(&live, format!("{dir}\\copy.db")).unwrap();
-        fs::copy(format!("{live}-wal"), format!("{dir}\\copy.db-wal")).unwrap();
+        let mut wal = fs::read(format!("{live}-wal")).unwrap();
+        let page_size = u32::from_be_bytes(wal[8..12].try_into().unwrap()) as usize;
+        let frame_size = 24 + page_size;
+        let last = &wal[wal.len() - frame_size..];
+        // A valid frame with no commit marker must be ignored even when its
+        // checksum succeeds and it would overwrite committed data.
+        let mut tail = last.to_vec();
+        tail[4..8].fill(0);
+        tail[24..].fill(0x5a);
+        let before = [
+            u32::from_be_bytes(last[16..20].try_into().unwrap()),
+            u32::from_be_bytes(last[20..24].try_into().unwrap()),
+        ];
+        let little = wal[3] == 0x82;
+        let crc = usage_engine::sqlite_memory::checksum(&tail[..8], before, little);
+        let crc = usage_engine::sqlite_memory::checksum(&tail[24..], crc, little);
+        tail[16..20].copy_from_slice(&crc[0].to_be_bytes());
+        tail[20..24].copy_from_slice(&crc[1].to_be_bytes());
+        wal.extend_from_slice(&tail);
+        fs::write(format!("{dir}\\copy.db-wal"), wal).unwrap();
     }
     let mut audit = Audit::new();
-    let rows = usage_engine::sqlite_memory::read_database(&format!("{dir}\\copy.db"), &mut audit, &mut |db| usage_engine::sqlite_memory::query(db, "SELECT x FROM t ORDER BY x")).unwrap();
+    let mut snapshot = std::path::PathBuf::new();
+    let rows = usage_engine::sqlite_memory::read_database(&format!("{dir}\\copy.db"), &mut audit, &mut |db| {
+        snapshot = db.path().map(std::path::PathBuf::from).expect("file-backed snapshot");
+        assert_eq!(snapshot.file_name().and_then(|name| name.to_str()), Some("snapshot.sqlite"));
+        let cache: i64 = db.query_row("PRAGMA cache_size", [], |row| row.get(0)).unwrap();
+        let mmap: i64 = db.query_row("PRAGMA mmap_size", [], |row| row.get(0)).unwrap();
+        assert_eq!((cache, mmap), (-2048, 0));
+        assert!(db.execute_batch("INSERT INTO t VALUES (4)").is_err());
+        usage_engine::sqlite_memory::query(db, "SELECT x FROM t ORDER BY x")
+    }).unwrap();
     let values: Vec<i64> = rows.iter().map(|r| r["x"].as_i64().unwrap()).collect();
     assert_eq!(values, vec![1, 2, 3]);
+    assert_eq!(audit.reads, 2);
+    assert!(!snapshot.exists());
+    assert!(!snapshot.parent().expect("snapshot directory").exists());
     // A main image without the WAL still reads (the copy holds committed pages
     // only when the WAL carried them; here at least the schema must survive).
     let bad = format!("{dir}\\bad.db");

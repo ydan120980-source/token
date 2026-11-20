@@ -4,7 +4,8 @@ PDH uses the same private-working-set/private-byte gauges as the CIM
 probe, in one query instead of repeated WMI process walks. English counter paths
 are localized by PdhAddEnglishCounterW. Process V2 (Windows 11+) includes the PID
 in every instance name: classic Process repeats names and cannot be joined by
-name. Older hosts should use the existing CIM probe. Output never contains names.
+name. Older hosts should use the existing CIM probe. Detailed output contains
+only executable instance names of the owned process tree, never command lines.
 """
 import argparse
 import ctypes as c
@@ -26,7 +27,7 @@ class Item(c.Structure):
 
 
 class Counters:
-    def __init__(self):
+    def __init__(self, detailed=False):
         self.dll = c.WinDLL("pdh")
         self.dll.PdhOpenQueryW.argtypes = [w.LPCWSTR, c.c_size_t, c.POINTER(w.HANDLE)]
         self.dll.PdhAddEnglishCounterW.argtypes = [w.HANDLE, w.LPCWSTR, c.c_size_t, c.POINTER(w.HANDLE)]
@@ -38,9 +39,14 @@ class Counters:
         self.query = w.HANDLE()
         self.check(self.dll.PdhOpenQueryW(None, 0, c.byref(self.query)))
         self.handles = {}
+        self.owned_instances = {}
+        self.detailed = detailed
         try:
-            for key, counter in (("pid", "Process ID"), ("parent", "Creating Process ID"),
-                                 ("working", "Working Set - Private"), ("private", "Private Bytes")):
+            definitions = [("pid", "Process ID"), ("parent", "Creating Process ID"),
+                           ("working", "Working Set - Private"), ("private", "Private Bytes")]
+            if detailed:
+                definitions += [("working_total", "Working Set"), ("threads", "Thread Count")]
+            for key, counter in definitions:
                 handle = w.HANDLE()
                 self.check(self.dll.PdhAddEnglishCounterW(self.query, "\\Process V2(*)\\" + counter, 0, c.byref(handle)))
                 self.handles[key] = handle
@@ -81,7 +87,11 @@ class Counters:
         values = {key: self.values(handle) for key, handle in self.handles.items()}
         records = {int(pid): (name, int(values["parent"].get(name, -1)))
                    for name, pid in values["pid"].items() if name != "_Total" and pid > 0}
-        owned, queue = set(), [root]
+        # Continue following already observed descendants if Windows reparents
+        # them during window destruction. The instance must still match.
+        inherited = [pid for pid, name in self.owned_instances.items()
+                     if pid in records and records[pid][0] == name]
+        owned, queue = set(), [root] + inherited
         while queue:
             pid = queue.pop()
             if pid in owned:
@@ -92,12 +102,23 @@ class Counters:
                        for pid in owned)
         def total(key):
             return sum(values[key].get(records[pid][0], 0) for pid in owned if pid in records) / 1048576
-        return {"at": int(time.time() * 1000), "pids": sorted(owned), "complete": complete,
+        if self.detailed:
+            self.owned_instances = {pid: records[pid][0] for pid in owned if pid in records}
+        result = {"at": int(time.time() * 1000), "pids": sorted(owned), "complete": complete,
                 "privateWorkingMiB": total("working"), "privateMiB": total("private"),
                 "processes": [{"pid": pid,
                                "privateWorkingMiB": values["working"].get(records[pid][0], 0) / 1048576,
                                "privateMiB": values["private"].get(records[pid][0], 0) / 1048576}
                               for pid in sorted(owned) if pid in records]}
+        if self.detailed:
+            result["workingMiB"] = total("working_total")
+            for process in result["processes"]:
+                pid = process["pid"]
+                name, parent = records[pid]
+                process.update(parent=parent, name=name.rsplit(":", 1)[0],
+                               workingMiB=values["working_total"].get(name, 0) / 1048576,
+                               threads=values["threads"].get(name, 0))
+        return result
 
     def close(self):
         if self.query:
@@ -110,10 +131,11 @@ def main():
     parser.add_argument("--pid", type=int, required=True)
     parser.add_argument("--stop-file", required=True)
     parser.add_argument("--count", type=int, default=0)
+    parser.add_argument("--detailed", action="store_true")
     args = parser.parse_args()
     if args.pid <= 0 or args.count < 0 or sys.platform != "win32":
         raise RuntimeError("COUNTER_ARGUMENT_INVALID")
-    counters, end, count = Counters(), time.monotonic() + 480, 0
+    counters, end, count = Counters(args.detailed), time.monotonic() + 480, 0
     try:
         while time.monotonic() < end and not os.path.exists(args.stop_file):
             begin = time.monotonic()

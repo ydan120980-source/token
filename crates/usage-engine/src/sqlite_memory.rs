@@ -1,9 +1,17 @@
-// No connection to a source database: bytes and committed WAL pages are read
-// O_RDONLY; SQLite runs exclusively on an in-memory image. No source shm locks.
-use crate::policy::{mtime_ms, read_bytes, Audit};
-use rusqlite::Connection;
+// SQLite opens only a private snapshot. The source database and WAL are
+// copied through read-only file handles, leaving the source SHM untouched.
+use crate::policy::{mtime_ms, Audit};
+use rusqlite::{Connection, OpenFlags};
 use serde_json::{Map, Value};
-use std::fs;
+use std::{
+    fs::{self, File, Metadata, OpenOptions},
+    io::{self, Cursor, Read, Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+};
+
+const MAX_FILE: u64 = 512 * 1024 * 1024;
+const HEADER: u64 = 32;
+const FRAME_HEADER: u64 = 24;
 
 pub fn checksum(bytes: &[u8], initial: [u32; 2], little: bool) -> [u32; 2] {
     let [mut s1, mut s2] = initial;
@@ -30,72 +38,121 @@ fn be32(bytes: &[u8], at: usize) -> u32 {
     u32::from_be_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])
 }
 
-pub fn overlay_wal(main: &[u8], wal: Option<&[u8]>) -> Result<Vec<u8>, String> {
-    let wal = match wal {
-        Some(wal) if !wal.is_empty() => wal,
-        _ => return Ok(main.to_vec()),
-    };
-    if wal.len() < 32 || ![0x377f0682u32, 0x377f0683].contains(&be32(wal, 0)) {
+struct Commit {
+    page_size: usize,
+    pages: u32,
+    end: u64,
+}
+
+impl Commit {
+    fn size(&self) -> u64 {
+        self.pages as u64 * self.page_size as u64
+    }
+}
+
+fn snapshot_error(_: io::Error) -> String {
+    "SOURCE_PARSE_FAILED".to_owned()
+}
+
+fn committed_wal(wal: &mut impl Read, len: u64) -> Result<Option<Commit>, String> {
+    if len == 0 {
+        return Ok(None);
+    }
+    let mut header = [0; HEADER as usize];
+    if len < HEADER {
+        return Err("WAL_HEADER_INVALID".to_owned());
+    }
+    wal.read_exact(&mut header).map_err(snapshot_error)?;
+    let magic = be32(&header, 0);
+    if ![0x377f0682u32, 0x377f0683].contains(&magic) {
         return Err("WAL_HEADER_INVALID".to_string());
     }
-    let size = be32(wal, 8) as usize;
-    let little = be32(wal, 0) == 0x377f0682;
-    if size < 512 || size > 65536 || (size & (size - 1)) != 0 {
+    let size = be32(&header, 8) as usize;
+    let little = magic == 0x377f0682;
+    if !(512..=65_536).contains(&size) || !size.is_power_of_two() {
         return Err("WAL_PAGE_INVALID".to_string());
     }
-    let mut sum = checksum(&wal[..24], [0, 0], little);
-    if sum[0] != be32(wal, 24) || sum[1] != be32(wal, 28) {
+    let mut sum = checksum(&header[..24], [0, 0], little);
+    if sum[0] != be32(&header, 24) || sum[1] != be32(&header, 28) {
         return Err("WAL_CHECKSUM_INVALID".to_string());
     }
-    // Validate once, remember the final commit boundary, then apply only verified
-    // committed bytes in a second linear pass.
-    let mut committed_end = 0usize;
-    let mut pages = 0u32;
-    let mut at = 32usize;
-    while at + 24 + size <= wal.len() {
-        let header = &wal[at..at + 24];
-        let payload = &wal[at + 24..at + 24 + size];
-        if header[8..16] != wal[16..24] {
+    let mut committed = None;
+    let mut at = HEADER;
+    let mut frame = [0; FRAME_HEADER as usize];
+    let mut payload = vec![0; size];
+    while at + FRAME_HEADER + size as u64 <= len {
+        wal.read_exact(&mut frame).map_err(snapshot_error)?;
+        wal.read_exact(&mut payload).map_err(snapshot_error)?;
+        if frame[8..16] != header[16..24] {
             break;
         }
-        sum = checksum(&header[..8], sum, little);
-        sum = checksum(payload, sum, little);
-        if sum[0] != be32(header, 16) || sum[1] != be32(header, 20) {
+        sum = checksum(&frame[..8], sum, little);
+        sum = checksum(&payload, sum, little);
+        if sum[0] != be32(&frame, 16) || sum[1] != be32(&frame, 20) {
             break;
         }
-        let page = be32(header, 0);
-        if page == 0 || page as u64 * size as u64 > 512 * 1024 * 1024 {
+        let page = be32(&frame, 0);
+        if page == 0 || page as u64 * size as u64 > MAX_FILE {
             return Err("WAL_SIZE_LIMIT".to_string());
         }
-        let commit = be32(header, 4);
-        if commit != 0 {
-            pages = commit;
-            committed_end = at + 24 + size;
+        at += FRAME_HEADER + size as u64;
+        let pages = be32(&frame, 4);
+        if pages != 0 {
+            committed = Some(Commit {
+                page_size: size,
+                pages,
+                end: at,
+            });
         }
-        at += 24 + size;
     }
-    if pages == 0 {
-        return Ok(main.to_vec());
-    }
-    if pages as u64 * size as u64 > 512 * 1024 * 1024 {
+    if committed
+        .as_ref()
+        .is_some_and(|commit| commit.size() > MAX_FILE)
+    {
         return Err("WAL_SIZE_LIMIT".to_string());
     }
-    let mut image = vec![0u8; pages as usize * size];
+    Ok(committed)
+}
+
+fn apply_commit(
+    wal: &mut (impl Read + Seek),
+    image: &mut (impl Write + Seek),
+    commit: &Commit,
+) -> io::Result<()> {
+    wal.seek(SeekFrom::Start(HEADER))?;
+    let mut at = HEADER;
+    let mut frame = [0; FRAME_HEADER as usize];
+    let mut payload = vec![0; commit.page_size];
+    while at < commit.end {
+        wal.read_exact(&mut frame)?;
+        wal.read_exact(&mut payload)?;
+        let page = be32(&frame, 0);
+        if page <= commit.pages {
+            image.seek(SeekFrom::Start((page as u64 - 1) * commit.page_size as u64))?;
+            image.write_all(&payload)?;
+        }
+        at += FRAME_HEADER + commit.page_size as u64;
+    }
+    Ok(())
+}
+
+pub fn overlay_wal(main: &[u8], wal: Option<&[u8]>) -> Result<Vec<u8>, String> {
+    let wal = wal.unwrap_or_default();
+    let mut reader = Cursor::new(wal);
+    let Some(commit) = committed_wal(&mut reader, wal.len() as u64)? else {
+        return Ok(main.to_vec());
+    };
+    let mut image = vec![0; commit.size() as usize];
     let copy = image.len().min(main.len());
     image[..copy].copy_from_slice(&main[..copy]);
-    let mut at = 32usize;
-    while at < committed_end {
-        let page = be32(wal, at) as usize;
-        if page <= pages as usize {
-            image[(page - 1) * size..page * size].copy_from_slice(&wal[at + 24..at + 24 + size]);
-        }
-        at += 24 + size;
-    }
+    apply_commit(&mut reader, &mut Cursor::new(image.as_mut_slice()), &commit)
+        .map_err(snapshot_error)?;
     Ok(image)
 }
 
 pub fn open_image(image: &[u8]) -> Result<Connection, String> {
-    let mut db = Connection::open_in_memory().map_err(|_| "DATABASE_FORMAT_UNSUPPORTED".to_string())?;
+    let mut db =
+        Connection::open_in_memory().map_err(|_| "DATABASE_FORMAT_UNSUPPORTED".to_string())?;
     // A committed WAL snapshot still carries WAL-mode header bytes (18/19 = 2);
     // SQLite would then look for a WAL file beside the in-memory image. The
     // image is a consistent read-only snapshot, so present it as rollback mode.
@@ -104,13 +161,16 @@ pub fn open_image(image: &[u8]) -> Result<Connection, String> {
         image[18] = 1;
         image[19] = 1;
     }
-    // OwnedData must own sqlite3_malloc'ed bytes; copy the read-only image there.
+    // SAFETY: The allocation and copy use the same checked byte length.
+    // OwnedData takes ownership of the SQLite allocation before deserializing.
     unsafe {
         let ptr = rusqlite::ffi::sqlite3_malloc64(image.len() as u64) as *mut u8;
-        let ptr = std::ptr::NonNull::new(ptr).ok_or_else(|| "DATABASE_FORMAT_UNSUPPORTED".to_string())?;
+        let ptr =
+            std::ptr::NonNull::new(ptr).ok_or_else(|| "DATABASE_FORMAT_UNSUPPORTED".to_string())?;
         std::ptr::copy_nonoverlapping(image.as_ptr(), ptr.as_ptr(), image.len());
         let data = rusqlite::serialize::OwnedData::from_raw_nonnull(ptr, image.len());
-        db.deserialize(rusqlite::DatabaseName::Main, data, true).map_err(|_| "DATABASE_FORMAT_UNSUPPORTED".to_string())?;
+        db.deserialize(rusqlite::DatabaseName::Main, data, true)
+            .map_err(|_| "DATABASE_FORMAT_UNSUPPORTED".to_string())?;
     }
     Ok(db)
 }
@@ -119,7 +179,11 @@ pub fn open_image(image: &[u8]) -> Result<Connection, String> {
 // (only Antigravity's gen_metadata reads them, converting back to bytes).
 pub fn query(db: &Connection, sql: &str) -> Result<Vec<Map<String, Value>>, String> {
     let mut statement = db.prepare(sql).map_err(|e| format!("SQL_ERROR:{e}"))?;
-    let columns: Vec<String> = statement.column_names().iter().map(|c| c.to_string()).collect();
+    let columns: Vec<String> = statement
+        .column_names()
+        .iter()
+        .map(|c| c.to_string())
+        .collect();
     let mut rows = statement.query([]).map_err(|e| format!("SQL_ERROR:{e}"))?;
     let mut out = Vec::new();
     while let Some(row) = rows.next().map_err(|e| format!("SQL_ERROR:{e}"))? {
@@ -129,8 +193,12 @@ pub fn query(db: &Connection, sql: &str) -> Result<Vec<Map<String, Value>>, Stri
                 rusqlite::types::ValueRef::Null => Value::Null,
                 rusqlite::types::ValueRef::Integer(n) => serde_json::json!(n),
                 rusqlite::types::ValueRef::Real(f) => serde_json::json!(f),
-                rusqlite::types::ValueRef::Text(t) => Value::String(String::from_utf8_lossy(t).to_string()),
-                rusqlite::types::ValueRef::Blob(b) => Value::Array(b.iter().map(|byte| serde_json::json!(byte)).collect()),
+                rusqlite::types::ValueRef::Text(t) => {
+                    Value::String(String::from_utf8_lossy(t).to_string())
+                }
+                rusqlite::types::ValueRef::Blob(b) => {
+                    Value::Array(b.iter().map(|byte| serde_json::json!(byte)).collect())
+                }
             };
             map.insert(column.clone(), value);
         }
@@ -139,31 +207,149 @@ pub fn query(db: &Connection, sql: &str) -> Result<Vec<Map<String, Value>>, Stri
     Ok(out)
 }
 
-pub fn read_database<T>(file: &str, audit: &mut Audit, visit: &mut dyn FnMut(&Connection) -> Result<T, String>) -> Result<T, String> {
+struct Snapshot {
+    root: PathBuf,
+}
+
+impl Snapshot {
+    fn create() -> io::Result<Self> {
+        let random: [u8; 16] = rand::random();
+        let name: String = random.iter().map(|byte| format!("{byte:02x}")).collect();
+        let root = std::env::temp_dir().join(format!("quotadock-sqlite-{name}"));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            fs::DirBuilder::new().mode(0o700).create(&root)?;
+        }
+        #[cfg(not(unix))]
+        fs::create_dir(&root)?;
+        Ok(Self { root })
+    }
+
+    fn file(&self, name: &str) -> io::Result<File> {
+        OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(self.root.join(name))
+    }
+}
+
+impl Drop for Snapshot {
+    fn drop(&mut self) {
+        for name in ["snapshot.sqlite", "frames.bin"] {
+            let _ = fs::remove_file(self.root.join(name));
+        }
+        let _ = fs::remove_dir(&self.root);
+    }
+}
+
+fn reparse(meta: &Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        meta.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    meta.file_type().is_symlink()
+}
+
+fn unchanged(before: &Metadata, after: &Metadata) -> bool {
+    before.len() == after.len() && mtime_ms(before) == mtime_ms(after)
+}
+
+fn source_error(_: io::Error) -> String {
+    "SOURCE_SIZE_OR_LINK".to_owned()
+}
+
+fn copy_source(file: &Path, destination: &mut File, audit: &mut Audit) -> Result<u64, String> {
+    let stat = fs::symlink_metadata(file).map_err(source_error)?;
+    if !stat.is_file() || reparse(&stat) || stat.len() > MAX_FILE {
+        return Err("SOURCE_SIZE_OR_LINK".to_owned());
+    }
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::Storage::FileSystem::FILE_FLAG_OPEN_REPARSE_POINT;
+        options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+    let mut source = options.open(file).map_err(source_error)?;
+    let opened = source.metadata().map_err(source_error)?;
+    if !opened.is_file() || reparse(&opened) {
+        return Err("SOURCE_SIZE_OR_LINK".to_owned());
+    }
+    if !unchanged(&stat, &opened) {
+        return Err("SOURCE_BUSY".to_owned());
+    }
+    audit.reads += 1;
+    let copied = io::copy(
+        &mut Read::by_ref(&mut source).take(stat.len() + 1),
+        destination,
+    )
+    .map_err(source_error)?;
+    if copied != stat.len() || !unchanged(&stat, &source.metadata().map_err(source_error)?) {
+        return Err("SOURCE_BUSY".to_owned());
+    }
+    Ok(copied)
+}
+
+pub fn read_database<T>(
+    file: &str,
+    audit: &mut Audit,
+    visit: &mut dyn FnMut(&Connection) -> Result<T, String>,
+) -> Result<T, String> {
     let before = fs::metadata(file).map_err(|_| "SOURCE_PARSE_FAILED".to_string())?;
     let wal_path = format!("{file}-wal");
     let wal_before = fs::metadata(&wal_path).ok();
-    let main = read_bytes(file, audit)?;
-    if main.len() < 16 || &main[..16] != b"SQLite format 3\0" {
+    let snapshot = Snapshot::create().map_err(snapshot_error)?;
+    let mut image = snapshot.file("snapshot.sqlite").map_err(snapshot_error)?;
+    let len = copy_source(Path::new(file), &mut image, audit)?;
+    let mut header = [0; 16];
+    image.rewind().map_err(snapshot_error)?;
+    if len < 16 || image.read_exact(&mut header).is_err() || &header != b"SQLite format 3\0" {
         return Err("DATABASE_FORMAT_UNSUPPORTED".to_string());
     }
     let wal = match &wal_before {
-        Some(_) => Some(read_bytes(&wal_path, audit)?),
+        Some(_) => {
+            let mut wal = snapshot.file("frames.bin").map_err(snapshot_error)?;
+            let len = copy_source(Path::new(&wal_path), &mut wal, audit)?;
+            wal.rewind().map_err(snapshot_error)?;
+            Some((wal, len))
+        }
         None => None,
     };
     let after = fs::metadata(file).map_err(|_| "SOURCE_BUSY".to_string())?;
     let wal_after = fs::metadata(&wal_path).ok();
-    if mtime_ms(&before) != mtime_ms(&after)
-        || before.len() != after.len()
+    if !unchanged(&before, &after)
         || wal_before.is_some() != wal_after.is_some()
         || match (&wal_before, &wal_after) {
-            (Some(b), Some(a)) => b.len() != a.len() || mtime_ms(b) != mtime_ms(a),
+            (Some(b), Some(a)) => !unchanged(b, a),
             _ => false,
         }
     {
         return Err("SOURCE_BUSY".to_string());
     }
-    let image = overlay_wal(&main, wal.as_deref())?;
-    let db = open_image(&image)?;
+    if let Some((mut wal, len)) = wal {
+        if let Some(commit) = committed_wal(&mut wal, len)? {
+            image.set_len(commit.size()).map_err(snapshot_error)?;
+            apply_commit(&mut wal, &mut image, &commit).map_err(snapshot_error)?;
+        }
+    }
+    if image.metadata().map_err(snapshot_error)?.len() >= 20 {
+        // Only the isolated copy uses a rollback-mode header. It contains all
+        // committed pages and has no associated WAL or SHM.
+        image.seek(SeekFrom::Start(18)).map_err(snapshot_error)?;
+        image.write_all(&[1, 1]).map_err(snapshot_error)?;
+    }
+    drop(image);
+    let db = Connection::open_with_flags(
+        snapshot.root.join("snapshot.sqlite"),
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(|_| "DATABASE_FORMAT_UNSUPPORTED".to_owned())?;
+    db.execute_batch("PRAGMA mmap_size=0; PRAGMA cache_size=-2048; PRAGMA query_only=ON;")
+        .map_err(|_| "DATABASE_FORMAT_UNSUPPORTED".to_owned())?;
     visit(&db)
 }

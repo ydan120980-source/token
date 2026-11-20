@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use std::{io::Write, path::Path, time::Duration};
+use std::{fs, io::Write, path::Path, time::Duration};
 use tauri::{AppHandle, Url, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
@@ -95,6 +95,37 @@ pub async fn choose_source(
     .map_err(|_| "SOURCE_DIALOG_FAILED".to_owned())?
 }
 
+pub fn data_directory_bytes(root: &Path) -> u64 {
+    let mut pending = vec![root.to_owned()];
+    let mut remaining = 20_000;
+    let mut bytes = 0u64;
+    while let Some(directory) = pending.pop() {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            if remaining == 0 {
+                return bytes;
+            }
+            remaining -= 1;
+            if entry.file_name() == "agent-tools" {
+                continue;
+            }
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            if kind.is_dir() {
+                pending.push(entry.path());
+            } else if kind.is_file() {
+                if let Ok(metadata) = entry.metadata() {
+                    bytes = bytes.saturating_add(metadata.len());
+                }
+            }
+        }
+    }
+    bytes
+}
+
 pub fn transcript_name(name: Option<&str>) -> String {
     let replaced: String = name
         .unwrap_or_default()
@@ -146,7 +177,7 @@ pub fn link(value: &str) -> Result<Url, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{link, transcript_name, write_export};
+    use super::{data_directory_bytes, link, transcript_name, write_export};
 
     #[test]
     fn exported_names_and_external_links_keep_the_desktop_boundaries() {
@@ -166,6 +197,26 @@ mod tests {
         ] {
             assert_eq!(link(value).err().as_deref(), Some("LINK_REJECTED"));
         }
+    }
+
+    #[test]
+    fn data_size_counts_only_files_inside_the_owned_tree() -> std::io::Result<()> {
+        let fixture = tempfile::tempdir()?;
+        let data = fixture.path().join("usage");
+        let outside = fixture.path().join("outside");
+        std::fs::create_dir_all(data.join("backups"))?;
+        std::fs::create_dir_all(data.join("agent-tools"))?;
+        std::fs::create_dir_all(&outside)?;
+        std::fs::write(data.join("statistics.json"), b"ledger")?;
+        std::fs::write(data.join("backups/old.json"), b"old")?;
+        std::fs::write(data.join("agent-tools/large.fixture"), [0; 1024])?;
+        std::fs::write(outside.join("external.fixture"), [0; 1024])?;
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_dir(&outside, data.join("external-link"))?;
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&outside, data.join("external-link"))?;
+        assert_eq!(data_directory_bytes(&data), 9);
+        Ok(())
     }
 
     #[test]

@@ -1,16 +1,18 @@
 # MIGRATION_PLAN.md — QuotaDock · Electron → Tauri v2 纯 Rust 迁移
 
+> **最高优先级：本机编译产物即用即删。** 构建前检查 RAM 和目标盘空间，使用本轮专用输出目录。验证、失败或取消后清理编译目录、临时包和解包副本，保留日志、哈希和验收数值。清理范围按 [AGENTS.md](AGENTS.md) 首条执行。
+
 > **接力指令（新会话第一句话）**：「请先读取 MIGRATION_PLAN.md，然后继续执行下一个未完成的任务。」
 > 本文件是迁移工程的唯一进度锚点。每完成一个子模块的移植与测试验证，立即更新 §7 的勾选与证据行。
-> 工作树：`token-fix`，分支 `qoder/dev-20261117`（自本地 main `c378786`）。**未经所有者允许禁止合并到 main，禁止 push。**
-> 状态：**Phase 0、M1 Batch 1 与 Phase A.1 完成；Phase A.2 的 17 个 Agent Rust 阅读格式已迁移，应用级验收待完成。**
+> 工作树：`token-fix`，审阅分支 `codex/rust-migration-review-20261119`（快照 `458a57f`）。**未经所有者允许禁止合并到 main，禁止 push。**
+> 状态：**单进程 Rust 宿主。M4、M5 已通过所有者验收，IPC 直连 111／111，展开 123／123。M6.1 已完成，M6.2 转入 GitHub 手动安装预览路径。**
 
 ---
 
 ## 0. 目标与铁律（所有者指令 2026-11-17）
 
 目标：后端 100% Rust 化（Tauri v2，Windows OS Native），剥离 Chromium 与 Node.js；
-安装包 ≤ 15 MB；托盘驻留内存 ≤ 15 MB；前端 `ui/` 业务代码零改动复用。
+正式安装包 ≤ 15 MiB。进程树私有工作集：冷启动直进托盘 ≤ 15 MiB、读库关窗回托盘 ≤ 35 MiB、开窗峰值 ≤ 500 MiB。复用前端页面与组件。
 
 1. **前端最小改动**：禁改 `ui/src/pages/`、`ui/src/kit/`；唯一改造点 `ui/src/data/bridges.ts`
    （Electron `window.*` → `@tauri-apps/api/core` invoke + `@tauri-apps/api/event` listen）。
@@ -43,7 +45,7 @@ Electron 旧实现与 `tests/m1` JS 套件在切换验收前保持可运行、�
 | 前端构建 | Vite 7 lib 模式 IIFE 单包 `design/desktop-reference/ui/agent-ui.js` + 单 CSS，`<script src>` 经典加载，CSP `script-src 'self'`，无模块/eval/网络；`tests/m1/ui-bundle.test.js` 逐字节校验 |
 | 桥装配 | preload 暴露 `usageTransport`/`quotaBridge`/`windowBridge`/`shellBridge`/`githubBridge`/`updateBridge`/`trayBridge`/`previewUsage`；**宿主层** `usage-data.js` 把 `usageTransport` 装配成 `usageBridge`（含 packed delta 解码），`quota-host.js`/`sessions-host.js`/`sources-host.js`/`insights-ui.js` 同理 |
 | packed 快照 | `usage:getPacked` 返回 `{snapshotBytes, snapshotRevision, ...}`；`snapshotBytes` 是 **JSON delta 帧**（`LocalUsageDeltaV1`），页内 `window.snapshotCodec.unpack` 解码；Rust 侧必须产出同构帧，宿主 codec 不动 |
-| 账本存储 | `statistics.json` 经 `write-statistics`/`read-statistics`（zstd 帧）；`preferences/pricing/billing/validation/workbench/model-pricing/session-labels` 为普通 JSON；原子写 `.tmp-<rand>` + rename，mode 0o600；损坏隔离 `quarantine/` |
+| 账本存储 | `statistics.json` 经 `write-statistics`/`read-statistics`（zstd 帧）；`preferences/pricing/billing/validation/workbench/model-pricing/session-labels` 为普通 JSON；独占创建同目录 `.tmp-<rand>`、`sync_all` 后原子替换，Unix mode 0o600；损坏隔离 `quarantine/` |
 | 源库读取 | `sqlite-memory.js`：**只读字节拷贝 + 手工 WAL overlay**（校验 WAL 头/ checksum /commit 边界，512MB 上限），sql.js 内存映像查询，不碰源库 shm 锁；Rust 必须保留同语义（不能直接 rusqlite 打开活库） |
 | native 引擎 | `tokscale.exe` 4.17.0，每次 spawn 前 SHA-256 全量校验；仅用于「统计投影核对」，非主采集路径；上游 github.com/junhoyeo/tokscale 为 Rust workspace：`crates/tokscale-core`（lib）+ `crates/tokscale-cli`；仓库许可标 MIT + AGPL-3.0（**core 许可待核，G1**） |
 | 网络边界 | 主进程 `disableNetwork`；网络只存在于隔离子进程：provider worker、price-fetch、installer 下载、github-transport、electron-updater 自有 session。Rust 侧用**按作用域隔离的 reqwest client** 继承该边界，统计核心零网络 |
@@ -306,6 +308,10 @@ lto = true; codegen-units = 1; strip = true; panic = "abort"; opt-level = "z"  #
 - 出口：`usage:agents:*`/`usage:config:*`/installers 全命令真实可用；UI 源页/Agent 管理页冒烟。
 
 ### M5 · quota-engine：额度 V1/V2 + 15 适配器 + 外部连接
+- 所有者已定稿 WebView2 UDF 策略。主窗口和托盘浮窗沿用进程级临时 UDF，第三方登录使用物理隔离的目录，暖托盘私有工作集验收仍为 ≤ 35 MiB。
+- 每次内嵌网页登录分配独立临时 UDF（`quotadock-login-<uuid>`），同一次登录内支持 OAuth 与 2FA 跳转。仅提取当前站点明确允许的有效凭据，验证并经当前用户 DPAPI 持久化后销毁登录窗口，再限时重试清理目录。取消、关闭和失败也清理本次目录。只有明确验证必须跨次保留会话的供应商才能单列例外，其目录仍与主窗口隔离。
+- 已核对 Electron 基线。`provider-website-login.js` 维护站点导航和 Cookie 筛选规则，当前 `ProviderQuotaService.openWebsite` 打开默认浏览器；产品路径没有 Electron 持久会话分区，也不读取默认浏览器的 Cookie。`opencode-console-login.js` 采用外部浏览器设备流，续期依赖凭据库中的 OAuth 上下文。两者均未发现需要跨次保留应用浏览器配置的约束。
+- 宿主启动时异步回收过期 UDF，仅限本应用创建并能验证归属的目录，须排除仍持有存活锁的目录和重解析点。所有者已豁免 M4 约 0.99 MiB 的历史测试残留。
 - 移植：`service/resource-state/amount`（V2 归一化 1:1，含 workbuddy 分页上限）、`provider-service/catalog/http/
   oauth/website-login/client-login/device-login`、15 适配器逐字段（Cookie 白名单、UA、organization/workspace）、
   `antigravity-*`（Job _owned pinned-image 语义→win-native）、`claude-passive`、`refresh-scheduler/quota-watch`、
@@ -319,12 +325,59 @@ lto = true; codegen-units = 1; strip = true; panic = "abort"; opt-level = "z"  #
 - 出口：额度页/连接流程合成全绿；真实账号验收仍按 AGENTS.md 单独授权，不在本迁移自动执行。
 
 ### M6 · 瘦身验收与打包切换
-- 体积：NSIS 安装包实测 ≤15MB（G2；tokscale 内联后无 exe 资产）；`strip/lto/opt-level=z` + 前端 bundle 复用。
-- 内存：托盘驻留（主 WebView2 销毁后）≤15MB 实测（G3）；开窗口峰值对照旧基线只降不升；
-  采样方法继承 windows-memory-sampler（private working set 与 private commit 分开报）。
+#### 所有者决策 · 2026-11-20
+
+- 当前无正式签名身份，先同步迁移分支源码，Tauri 预览版采用 GitHub 分发 NSIS 完整包与 SHA-256 回执，用户手动下载和安装。预览版关闭应用内自动安装入口。正式自动更新仍采用 `tauri-plugin-updater`，要求完整包签名绑定应用版本。预览和正式安装包体积门槛均为 ≤ 15 MiB。
+- M6.1 正式打包前核对 Gemini、Cursor 客户端登录与 WorkBuddy 旧桌面会话复用，与 Electron 对齐三轮静默重试。按实际可接入路径验证，逐项保留定向 Rust 测试和黄金比对结果。
+- M6.2 正式安装包验收包括隔离的升级／回退流程、运行内存和 125% 视觉对照。
+- M6.3 真机实测核对单随 NSIS 包交付。所有者点测真实 GitHub OAuth 与私有库同步、Windows 手动覆盖安装、开机自启注册、系统通知以及真实供应商登录／安装。签名通道单独验收 Windows 静默升级。
+
+#### M6.1 本轮回执
+
+- [x] 宿主层接入 Codex／Provider 的三轮静默刷新策略。旧读数可用且无现有错误时，首两轮的瞬态超时或请求失败保留旧结果，历史记录包含 `quiet`。每次静默等待期间归还调度槽，第三轮仍失败时发布错误并保留最近读数。认证拒绝、限流和手动刷新按原规则即时呈现。Rust 宿主定向 21 项及 Electron 黄金 8 项通过，见 `m6-quiet-rust-final.log` 与 `m6-quiet-electron.log`。
+- [x] 生产读取路径测试使用 100,786,176 字节 SQLite 主库、4,239,512 字节未 checkpoint WAL 和 229,376 字节 SHM。宿主开窗采集时以 Windows 文件共享限制拒绝写入，独占 SHM，并占用 SQLite 原生锁区。主库与 WAL 两条记录均与 Electron 黄金逐字段一致。源文件 SHA-256 和修改时间一致。宿主回托盘后可独占打开三份文件，合成目录已清理。
+- [x] 修改前诊断。整库内存镜像版读取期间进程树私有工作集峰值 618.48 MiB，私有提交峰值 1,208.24 MiB。关窗后私有工作集 30.80 MiB，采样未见 WebView2。保留 `m6-sqlite-wal.json` 作为对照。
+- [x] 所有者授权的 SQLite 修复与复测通过。对源主库和 WAL 流式只读复制，在隔离目录校验并叠加提交帧。SQLite 只读打开副本，页缓存上限 2 MiB，禁用 mmap。真实格式合成库同一场景复测私有工作集峰值 302.92 MiB，暖托盘 29.60 MiB，采样未见 WebView2。私有提交峰值 812.52 MiB，暖托盘 87.86 MiB。单次采集观测为原 444 ms 与新 697 ms，尚无多轮延迟结论。
+- [x] 新读取路径的统计与 Electron 黄金一致，源 SHA-256、修改时间和目录清单均一致。文件保护仍拒绝写入、占用 SQLite 源锁区并独占 SHM。暖托盘可重新独占打开源文件，隔离快照残留 0。Rust 专项覆盖有效校验和但未提交的尾帧、页缓存、只读连接及清理。回执 `m6-sqlite-file-test.log`、`m6-sqlite-file-parity.json`。
+- [x] 所有者接受三条授权路径差异并放行 M6.2。Gemini 通过已登录的官方 CLI 内 `/stats model` 查询额度，Cursor 在 QuotaDock 中走独立网页登录，WorkBuddy 走独立网页登录或显式 API 凭据。旧客户端会话复用列为产品差异。真实账号登录与额度显示由所有者在 M6.3 点测。
+- [x] SQLite 隔离快照改造后，串行 Rust 工作区单元、集成、文档测试合计 2,369 项通过、0 失败、5 项标记忽略，见 `m6-sqlite-final-workspace.log`。同轮 Electron 回归 813／813 通过，见 `m6-1-electron.log`。这些回执位于 `artifacts/memory-gate-20261119/recovery-verification/`。
+- [x] 已备好 [M6 真机实测核对单](docs/m2/M6-MANUAL-ACCEPTANCE.md)，正式包路径及最终验收结论等 M6.2 装包后填写。
+
+#### M6.2 手动安装预览与装包门禁
+
+- [x] 备好 Windows 当前用户 NSIS Release 配置和 `scripts/m1/package-tauri-release-windows.ps1`，复用正式 updater 的升级身份和静默安装配置。Release 宿主恢复按自有设置决定生产来源采集，测试继续使用隔离夹具。当前宿主定向测试 21／21 通过，见 `m6-release-host.log`。
+- [x] `-ManualPreview` 使用独立的回执目录，关闭 updater 产物与构建时 updater 公钥。常规模式仍要求 `QUOTADOCK_UPDATER_PUBLIC_KEY` 和 `TAURI_SIGNING_PRIVATE_KEY`。现有 GitHub Release 工作流面向 Electron，Tauri 预览包有独立的发布审阅。
+- [ ] 构建当前提交的手动安装预览包，记录实际体积和 SHA-256。在发布预览资产前完成装包门禁，保留现有 Electron `v0.1.8` 标签与资产。
+
+- 手动安装预览 NSIS 实测 ≤ 15 MiB（G2），复用前端 bundle 和现有 Release 体积配置。
+- 冷托盘 ≤ 15 MiB、读库关窗回托盘 ≤ 35 MiB、开窗峰值 ≤ 500 MiB（G3）。按应用进程树统计私有工作集，另报私有提交量。
+- 用真实大体积 SQLite 验证只读隔离复制、手工 WAL overlay、不锁源库和不访问 `shm`，同时核对统计正确性与内存。
 - 全量 parity 汇总 + 受影响 UI 套件（WebView2 CDP harness）+ `audit:runtime` 等价 Rust 审计；
   所有者视觉/交互验收后，才谈切换与合并（**合并仍需所有者逐次允许**）。
+- 同机同分辨率和同数据对照 Electron 与 Tauri 预览包，逐页及托盘浮窗验证零像素差。留存回执作为后续动效改动的静止态基线。
+- 验证 Electron 回退后旧目录及安装身份照常使用，另行验证 Tauri 已安装版本升级后自有账本、偏好与可续期授权恢复。
 - 出口：MIGRATION_PLAN 全勾选 + 验收证据行；旧 Electron 入口保留为对照直至所有者下令移除。
+
+#### M6 通过后的交互动效
+
+所有者要求在 M6 装包验收后调整概览卡片拖拽弹簧，并取四段本地视频和账号菜单截图作为参考。以下为参考片段的抽帧观察，由 QuotaDock 自有组件承载对应动效。
+
+| 参考 | 观察与 QuotaDock 验收 |
+| --- | --- |
+| 卡片拖拽 `As-smooth-as-it-gets` | 卡片保持抓取点，跨列时轻微倾斜，目标占位随排序变化。约 5.20 秒松手，5.40 秒接近静止。单独微调 QuotaDock 的松手归位与邻卡让位节奏，核对跨列、取消及中途改向。 |
+| 侧边栏过渡实验 | 约 1.50 秒开始拖动分隔线，2.00–2.20 秒附近收合为图标栏，内容区随宽度迁移。对照拖动、到阈值吸附、标题淡出及反向展开。 |
+| 控件动效展示 `DJTpuwUQx6CYmS-G` | 分段选择、开关、复选、下拉、滑块与状态按钮各有独立反馈，3–11 秒可看到多组状态切换。映射到 QuotaDock 已有的对应控件，逐项比对按下、切换、完成三个状态。 |
+| 状态胶囊 `D71RLtCH4n0r9bko` | 轮廓光变化和局部模糊衔接图标／文本进出。画面分段展示两端效果，用于参考 QuotaDock 自有状态提示的过渡。 |
+| 账号菜单截图 | 核对内外圆角在嵌套边缘的间距、弹层与侧栏底部入口的锚点及半透明背景。截图用于确认静止态几何。 |
+
+实施顺序与每批验收
+
+1. **概览拖拽。** 在同机 125% 及相同窗口尺寸下，用同一指针轨迹采集现版、参考和新方案。先调整 `ui/src/design/motion.ts` 中用于卡片归位的弹簧，验证 `ui/src/kit/sortable.tsx` 的归位和邻卡让位。首版试调为松手后可见归位时间增加约 10–15%，根据录屏收敛。检查短距离、跨列、取消、快速反向与连续拖动，记录握持点偏移、可见归位时长、邻卡首次位移和掉帧。保留键盘排序和减少动态效果行为。
+2. **侧栏与账号弹层。** 复用已有侧栏分隔线和账号入口。验证拖宽、阈值吸附、导航文字淡出、点击展开及中途反向，同时检查内容区重排。用截图比对弹层锚点、嵌套圆角与内边距，覆盖亮暗主题、125%／150% 和键盘关闭后的焦点恢复。
+3. **控件与状态反馈。** 将参考中的按下、切换与完成动效逐项匹配现有分段控件、开关、下拉和状态提示。重点比对状态变更时机、文本可读性及减少动态效果分支，分别录制正常与快速连续操作。
+4. **收口。** 每批使用相同数据和操作脚本录制对照，保留帧截图与差异记录。对照 M6 静止态基线跑受影响页面冒烟，确认拖拽和侧栏变化未增加持续长帧。录屏使用合成数据。
+
+本轮交付计划，UI 源码改动从 M6 预览包验收后单独开始。
 
 ---
 
@@ -350,11 +403,8 @@ lto = true; codegen-units = 1; strip = true; panic = "abort"; opt-level = "z"  #
   含补齐的 2 个测试夹具 README；归一化 Cargo.toml 的版本来源根 manifest 与官方字节一致），
   语义以 SHA-256 pin 的 exe 4.17.0 十例矩阵逐字节 parity 为准；SHA256SUMS（110 条）随 vendor 提交。
   core 实际依赖 reqwest(rustls+native-tls)/rusqlite/zstd/simd-json/tokio（无 leveldb），体积影响计入 G2。
-- **G2 15MB 安装包**：Rust bin(strip+lto) 估 6–10MB + bundle ~1.5MB + 资产；NSIS LZMA 后有望 ≤15MB，**以实测为准**。
-  若超：先砍依赖 feature，再请所有者重议目标；不擅自放宽。
-- **G3 15MB 托盘驻留**：销毁主 WebView2 后 Rust 进程估 8–15MB；WebView2 独立 UDF 的 browser 进程须随最后一个
-  webview 退出而退出（M3 实测验证，必要时 `Close()`+等待进程退出再报数）。开窗口时 WebView2 本身百兆级是物理事实，
-  目标只约束托盘态；验收数值分开报。
+- **G2 正式 NSIS ≤ 15 MiB**。诊断封装已测 6.45 MiB，正式包以 M6 实测为准。
+- **G3 进程树私有工作集**。冷托盘 ≤ 15 MiB，读库关窗回托盘 ≤ 35 MiB，开窗峰值 ≤ 500 MiB。暖托盘达标后进一步压降不阻塞。关窗验收须确认主 WebView2 进程树退出。
 - **G4 窗口控制条**：Tauri 无原生 titleBarOverlay；宿主层注入三按钮（§3.4）。视觉需所有者确认（tokens 令牌内）。
 - **G5 decimal 精度**：**已决（2026-11-17）**：`amount.js` MAX_INTEGER_DIGITS=36、MAX_SCALE=18，内部 BigInt；
   rust_decimal（96-bit）不足，改用 `num-bigint` 对齐算术 1:1 移植（amount/aligned/format/subtract/compare）。
@@ -486,7 +536,7 @@ lto = true; codegen-units = 1; strip = true; panic = "abort"; opt-level = "z"  #
 - [ ] M3 宿主+bridges 切换（window/tray/lifecycle □ bridges.ts □ 控制条 □ M1/M2 接线 □ 三页冒烟 □ 托盘内存首测 □）
   - [x] 2026-11-19 · Windows 阅读器宿主切片：复用现有 1480 × 960 界面。独立 Vite 构建启用 Tauri `invoke` 和 `listen`，接通用量快照、会话列表和标签、预览、分段、查找、跟读 stamp、摘要、跨会话搜索及文件历史。常规 Electron 构建的 5 项 bundle 校验通过，包括字节一致性。默认真数据读取关闭，须显式提供 `--real-sources codex,claude`。IPC 使用原 DTO 的 JSON；二进制 IPC、正式托盘浮窗、管理与配额 IPC、导出/剪贴板和整应用切换仍待迁移。
   - [x] 2026-11-19 · 窗口生命周期：关闭销毁主 WebView2 并释放内存账本，原生托盘复用重建入口。自动验收以测试进程输入调用同一重建入口，未手工点击系统托盘图标。WebView2 使用 128 MB JS 堆上限与独立用户数据目录，验收省略禁用 SmartScreen 的启动参数。
-- [ ] M4 source-admin+win-native（discovery/custom □ config-health/manager □ inventory/skill □ install 引擎 □ DPAPI/Job □ parity □）
+- [x] M4 source-admin+win-native（discovery/custom ✓ config-health/manager ✓ inventory/skill ✓ install 引擎 ✓ DPAPI/Job ✓ 合成 parity ✓）
 - [ ] M5 quota-engine（V1/V2 □ 15 适配器 □ 登录族 □ scheduler/watch □ github □ update □ parity □）
   - [x] Windows DPAPI 原语与凭据格式：仅当前用户可解密，解密缓冲释放前清零，解密用途绑定；凭据按路由规范化。合成测试覆盖错误用途和无效输入。
   - [x] 额度 V1/V2 数据契约：Codex CLI 响应、旧 V1 缓存恢复、资源字段和单项新鲜度均已与 Electron 比对；保留未知值、过期与不同余额口径。
@@ -523,7 +573,7 @@ lto = true; codegen-units = 1; strip = true; panic = "abort"; opt-level = "z"  #
 
 ### 2026-11-19 · 暂停点与架构复核
 
-**状态：暂停迁移。** 本分支保存 Rust/Tauri 审阅快照。Electron 继续作为正式运行入口和契约对照，等待所有者确定后续方向。
+**历史审阅快照。** 当时暂停推进以确认架构。以下保留原有证据，现行决议见后文。
 
 | 范围 | 快照状态 |
 |---|---|
@@ -534,17 +584,207 @@ lto = true; codegen-units = 1; strip = true; panic = "abort"; opt-level = "z"  #
 
 验证记录：quota-engine 和宿主 29 项常规 Rust 测试通过，另显式执行原版 Electron 合成凭据兼容测试 1 项并通过。相关 Electron 回归 35 项通过，包含前端 bundle 字节校验。TypeScript、Tauri Debug 构建及 8 项合成 WebView2 冒烟通过，托盘用测试入口打开。仅使用合成账户、隔离目录或本机传输，未读取正式安装资料。
 
-恢复前先对齐三个问题：
+### 2026-11-19 · 所有者定稿与验收口径
 
-1. **后台进程归属。** 当前 Tauri 宿主同时持有调度和窗口。可继续精简同进程宿主，或拆成轻量 Windows 托盘宿主与按需工作进程。两种结构均用整个应用进程树衡量，刷新峰值单独记录。
-2. **切换粒度。** 按领域交付 Rust 内核，还是等待宿主、安装、更新和逐像素验收一并达标再切换。审阅分支保留 Electron 对照入口。
-3. **数据和安装身份。** 独立数据目录与用户确认导入已经确定。需要划定可继承的偏好和运行时授权、要求重新登录的场景，并分别验证 Electron 回退与 Tauri 升级。
+- **定稿为单进程 Rust 宿主（Tauri v2），放弃拆进程备选。** 冷托盘私有工作集为 3.42 MiB，Electron 隐藏启动为 247.18 MiB。读库回托盘为 33.86 MiB，Electron 为 299.56 MiB，后者约为前者的 8.85 倍。空窗关窗仍有 22.22 MiB，体现含 WebView2 客户端与 COM 初始化在内的固定成本，未单独量测 COM 份额。为此重做 M5 的 13 条登录族 IPC 跨进程接线不划算。
+- **用户侧整应用一次性切换。** 内部按 M4 → M5 → M6 逐项测试、黄金比对和打包，保留 Electron 对照。
+- Tauri 使用独立目录。经用户在菜单确认后复制导入并重封凭据，失败账户标记需重新登录。Electron 原目录和回退路径隔离。
 
-### 待迁移顺序（架构确认前暂停）
+| 验收项 | 目标 | 同机证据 |
+|---|---:|---|
+| 冷启动直进托盘，私有工作集 | ≤ 15 MiB | 3.42 MiB，合成基线达标 |
+| 读库关窗回托盘，私有工作集 | ≤ 35 MiB | 33.86 MiB，合成基线达标。进一步压降不阻塞 |
+| 开窗峰值，私有工作集 | ≤ 500 MiB | 三窗格 370.86 MiB，返回列表 391.46 MiB，均达标。WebView2 GPU 动效放大瞬态峰值，8 秒回落至 348.95 MiB。本项不修改 `bridges.ts` 或页面组件 |
+| 正式 NSIS 安装包 | ≤ 15 MiB | 诊断封装 6.45 MiB，Electron 公开包 121.53 MiB。正式 Tauri NSIS 待 M6 实测 |
 
-1. M5 · 将配额观测接到可恢复的账户服务和受限 IPC，用合成凭据与回环服务验证写入顺序、并发刷新、关闭及重启。随后接登录／续期、CLI 和被动观测。
-2. M4 · 完成配置健康／管理、Agent 清单、Windows Job Object 和安装器。先完成只读检查，再接入用户显式触发的修改和安装。
-3. M3/M5 · 接配额提醒、原生托盘浮窗与持久设置，完成 GitHub、更新及剩余 IPC。
-4. M6 · 打包后进行真实包回归、内存和零像素差验收。以相同输入复验，真实账号测试须单独授权。
+| 范围 | 导入规则 |
+|---|---|
+| 通用偏好、展示设置 | 可继承。校验已知字段和取值，再写入 Tauri 独立目录。 |
+| 历史账本、统计、历史额度 | 可继承。按版本校验、前置备份和去重，保留未知、缺失、旧读数和未定价语义。 |
+| 已验证可重封的凭据 | 可继承。限用户确认、当前 Windows 用户及已核对格式，成功后在独立目录 DPAPI 重封。失败保留历史，标记需重登。 |
+| 网页 Cookie 登录态 | 必须重建。旧库兼容测试证明可解密的合成旧记录，用于验证格式。正式导入需排除网页登录态，当前原型的 Cookie 恢复路径待 M5 接线时收紧。 |
+| 设备流运行时授权 | 必须重建。重新发起本次授权，禁止沿用旧的待登录或进行中的运行时状态。 |
+| 更新与安装身份 | 必须重建。单独验证 Tauri 安装、更新签名及升级，旧 Electron 路径保留供回退。 |
+
+#### 内存门禁 · `737737c` / `458a57f`
+
+Windows 原生 125%，Tauri 客户区 1480 × 960 CSS px。PDH 每 100 ms 记录同一时刻的完整进程树，分别使用 `Working Set`、`Working Set - Private` 与 `Private Bytes`。普通工作集的树合计包含多进程共享页的重复计数。托盘表取末次有效样本，浏览表取各阶段整树私有工作集峰值。测试使用隔离目录和三份合成 Codex／Claude JSONL（810、1,683、1,560 轮，14,111,722 字节，SHA-256 `1d2ee6701766a50ab518b907dd4a6fcf7e833e90e4c8716827efab6d042d376c`），记录只含数值、PID 及进程角色。
+
+| Tauri 托盘样本 | PID | 进程 | Working Set | Private Working Set | Private Commit |
+|---|---:|---|---:|---:|---:|
+| 同脚本对照轮，默认冷启动 | 18788 | quotadock-desktop | 15.29 | 3.42 | 10.57 |
+| 同脚本对照轮，默认读库后关窗 | 18788 | quotadock-desktop | 65.98 | 33.86 | 115.86 |
+| 首轮默认读库后关窗 | 3184 | quotadock-desktop | 65.73 | 33.61 | 109.08 |
+| 空数据关窗对照 | 20900 | quotadock-desktop | 53.75 | 22.22 | 65.36 |
+| `MIMALLOC_PURGE_DELAY=0`，读库后关窗 | 24600 | quotadock-desktop | 64.54 | 32.41 | 95.26 |
+| 关闭动效，读库后关窗 | 10628 | quotadock-desktop | 64.15 | 31.98 | 101.96 |
+
+单位均为 MiB。各行只有一个进程。冷启动探针确认主窗、WebView2 profile、账本 `Store` 均未创建，读调用为 0。关窗等待 WebView2 整树退出及 `Store` 释放。此前实测 150.59 MiB 私有提交量所在阶段也只有 Rust 宿主。两轮默认读库后的 mimalloc 提交页分别为 102.31／109.08 MiB 和 109.13／115.86 MiB（后者分别是各轮进程私有提交总量）。空目录开窗关窗仍留 65.36 MiB 私有提交量，mimalloc 占 58.38 MiB。仅对本轮进程启用立即归还空闲页后，读库后私有提交量降至 95.26 MiB，私有工作集降至 32.41 MiB，仍高于当时的暖托盘 15 MiB 门槛。
+
+首轮 `VirtualQueryEx` 记录读库后私有映射区约 106.22 MiB、映射文件区约 10.75 MiB。映射区统计与进程私有提交量的口径不同。mimalloc 提交统计包含仍被对象占用的页和分配器保留的页，历史 150.59 MiB 缺少堆级记录，无法分配到具体对象。源码显示 `Store::new` 初始化、合并和散列价格目录，内嵌 JSON 还有进程级 `OnceLock`。本轮未量出价格表独占份额。工作负载只读 JSONL，SQLite 整库复制及 WAL overlay 未走到，临时文件换底座未执行。
+
+| Tauri 私有工作集峰值的同刻归因 | 单窗格 | 三窗格 | 返回列表 |
+|---|---:|---:|---:|
+| 整树 | 321.95 | 370.86 | 391.46 |
+| Rust 宿主 PID 18788 | 65.45 | 67.38 | 67.40 |
+| WebView2 renderer PID 18792 | 112.77 | 147.86 | 152.32 |
+| WebView2 GPU PID 36820 | 96.67 | 109.91 | 125.65 |
+
+同脚本对照轮返回列表整树增加 20.60 MiB，其中 GPU 增加 15.74 MiB、renderer 增加 4.45 MiB、Rust 宿主增加 0.02 MiB。首轮和立即归还空闲页对照都重现反涨，整树增加 18.12 和 21.25 MiB，GPU 增加 18.72 和 17.30 MiB。合成配置走正常动效设置切到 `off` 后，三窗格／返回列表为 356.79／360.80 MiB，差值 4.01 MiB，GPU 差值 5.10 MiB。该对照覆盖整条路径，支持动效放大涨幅，未定位到单个合成层。
+
+同脚本轮返回列表后 Rust 计数 `[get, refresh, sessions, preview, part, facts]` 保持 `[2, 1, 4, 3, 0, 0]`。阅读器窗格归零，供阅读器使用的全量会话列表引用从 3 行变为 null，页面连接元素 9,666 → 2,028。CDP 的 DOM 节点 12,334 → 12,723 → 7,827，JS 堆使用 27.54 → 25.97 → 24.31 MiB，detached 根 10 → 12 → 12（对应三窗格、返回、再静置 8 秒）。该时窗不能确证或排除长期 DOM 保留。静置后整树私有工作集 348.95 MiB，私有提交量 706.16 MiB。历史实数 590.15 → 616.81 MiB 对应宿主阶段私有峰值 150.76 → 141.49 MiB，旧报告缺少峰值同刻进程角色及堆数据，历史 GPU 和对象级份额仍未证实。
+
+可在宿主细化关窗后的价格目录所有权、分配线程生命周期和必要缓存释放，继续用空目录对照测增量。实测反涨期间没有新增这些 IPC，当前没有 `bridges.ts` 改动依据。若后续精确归因到阅读器或列表重挂载的动画／合成层，可能触及被保护的页面或组件，须由所有者决定。
+
+| 同机、同脚本对照，单位 MiB | 当前 Tauri Release | Electron v0.1.8 公开包 |
+|---|---:|---:|
+| 冷托盘／隐藏启动，普通工作集／私有工作集／私有提交量 | 15.29／3.42／10.57 | 503.05／247.18／501.86 |
+| 读库后回托盘，普通工作集／私有工作集／私有提交量 | 65.98／33.86／115.86 | 564.17／299.56／492.01 |
+| 单窗格私有工作集峰值 | 321.95 | 335.88 |
+| 三窗格私有工作集峰值 | 370.86 | 374.19 |
+| 返回列表私有工作集峰值 | 391.46 | 388.54 |
+| 安装包体积 | 6.45（6,758,838 字节，诊断 NSIS） | 121.53（127,434,956 字节，公开 NSIS） |
+
+两端同为原生 125%、1480 × 960 CSS px、完整动效。Electron `--hidden` 创建并保留 BrowserWindow、renderer、GPU 和 utility，冷表使用单独空目录启动。两端读库路径使用同一份合成 JSONL、同一测量脚本和列表／阅读操作。Electron 在隐藏启动就执行初次采集，合成数据须在该次启动前写入。Tauri 用冷探针开窗前写入。Electron 安装包按发布资产 SHA-256 `372751706f89d6b275629241003c8d9ad93147bc01e95a009165923e4ea11a86` 校验后解包。诊断 NSIS 已从包中提取并确认 payload 等于被测 Tauri Release（SHA-256 `56ae4275a49fdb284c2c38a411c14721571b3da4084c3c5cbefdb6a6bdb8f3ad`）。正式 Tauri 打包配置仍为 `bundle.active=false`，6.45 MiB 只覆盖当前可执行文件的诊断封装。初轮因列表工具超时或 Electron 空目录启动后没有发现追加的同批数据而失败，已用公开版支持的隔离 fixture 和共同的页面操作重跑。
+
+过程明细存放于 `artifacts/memory-gate-20261119/`。`baseline/{tauri,electron}.json` 是配对轮摘要，旁边的 JSONL 保留每次采样的 PID、父 PID、进程名及三个内存指标。`electron-cold/` 是 Electron 空数据隐藏启动。`initial-tauri/`、`empty/`、`purge/`、`motion-off/` 是四轮 Tauri 对照。`scripts/m1/measure-memory-gate.js` 接收 `tauri|electron <exe> <output-directory> [reader|empty|cold]`。归还空闲页轮仅设进程环境 `MIMALLOC_PURGE_DELAY=0`，动效轮仅设 `QUOTADOCK_MEMORY_GATE_MOTION=off`。`scripts/m1/package-memory-gate-windows.ps1` 以 NSIS 生成诊断包。采样未保存会话、路径、凭据或原始 DOM。
+
+2026-11-19 收尾复核了六组有效摘要与原始 PID 样本，核对了同源夹具、原生视口、峰值和包体回执。变更检查、诊断脚本 ESLint、Python 与 PowerShell 语法检查通过。沿用被测 Release 构建和桌面运行证据，中断的 Rust 测试缺乏可核查完成回执。二次编译前先按本文件首条资源规则重新评估。
+
+- 收尾 Electron 回归：`npm run lint`、`npm run typecheck:ui` 通过。以单并发执行 `node --test --test-concurrency=1 tests/m1/*.test.js`，813 项全部通过。回执保存在 `artifacts/memory-gate-20261119/recovery-verification/`。
+- 暖托盘备选优化：若今后私有工作集超过 35 MiB，才复测价格目录 `OnceLock` 改为随 Store 释放、重开重载，以及 mimalloc 与默认系统分配器的差异。当前保留原配置，继续推进主线。
+
+诊断读数按新口径复判，默认合成冷托盘、暖托盘和开窗均达标。真实大库与正式包仍须按上述指标验收。
+
+#### 解冻前回归状态 · 2026-11-19
+
+- Electron 已绿。全量回归 813／813，ESLint 和 TypeScript 通过。Rust 调用原版 Electron 生成合成旧库，再导入、DPAPI 重封并重启恢复，兼容测试 1／1 通过。
+- WebView2 本轮 Debug 构建和隔离冒烟通过，覆盖冷托盘、开窗、采集、会话列表、单／三窗格、返回和回托盘。此回执只验冒烟，正式内存验收仍用 M6 Release。
+- Windows Job 原夹具以 Job 进程数恰为 2 作为启动信号，本机有额外进程而失败。调整后由实际合成后代传回 PID，核验终止前存活、终止后退出及 Job 清空，定向 4／4 通过。生产 Job 逻辑未改。
+- Rust 全量仍红。vendored tokscale 的 MiMo 目录符号链接去重测试在建立链接时返回 Windows 1314（缺少所需特权）。全量重跑与前一轮清理交叠，导致部分测试和文档测试缺少已构建文件，该轮不能签发全绿。下一次全量在能够创建目录符号链接的环境中串行完成，再执行 Cargo 清理。
+- 本次专用 Cargo 目录已通过 `cargo clean` 清除，最终清理回执 2.4 GiB，目录已消失。上轮 `input/` 的 684.82 MiB 安装包与解包副本仍待清理，自动审批拒绝删除，哈希与采样回执已保存。M4 首个子模块等待两项门禁解除。
+- 日志和退出状态位于 `artifacts/memory-gate-20261119/recovery-verification/`，旧诊断包回执仍在 `input/`。
+
+- M4 入口复核：`input/` 仅剩两份包体哈希回执，普通权限目录符号链接探针通过。串行 `cargo test --locked --offline --workspace --no-fail-fast` 退出 0，2,317 项通过、0 失败，5 项按原声明忽略（Electron 合成凭据另有单独绿灯）。覆盖单元、集成和文档测试。保留本轮专用 Cargo 缓存，进入 M4.1。回执：`recovery-verification/m4-entry-rust-status.json`。
+
+### M4.1 · 独立账本、原子落盘与重启读取
+
+- [x] 2026-11-19 · 正常 Tauri 宿主在应用标识所对应的数据目录下使用 `usage/`，包括 `statistics.json`、偏好、计价及会话标签。应用级写入租约阻止多个宿主同时写入。窗口关闭释放内存 Store，WebView2 仍使用本次进程的临时 profile。Electron 原目录不参与启动读写。
+- [x] 2026-11-19 · 同目录独占创建临时文件，保持流式 JSON 写入，`sync_all`、关闭临时句柄并原子替换。打开的旧读句柄仍读到完整旧版本，新句柄读到完整新版本。失败替换保留已提交内容，模拟中断遗留的不完整临时文件在冷启动时被忽略。此次未执行物理断电试验。
+- [x] 2026-11-19 · 定向 Rust 宿主、statistics_io 和 Store 全链测试 18／18。覆盖写入租约释放、并发持有的读句柄、未知值 `null` 和高精度十进制字符串。Electron 统计读写、账本与隐私回归 17／17。
+- [x] 2026-11-19 · `scripts/m1/ledger-restart-check.js` 将实际 Tauri 写入字节与 Electron 原版读写重编码比对。移除合成源后，关窗重建和新进程启动均读出相同 3 条会话、统计版本 1、日汇总和标签。逐字节核对冷重启、Electron 隔离哨兵与源正文未写入。最终轮清除测试目录，首轮关窗后的宿主退出和临时文件清理未通过，保留初轮回执。脚本加入 WebView2 退出静置后复验通过。首轮约 14.56 MiB 合成临时文件清理受自动审批拦截。
+- 复现及回执位于 `artifacts/memory-gate-20261119/recovery-verification/` 的 `m4-ledger-*`。按所有者指示保留本轮专用 Cargo 缓存，未执行 `cargo clean`。
+
+### M4 · 本机数据目录信息与打开入口
+
+- [x] 2026-11-19 · Tauri 设置桥接接通 Electron 的 `dataInfo` 和 `openData` 契约。仅主窗口可请求，目录固定为 Tauri 自有 `usage/`。统计目录体积使用文件元数据，最多访问 20,000 个条目，跳过链接和 `agent-tools`。页面与组件目录无变更。
+- [x] 2026-11-19 · Rust 宿主 4／4、TypeScript 检查、Tauri 前端构建和 Electron bundle／预览回归 11／11 通过。隔离 WebView2 实测设置桥返回版本、独立路径和账本体积，重跑 M4.1 的黄金字节、关窗及冷重启全绿。打开入口通过宿主构建，未在冒烟中拉起资源管理器。回执：`recovery-verification/m4-data-webview.json`。
+### M4.2 · 自定义源、定价同步与配置健康
+
+- [x] 自定义源通过 8 条 `usage:custom*` 接入独立 `usage/`。预览只返回限定摘要，应用前核对文件版本，支持变更、停用、删除、回滚、导入和导出。黄金比对覆盖重启后仍为未知的用量与来源正文不落盘。
+- [x] 本地价格保存／重置、试算、覆盖计划、账单设置、估值重算和工作台保存均接 Rust。同步以固定 HTTPS 端点拉取价格目录，失败时保留旧目录。托盘调度只读取价格文件，在 Store 已释放时执行同一账单引用校验并原子替换价格目录。
+- [x] 6 条 `usage:config:*` 已接通。静态检查经 Rust 阻塞池执行，扫描只读已明确选择的范围。MCP、Hooks 与 Skill 的管理操作经预览、版本核对、DPAPI 备份和原子替换执行，支持撤销。
+- [x] 定向 Rust 17／17，Electron 配置、自定义源及采集诊断 59／59，定价与工作台 32／32。TypeScript 检查通过。隔离 WebView2 复验覆盖 15 项 IPC 结果及关窗重建、冷重启和账本隐私不变量。IPC 冒烟核对未授权边界，成功写入和恢复由合成 Rust 黄金测试验证。固定端点的真实网络请求未执行。
+- [x] 保留首轮路径判断和冒烟断言失败回执。Windows 路径比较统一按组件处理，价格探测冒烟以 Electron 计算的按 Token 价格为期望值。回执见 `artifacts/memory-gate-20261119/recovery-verification/m42-final-*`。
+### M4.3 · Agent 清单、运行时发现与安装器
+
+- [x] 环境发现接入元数据探测。Rust 4／4、Electron 14／14，包含普通 CLI、Antigravity、已保存的来源范围和其他 Agent 的存在性提示。没有执行 CLI 进行发现。
+- [x] Agent 盘点限定在固定配置文件和选定项目。四类 Agent 的 Rust 与 Electron 输出逐项一致，Electron 盘点／Skill 行为 22／22。13 条 Agent 管理操作由 Rust 处理，指令按项目内的盘点 ID 访问，预览和恢复沿用加密备份。管理接线的 WebView2 冒烟将随 M4 收口运行。
+- [x] Agent 引导、Antigravity 运行时发现及会话内 MCP／Skill 活动接入 6 条 IPC。运行时发现只读文件元数据；复制命令与打开官方指南由用户显式触发。已有 `discovery` 和 `agent-traces` 在主宿主提供来源路径与额外 Agent 痕迹。
+- [x] 安装器的 2 条 IPC 和进度事件接入生产宿主。固定 HTTPS 来源、有限重试与续传、TAR/GZIP 和 ZIP 原生解包、完整性验证、WinTrust 发行者检查、版本探测与应用内代际原子切换均走 Rust。队列串行，退出时取消并等待；临时下载由任务目录释放。旧 Claude 本机维护标记仍阻断产品安装路线。
+- [x] 安装和受管探测通过 Windows Job。通过 SHA-256 pin 后创建挂起进程，通过进程创建属性把该进程直接交给 `KILL_ON_JOB_CLOSE` Job，再恢复运行。保留 Job 及只读镜像租约，输出有上限。已验证显式取消、宿主被终止时的进程树回收及错误 pin 拒绝。创建时原子入 Job 的完整复验记入最终回执。
+- [x] 补接用户订阅费及 Codex 账本重建预览、确认与备份。黄金比对覆盖预览时账本字节一致、错误预览被拒绝及先备份后替换。自定义源打开位置限已保存并通过校验的根目录。
+- [x] Electron 全量回归按 `--test-concurrency=1` 执行，813／813。M4.3 定向黄金覆盖四种 Agent、安装来源及解包契约、账本重建、DPAPI 配置恢复和 Job 子进程生命周期。
+- [x] WebView2 最新复验通过。M4.2 的 16 项和 M4.3 的 13 项 IPC 检查全绿，同时完成窗口重建、冷重启、Electron 账本字节黄金比对及合成测试目录清理。首轮 29 项 IPC 已通过，冷重启的退出清理遇到 `EPERM`。Rust 宿主只对本进程临时 UDF 的暂时共享冲突限时重试，已通过复现实测及持有句柄的合成测试。
+- [x] 最终源码的 Rust 工作区串行全量复验通过，覆盖单元、集成与文档测试，共 2,341 通过、0 失败、默认忽略 5 项。使用已安装 Electron 另行运行默认忽略的旧凭据兼容测试，合成凭据解封、DPAPI 重封、重启恢复与旧目录字节隔离 1／1。Rust 创建时入 Job 的取消和宿主终止测试通过。TypeScript、ESLint 与 Tauri dev 构建通过。
+- 回执在 `artifacts/memory-gate-20261119/recovery-verification/`，见 `m4-final-rust-retry.log`、`m4-final-electron-dpapi.log`、`m4-final-electron.log`、`m4-final-smoke-retry.json`。本轮使用合成源、模拟安装请求和进程树。真实供应商下载安装、真实签名包交互和发布验收留待后续授权与 M6。
+- WebView2 失败首轮遗留的合成目录 `%TEMP%/quotadock-ledger-restart-TaPl6v` 约 0.99 MiB，以及句柄测试的零字节副本 `%TEMP%/.tmpyrN03S`，即时清理命令均被执行策略拒绝。成功复验的临时文件已清理。按所有者指示保留增量缓存。本轮未执行 `cargo clean`。
+
+### M4 接线后的 IPC 进度
+
+用 Electron preload 实际调用、Tauri renderer `bridges.ts` 的直接返回和 Rust `generate_handler!` 注册表交叉核对。字段别名合并到同一 Electron 通道，返回占位错误的兼容方法未计入。历史 **111** 的口径把 `usage:agents:` 动态前缀算作 1 条；展开 13 个真实操作后是 **123** 条。现有直接接线 **81／111**，或 **93／123**。
+
+| Electron preload 域 | 展开后接入／总数 | 尚待接入 |
+| --- | ---: | --- |
+| `window:*` | 3／3 | — |
+| `usage:*` | 79／82 | `performanceState`、`statisticsDiagnostics`、`interval` |
+| `quota:*` | 11／21 | 两条 provider 指南、网页登录／取消、客户端登录及 Codex 登录／取消／单账户刷新／移除／选择程序 |
+| `shell:*` | 0／3 | `get`、`set`、`readHistory` |
+| `github:*` | 0／9 | GitHub 连接、同步和相关操作 |
+| `update:*` | 0／5 | 获取、检查、取消、安装和打开发行入口 |
+| **合计** | **93／123** | **30 条** |
+
+M4 本轮明确的 `usage:config:*` 6／6、`usage:agents:*` 13／13、自定义源 8／8、定价维护与同步、来源、Agent 引导及安装器通道均已接线。台账刷新间隔与统计遥测列为历史待补项；本次 M4 门禁只验证授权的合成数据与操作。逐通道回执为 `artifacts/memory-gate-20261119/recovery-verification/m4-ipc-coverage.json`。
+
+### M5.1 · 登录与旧库导入进度
+
+- [x] 主窗和托盘仍使用进程级临时 UDF。网页登录单次创建独立目录，限定 HTTPS 导航域、拦截下载与外部窗请求，并在 IPC 分发层拒绝登录窗调用应用命令。有效凭据通过 Rust 额度验证和 DPAPI 持久化后销毁 WebView2。启动任务按 24 小时期限回收本应用有归属记录且无存活租约的目录，遇到重解析点或无归属记录时跳过。
+- [x] 旧库仍通过主窗口菜单选择目录和二次确认。API key 等可移植凭据验证后重封。网页登录态、设备流和 CLI 运行时授权要求重新建立。兼容解码器保留旧格式测试，产品导入不继承这些授权。合成 Electron 凭据验证了重封及账号重启状态，旧连接文件与 Cookie 文件字节相同。
+- [x] 合成 WebView2 冒烟覆盖独立 UDF 创建、主窗 Cookie 不可见、登录窗口关闭后删除 UDF、DPAPI 重开账户。Fixture 从空白页注入合成 Cookie，额度响应用合成数据。同期窗口重建、冷重启、账本 Electron 黄金字节与测试目录清理均通过。
+- [x] 接通 Provider 官方指南、状态栏指引、网页登录和取消。Claude／Antigravity 状态栏由本人复制配置，Rust 仅接收标准输入并原子保存额度投影。浏览器登录采用站点规则与 Cookie 白名单，DeepSeek 只读取本次窗口本站固定的 `userToken`。第三方真实跳转和多工作区交互待验证。
+- [x] Codex App Server 的登录、取消、单账户刷新、移除、选择程序已接线。用户选择的 `codex.exe` 存应用内 SHA-256 pin，进程归 Windows Job 管理。双向管道限长并隔离标准错误，连接先确认 CLI 实际配置为系统凭据库，每个账户使用独立 `CODEX_HOME`。原生双向管道、取消、宿主退出回收和旧 pin 拒绝已合成验证。真实授权和账户变更通知对账仍待验证。
+- [x] 官方 CLI 交互窗口接入 Windows Job。创建时将进程纳入 Job，交互控制台内部完成授权，宿主无须捕获控制台内容。合成 Windows 进程树套件 10／10。首轮后代退出检查把 Job 计数归零与进程句柄发出退出信号视为同时发生，复跑改用限时等待，两份回执分别为 `m5-cli-console-job.log` 与 `m5-cli-console-job-retry.log`。
+- [x] Antigravity 登录及额度走受管官方 CLI。选择已验证的 app-owned 安装或唯一元数据候选，同一 SHA-256 pin 覆盖版本、交互控制台及固定 `/usage` 参数。保留已复核的 1.1.11–1.4.2 门禁。用户在独立控制台按 CLI 的浏览器提示完成授权并退出。授权材料保存在 DPAPI 凭据记录中，刷新时复原到新建临时目录，用后清理。自动读至少间隔五分钟，取消与退出等待 Job 收口。只发布无模型调用证据的合法报告。
+- [x] 合成 CLI 实际执行了托管启动、版本检查、登录、额度读取、凭据更新、冷重启和显式刷新。验证了临时授权目录清理和 299,999／300,000 ms 自动刷新边界。Rust 原生流程与黄金比对 2／2，Electron Antigravity、客户端及 Job 29／29。回执 `m5-antigravity-native-smoke-final.log` 与 `m5-antigravity-electron.log`。真实 CLI 授权兼容性仍待验证。
+- [ ] 客户端登录 IPC 已覆盖 OpenCode Zen／ZCode、四种显式环境 API key、Claude 和 Antigravity 的应用独立授权。仍缺 Gemini CLI 与 Cursor 客户端路线及其他固定文件来源。Gemini 公共文档限制第三方直接使用 CLI OAuth 访问 Code Assist，已将官方说明入口切到 `/stats model` 的使用文档。后续应用内额度需要供应商支持的集成合同。
+- **WorkBuddy 接线。** Tauri 提供独立网页登录和手动提供已授权的 API 凭据两条路线。能力列表在两个读取入口均投影为这两条可选路线，旧桌面账户仍可读取历史额度。用户追加的私有密钥方式未接入，旧 Electron 桌面加密会话复用仍有差异。开放平台的第三方 OAuth 要求应用审核并由服务端管理应用密钥。
+- [x] WorkBuddy 本轮补验通过。桌面 Rust 11／11，适配器与金额精度定向套件 3／3，其中 17 条适配器输出与 Electron 黄金夹具逐条一致。WebView2 冒烟通过两条入口的合成读取、浏览器 UA 校验、积分十进制字符串、凭据不出现在 IPC 投影、关窗重建和冷重启后的 DPAPI 恢复及显式刷新。核对合成凭据和 UA 均未明文写入配额缓存。本轮重启夹具在测试沙盒里保存配额账户，测试目录已清理。真实 WorkBuddy 账号与远端接口仍待验收。回执见 `m5-workbuddy-desktop-final.log`、`m5-workbuddy-parity.log` 和 `m5-workbuddy-restart.json`。
+
+### M5.2 · 后台刷新、托盘与桌面提醒
+
+- [x] M5.2 调度基础接线。主进程保存额度刷新偏好，写入失败保留旧状态，冷重启重新起算计时。自动批次并行调度 Provider 和 Codex，Codex 子进程与 Provider 共用运行槽，手动全刷仍按 Electron 原入口只处理 Codex，Provider 由现有前端分别发起。Codex 失败保留上次额度，限流与需重新登录状态跨重启保留。
+- [x] 定向验证通过。Rust 账户与调度 5／5、Tauri 桌面 12／12。WebView2 实测 IPC 合成场景包含刷新偏好写入与冷重启、Codex 手动批次统计、登录隔离及 WorkBuddy 重启刷新。回执 `m5-codex-refresh-core.log`、`m5-codex-refresh-desktop.log`、`m5-codex-refresh-webview.json`。Codex 实际账户后台运行与慢读重试策略仍待验收。
+- [x] M5.2 三条桌面 IPC 已接线。关闭到托盘、引导标志和提醒阈值在应用独立目录原子保存。读取历史按连接保留最近 40 行，同结果合并，返回时间和受限错误码。已验证关窗留托盘、冷重启恢复及关闭该偏好后关窗完全退出。托盘监听配额变更，阈值、重置与重登提醒经 Windows 通知插件投递。点击通知可打开额度页。
+- [x] TypeScript 检查和桌面 Rust 14／14，WebView2 冒烟涵盖桌面三条 IPC、历史合并、重启、关窗和隔离。回执 `m5-desktop-shell-rust.log`、`m5-desktop-shell-webview.json`。
+- [x] 2026-11-20 · M5.2 合成暖托盘回执。关窗并等待实际一分钟自动刷新完成后静置 3 秒，PDH 取得 15 个完整进程树样本，均无 WebView2。私有工作集峰值及末值 29.52 MiB，私有提交量峰值及末值 85.83 MiB，总工作集末值 89.33 MiB。Rust 宿主私有工作集 28.61 MiB，`conhost` 0.91 MiB。首轮把全部额外子 PID 误判为 WebView2，复跑按实际进程名区分并继续计入树总量。保留 `m5-warm-tray-after-refresh.json` 与 `m5-warm-tray-after-refresh-retry.json`。本轮为开发构建和合成账本，正式安装包与真实大库归 M6 终验。
+- [x] 最终暖托盘复跑 `m5-warm-tray-after-refresh-final.json` 全程通过。私有工作集峰值及末值 31.19 MiB（宿主 30.30 MiB，`conhost` 0.89 MiB），私有提交量峰值及末值 97.13 MiB，总工作集末值 90.97 MiB，15 个样本均无 WebView2。前一轮复跑在冷重启阶段仍断言只发生两次手动读取，自动刷新会按 Electron 相同规则合并第三次成功读取，已修正冒烟断言。最终回执同时验证冷重启、DPAPI 恢复、关窗退出和临时目录清理。
+- [x] 接完 GitHub、更新与开机登录接线后，在同一合成场景复验。关窗、自动刷新、静置后 16 个样本的私有工作集峰值 31.28 MiB，私有提交量 95.31 MiB，总工作集末值 91.63 MiB，未见 WebView2 子进程。登录窗隔离、DPAPI 恢复、冷重启和临时目录清理仍通过。回执 `m5-final-warm-webview.json`。
+- [x] Windows 开机登录注册已接入 `shell:set`。仅安装态允许用户显式操作，在 HKCU Run 使用独立的 Tauri 标识与 `--start-in-tray`。启动参数会跳过主窗创建和启动账本读取。Rust 注册命令的引号与参数测试通过，实际注册和系统通知投递需在正式安装态验收。
+- [ ] M5.2 仍缺 Electron 的瞬态错误延迟重试一次、连续三轮前保持静默的行为。Rust 当前已有刷新池、限流退避和历史读数保留。
+- [x] 2026-11-20 · 接通 `usage:performanceState`、`usage:statisticsDiagnostics` 与 `usage:interval`。原子保存的间隔值与 Electron 一致，默认 15 秒，0 关闭定时采集。定时器在主窗持有账本期间运行，关窗释放账本后暂停，额度后台刷新独立运行。诊断返回 Rust 账本所有者和请求计数，尚无对应的 Node 堆和 worker 投影采样项记为 null。观测诊断无需装载账本或读取来源。
+- [x] Rust 账本 9／9、桌面 14／14、Electron 定向 8／8、TypeScript 和实际 WebView2 合成定时刷新均通过。WebView2 从新增合成数据验出账本版本推进，禁用定时后重启恢复 0，账本字节与 Electron 黄金一致。回执 `m5-usage-interval-core.log`、`m5-usage-desktop.log`、`m5-usage-electron.log` 与 `m5-usage-webview.json`。
+
+### M5.3 · GitHub 同步与签名更新
+
+- [x] GitHub 9 条 IPC 已接线。用户发起设备流，Windows DPAPI 密文与本地账号状态同一次原子替换。同步前复核本人拥有、私有、可写、未归档的目标，固定设备文件名并检查远程 blob SHA。同步载荷仅含内置 Agent 按日期、模型的汇总和上传元数据。
+- [x] GitHub 同步载荷与 Electron 黄金 JSON 逐字节一致，Rust API 2／2、桌面 15／15、Electron 基线 11／11，WebView2 未配置模式 9 条通道通过。回执 `m5-github-sync-payload.log`、`m5-github-api-rust.log`、`m5-github-desktop.log`、`m5-github-electron.log`、`m5-github-webview.json`。真实设备授权、续期和私有库上传需要获准的 GitHub App 与测试仓库。
+- [x] 更新 5 条 IPC 已接线。安装构建需在编译时配置公钥 `QUOTADOCK_UPDATER_PUBLIC_KEY`，从独立 `latest-tauri.json` 获取版本。下载支持进度、取消与重试，使用临时文件保留已验签的安装包。更新程序接受本项目 NSIS 资产和指定 CDN，强制签名绑定版本。用户触发安装时先等待账本和后台任务收口，再请求 Tauri updater 静默安装并重启。
+- [x] 更新定向 Rust 桌面 17／17，合成验签 1／1，确认匹配版本包通过、替换字节或虚报版本均被拒绝。首轮 mock 缺插件配置，复跑修正。Electron 更新 13／13。WebView2 未配置模式 5 条 IPC 通过。回执 `m5-updater-desktop.log`、`m5-updater-signature.log`、`m5-updater-signature-retry.log`、`m5-updater-electron.log`、`m5-updater-webview.json`。
+- [x] 所有者定稿为签名 NSIS 完整包。M6 打包需生成绑定应用版本的签名，配好 Tauri 专用更新清单，并使用隔离安装身份与测试 feed 核对升级和回退。真实静默升级与重启归入 M6.3 点测清单。
+
+| Electron preload 域 | 直接接线／展开总数 | 尚待接线 |
+| --- | ---: | --- |
+| `window:*` | 3／3 | — |
+| `usage:*` | 82／82 | — |
+| `quota:*` | 21／21 | `providerClientLogin` 仍有分支缺口，Codex 合成接线与真实授权验收分开 |
+| `shell:*` | 3／3 | Windows 开机登录注册和系统通知的安装态实测 |
+| `github:*` | 9／9 | 配置态的实际设备授权与本人私有库同步 |
+| `update:*` | 5／5 | 正式签名完整包的静默升级 |
+| **合计** | **123／123（111／111）** | **直接接线完成，部分行为仍待验证或补齐** |
+
+本轮逐项核对保存在 `m5-final-ipc-coverage.json`。
+
+回执目录为 `artifacts/memory-gate-20261119/recovery-verification/`。最新逐通道核对见 `m5-m52-ipc-coverage.json`，M5.1 快照保留在 `m5-ipc-coverage.json`。`m5-webview-login.json` 记录 10 项桥接调用和 4 项 UDF／DPAPI 冒烟，`m5-electron-login.log` 记录 10 项定向 Electron 基线，`m5-codex-and-login-rust.log` 含 9 项 Windows Job 测试和 1 项 Electron DPAPI 兼容复验。初次 Rust 开发构建报出 Tauri 回调所有权与命令分发泛型推断问题，已修复并复跑。新增状态栏子路径先修复了测试错误类型和 Windows 引号，再跑工作区门禁。WorkBuddy 首轮桌面编译发现新错误枚举转换不成立，改用现有 `AccountError::Observation` 包装，初次失败保留在 `m5-workbuddy-desktop.log`。
+
+2026-11-20 · Rust 工作区全量复验 · E 盘在链接期间降至约 1.09 GiB 可用空间，已按资源规则结束本次 Cargo 进程树并按所有者要求保留现有增量缓存。`m5-20261120-workspace.log` 只记录编译进度，门禁仍开放。上轮较早构建的 `m5-m51-rust-final.log` 为 2,349 通过、5 项默认忽略，其快照早于 WorkBuddy 能力调整。
+
+资源复查时 E 盘回升至 16.26 GiB，可用物理内存约 2.07 GiB。准备以单构建任务、带资源监控的方式复跑，终端执行策略拒绝启动监控命令。本轮未再次启动 Cargo。
+
+2026-11-20 · Electron 全量回归（串行） · `m5-20261120-electron.log` 813／813，0 失败、0 跳过。覆盖旧版登录、适配器、刷新池、托盘及 Job 行为。
+
+2026-11-20 · 最新 Rust 工作区全量（串行） · `m5-final-workspace.log` 共 58 个测试目标，含 3 个文档测试目标。2,366 项通过，0 失败，5 项默认忽略。17 条额度适配器路线与 Electron 黄金通过，签名与版本篡改拒绝测试通过。
+
+2026-11-20 · 最新 Electron 全量（串行） · `m5-final-electron.log` 813／813，0 失败、0 跳过。随后在本轮工作区目标中单独执行默认忽略的 Electron 凭据库兼容测试，1／1。验证了可重封凭据冷重启后可用，旧 Cookie 与设备流账户提示重登，并逐字节核对旧库未被写入。回执 `m5-final-electron-credential.log`。
+
+2026-11-20 · 旧编译产物清理 · 按 Cargo 测试目标、配置指纹与时间保留各组最新的完整变体。逐文件删除 127 个过时测试可执行文件，合计 11,449,852,212 字节。保留当前二进制、依赖、指纹记录和增量缓存。回执为 `cache-prune-plan.json` 与 `cache-prune-result.json`。
+
+2026-11-20 · 验证后清理 · Rust、Electron 和旧凭据测试全部退出后，移除 59 个被新变体取代的测试可执行文件，合计 5,357,135,988 字节。两轮合计 186 个文件、16,806,988,200 字节，保留最新工作区测试和构建所需的产物与增量缓存。回执 `cache-prune-after-tests-plan.json`、`cache-prune-after-tests-result.json`。
+
+### 解冻顺序
+
+1. **收尾门禁。** 清理临时副本并保留哈希及采样日志，跑通 Rust 工作区常规测试、Electron 合成凭据兼容、Electron 回归与 WebView2 冒烟。价格缓存与分配器轻检可选且不阻塞。
+2. **M4。** 首先落地自有账本独立目录、原子写与重启读取。接通 13 条 Agent IPC、6 条配置 IPC，以及定价、自定义源、安装器。接入 Windows Job Object 与可执行文件 SHA-256 pin。
+3. **M5。** 补齐 13 条登录族 IPC、后台刷新、托盘通知、9 条 GitHub 和 5 条更新 IPC，按实测 111 条 Electron preload invoke 核对。完成显式旧目录导入与 DPAPI 重封。
+4. **M6。** 完成真实大 SQLite 源正确性、内存、正式 NSIS 和零像素差验收。真实账号测试须单独授权。
 
 > 证据行格式：`日期 · 子模块 · cargo test/套件名 · 结果 · 偏差与遗留`。初始失败与重跑分开记，不覆盖历史。

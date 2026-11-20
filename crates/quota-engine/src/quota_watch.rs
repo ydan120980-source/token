@@ -1,5 +1,5 @@
 use crate::resource_state::date_millis;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::{
     fs,
@@ -11,7 +11,7 @@ const MINUTE_MS: i64 = 60_000;
 const SOON_MS: i64 = 10 * MINUTE_MS;
 const SAME_RESET_MS: u64 = 30 * MINUTE_MS as u64;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub enabled: bool,

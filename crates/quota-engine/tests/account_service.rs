@@ -163,3 +163,48 @@ fn import_deduplicates_by_id_and_preserves_the_old_bytes() -> Result<(), Box<dyn
     assert_eq!(state["accounts"][0]["quota"], Value::Null);
     Ok(())
 }
+
+#[tokio::test]
+async fn codex_refresh_keeps_its_cached_quota_and_restores_backoff_after_restart(
+) -> Result<(), Box<dyn std::error::Error>> {
+    use quota_engine::codex_resources;
+    let root = tempfile::tempdir()?;
+    let now = now_ms();
+    let id = "12345678-1234-1234-1234-123456789abc";
+    let resources = codex_resources::from_codex(
+        &json!({"rateLimits":{"primary":{"usedPercent":20,"windowDurationMins":300}}}),
+        &json!(usage_engine::time::iso_from_ms(now)),
+        &json!("plus"),
+    )?;
+    let service = AccountService::open(root.path())?;
+    service.publish_codex(id, Some("Synthetic Codex"), resources)?;
+    assert_eq!(service.codex_refreshable(now)?, [id]);
+
+    let cached = service.quota_state(false, now)?["accounts"][0]["quota"].clone();
+    let permit = service.acquire_codex_refresh(id).await?;
+    assert_eq!(
+        service.quota_state(false, now)?["refreshConcurrency"]["active"],
+        1
+    );
+    drop(permit);
+
+    service.record_codex_failure(id, "RATE_LIMITED", now)?;
+    assert!(!service.codex_refresh_due(id, now + 899_999)?);
+    assert!(service.codex_refresh_due(id, now + 900_000)?);
+    service.close().await?;
+
+    let service = AccountService::open(root.path())?;
+    assert!(service.codex_refreshable(now + 899_999)?.is_empty());
+    assert_eq!(
+        service.quota_state(false, now)?["accounts"][0]["quota"],
+        cached
+    );
+    service.record_codex_failure(id, "LOGIN_REQUIRED", now + 900_000)?;
+    service.close().await?;
+    let service = AccountService::open(root.path())?;
+    assert!(service.codex_refreshable(now + 1_000_000)?.is_empty());
+    let state = service.quota_state(false, now)?;
+    assert_eq!(state["accounts"][0]["status"], "login-required");
+    assert_eq!(state["accounts"][0]["quota"], cached);
+    Ok(())
+}

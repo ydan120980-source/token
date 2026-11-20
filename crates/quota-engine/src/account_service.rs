@@ -7,7 +7,7 @@ use crate::{
     provider_catalog::{capabilities, experimental, routes},
     provider_observation::{Observation, ObservationError},
     provider_vault::{self, Secret},
-    refresh_scheduler::{Limits, RefreshScheduler, Scope},
+    refresh_scheduler::{Limits, RefreshPermit, RefreshScheduler, Scope},
     resource_contract::project_resources,
     resource_state::{date_millis, resource_view},
 };
@@ -32,6 +32,12 @@ pub enum AccountError {
     Action,
     NotFound,
     ExperimentalOff,
+    ClientUnavailable,
+    LoginFailed,
+    LoginTimeout,
+    LoginBusy,
+    BrowserFailed,
+    FixtureBlocked,
     Canceled,
     AuthRequired,
     Unavailable,
@@ -47,6 +53,12 @@ impl fmt::Display for AccountError {
             Self::Action => formatter.write_str("PROVIDER_ACTION_INVALID"),
             Self::NotFound => formatter.write_str("ACCOUNT_NOT_FOUND"),
             Self::ExperimentalOff => formatter.write_str("PROVIDER_EXPERIMENTAL_OFF"),
+            Self::ClientUnavailable => formatter.write_str("PROVIDER_CLIENT_MISSING"),
+            Self::LoginFailed => formatter.write_str("PROVIDER_LOGIN_FAILED"),
+            Self::LoginTimeout => formatter.write_str("PROVIDER_LOGIN_TIMEOUT"),
+            Self::LoginBusy => formatter.write_str("PROVIDER_LOGIN_BUSY"),
+            Self::BrowserFailed => formatter.write_str("PROVIDER_BROWSER_FAILED"),
+            Self::FixtureBlocked => formatter.write_str("PROVIDER_FIXTURE_BLOCKED"),
             Self::Canceled => formatter.write_str("PROVIDER_CANCELED"),
             Self::AuthRequired => formatter.write_str("PROVIDER_AUTH_REQUIRED"),
             Self::Unavailable => formatter.write_str("PROVIDER_STORAGE_FAILED"),
@@ -297,17 +309,21 @@ impl AccountService {
             }
             let mut credential = None;
             if let Some(adapter) = account.adapter.as_deref() {
-                if routes[adapter]["kind"] != "passive" {
-                    if let Ok(Some(secret)) =
-                        provider_vault::import_legacy(source, &account.id, adapter)
-                    {
-                        if usable(&secret, adapter, now)
-                            && secret.credential.as_str() != "official-login-required"
+                let route = &routes[adapter];
+                if route["kind"] != "passive" {
+                    // The old vault reader also understands cookies for format compatibility.
+                    // Product import restores portable app credentials only.
+                    if route["websiteLogin"] != true && route["kind"] != "cookie" {
+                        if let Ok(Some(secret)) =
+                            provider_vault::import_legacy(source, &account.id, adapter)
                         {
-                            if let Ok(sealed) = provider_vault::seal(&account.id, adapter, &secret)
-                            {
-                                account.sealed_credential = Some(sealed);
-                                credential = Some(secret);
+                            if legacy_credential_portable(&secret, adapter, now) {
+                                if let Ok(sealed) =
+                                    provider_vault::seal(&account.id, adapter, &secret)
+                                {
+                                    account.sealed_credential = Some(sealed);
+                                    credential = Some(secret);
+                                }
                             }
                         }
                     }
@@ -315,6 +331,9 @@ impl AccountService {
                         account.error_code = Some("PROVIDER_AUTH_REQUIRED".to_owned());
                     }
                 }
+            }
+            if account.adapter.is_none() {
+                account.error_code = Some("LOGIN_REQUIRED".to_owned());
             }
             prepared.push((account, credential));
         }
@@ -372,12 +391,109 @@ impl AccountService {
         Ok(())
     }
 
+    pub fn has_accounts(&self) -> Result<bool, AccountError> {
+        Ok(!self.state()?.cache.accounts.is_empty())
+    }
+
+    pub fn read_error_code(&self, id: &str) -> Result<Option<String>, AccountError> {
+        let state = self.state()?;
+        Ok(state.cache.accounts[index(&state, id)?].error_code.clone())
+    }
+
     pub fn adapter(&self, id: &str) -> Result<String, AccountError> {
         let state = self.state()?;
         state.cache.accounts[index(&state, id)?]
             .adapter
             .clone()
             .ok_or(AccountError::Action)
+    }
+
+    pub fn add_passive(&self, request: &ManualConnect) -> Result<(), AccountError> {
+        let route = routes()
+            .ok()
+            .and_then(|routes| routes.get(&request.adapter))
+            .filter(|route| route["kind"] == "passive")
+            .ok_or(AccountError::Action)?;
+        if request.credential.is_some()
+            || request.project.is_some()
+            || request.user_agent.is_some()
+            || request.organization.is_some()
+            || request.workspace.is_some()
+            || request.remember == Some(true)
+        {
+            return Err(AccountError::Action);
+        }
+        let account = new_provider_account(&request.adapter, &request.alias, route)?;
+        let mut state = self.state()?;
+        if state.closed {
+            return Err(AccountError::Canceled);
+        }
+        state.cache.accounts.push(account);
+        if let Err(error) = check_accounts(&state.cache.accounts).and_then(|_| save(&state)) {
+            state.cache.accounts.pop();
+            return Err(error.into());
+        }
+        Ok(())
+    }
+
+    pub fn refresh_passive(&self, root: &Path, id: &str) -> Result<bool, AccountError> {
+        let mut state = self.state()?;
+        if state.closed {
+            return Err(AccountError::Canceled);
+        }
+        let index = index(&state, id)?;
+        let account = &state.cache.accounts[index];
+        if !matches!(
+            account.adapter.as_deref(),
+            Some("claude-statusline" | "antigravity-statusline")
+        ) {
+            return Err(AccountError::Action);
+        }
+        let Some(quota) = crate::provider_passive::observation(root, id, &account.provider)
+            .map_err(|_| AccountError::Response)?
+        else {
+            return Ok(false);
+        };
+        if account.quota.as_ref() == Some(&quota) {
+            return Ok(false);
+        }
+        let fetched = date_millis(&quota["fetchedAt"]).ok_or(AccountError::Response)?;
+        if fetched > now_ms().saturating_add(60_000)
+            || account
+                .quota
+                .as_ref()
+                .and_then(|previous| date_millis(&previous["fetchedAt"]))
+                .is_some_and(|previous| previous >= fetched)
+        {
+            return Err(AccountError::Response);
+        }
+        let mut updated = account.clone();
+        updated.last_attempt = Some(iso_from_ms(fetched));
+        updated.quota = Some(quota);
+        updated.error_code = None;
+        let old = std::mem::replace(&mut state.cache.accounts[index], updated);
+        if let Err(error) = save(&state) {
+            state.cache.accounts[index] = old;
+            return Err(error.into());
+        }
+        state.ready.insert(id.to_owned());
+        Ok(true)
+    }
+
+    pub fn passive_ids(&self) -> Result<Vec<String>, AccountError> {
+        Ok(self
+            .state()?
+            .cache
+            .accounts
+            .iter()
+            .filter(|row| {
+                matches!(
+                    row.adapter.as_deref(),
+                    Some("claude-statusline" | "antigravity-statusline")
+                )
+            })
+            .map(|row| row.id.clone())
+            .collect())
     }
 
     pub async fn connect<F, Fut>(&self, request: ManualConnect, run: F) -> Result<(), AccountError>
@@ -390,26 +506,7 @@ impl AccountService {
             .and_then(|routes| routes.get(&request.adapter))
             .filter(|route| route["url"].is_string() && route["clientOnly"] != true)
             .ok_or(AccountError::Action)?;
-        let alias = request.alias.trim();
-        if alias.is_empty() || !valid_alias(alias, 48) {
-            return Err(AccountError::Action);
-        }
-        let id = uuid::Uuid::new_v4().to_string();
-        let account = StoredAccount {
-            id,
-            adapter: Some(request.adapter.clone()),
-            provider: route["provider"]
-                .as_str()
-                .ok_or(AccountError::Action)?
-                .to_owned(),
-            alias: alias.to_owned(),
-            plan: None,
-            quota: None,
-            last_attempt: None,
-            error_code: None,
-            next_refresh_at: None,
-            sealed_credential: None,
-        };
+        let account = new_provider_account(&request.adapter, &request.alias, route)?;
         let secret = Arc::new(request.secret()?);
         let (ticket, cancellation) = {
             let mut state = self.state()?;
@@ -435,6 +532,96 @@ impl AccountService {
             ticket,
             cancellation,
             Mode::Connect,
+            run,
+        )
+        .await
+        .map(|_| ())
+    }
+
+    fn login_target(
+        state: &Inner,
+        adapter: &str,
+        alias: &str,
+        id: Option<&str>,
+        capability: &str,
+    ) -> Result<StoredAccount, AccountError> {
+        if state.closed {
+            return Err(AccountError::Canceled);
+        }
+        let route = routes()
+            .ok()
+            .and_then(|routes| routes.get(adapter))
+            .filter(|route| route[capability] == true)
+            .ok_or(AccountError::Action)?;
+        if experimental(route) && !state.cache.experimental_enabled {
+            return Err(AccountError::ExperimentalOff);
+        }
+        if let Some(id) = id {
+            let existing = &state.cache.accounts[index(state, id)?];
+            if existing.adapter.as_deref() != Some(adapter) || state.jobs.contains_key(id) {
+                return Err(AccountError::Action);
+            }
+            Ok(existing.clone())
+        } else {
+            if state
+                .cache
+                .accounts
+                .iter()
+                .filter(|account| account.adapter.is_some())
+                .count()
+                >= 20
+            {
+                return Err(AccountError::Action);
+            }
+            new_provider_account(adapter, alias, route)
+        }
+    }
+
+    pub fn check_login(
+        &self,
+        adapter: &str,
+        alias: &str,
+        id: Option<&str>,
+        client: bool,
+    ) -> Result<(), AccountError> {
+        if alias.trim().is_empty() || !valid_alias(alias, 48) {
+            return Err(AccountError::Action);
+        }
+        let state = self.state()?;
+        Self::login_target(&state, adapter, alias, id, login_capability(client)).map(|_| ())
+    }
+
+    pub async fn verified_login<F, Fut>(
+        &self,
+        adapter: &str,
+        alias: &str,
+        id: Option<&str>,
+        client: bool,
+        secret: Secret,
+        run: F,
+    ) -> Result<(), AccountError>
+    where
+        F: FnOnce(ReadAccount) -> Fut,
+        Fut: Future<Output = Result<ReadResult, ObservationError>>,
+    {
+        let (account, ticket, cancellation) = {
+            let mut state = self.state()?;
+            let account = Self::login_target(&state, adapter, alias, id, login_capability(client))?;
+            let (ticket, cancellation) = self.begin(&mut state, &account.id)?;
+            (account, ticket, cancellation)
+        };
+        let mode = if id.is_some() {
+            Mode::Replace
+        } else {
+            Mode::Connect
+        };
+        self.read_and_commit(
+            account,
+            Arc::new(secret),
+            true,
+            ticket,
+            cancellation,
+            mode,
             run,
         )
         .await
@@ -533,10 +720,11 @@ impl AccountService {
         Fut: Future<Output = Result<ReadResult, ObservationError>>,
     {
         let adapter = account.adapter.clone().ok_or(AccountError::Action)?;
+        let native_cli = adapter == crate::provider_antigravity_cli::ADAPTER;
         let permit = tokio::select! {
             biased;
             _ = cancellation.wait_for(|canceled| *canceled) => return Err(AccountError::Canceled),
-            permit = self.scheduler.acquire(Scope { provider: account.provider.clone(), cli: false, key: Some(account.id.clone()) }) =>
+            permit = self.scheduler.acquire(Scope { provider: account.provider.clone(), cli: native_cli, key: Some(account.id.clone()) }) =>
                 permit.map_err(|_| AccountError::Unavailable)?,
         };
         let started = now_ms();
@@ -545,10 +733,20 @@ impl AccountService {
             secret: Arc::clone(&secret),
             cancellation: cancellation.clone(),
         };
-        let outcome = tokio::select! {
-            biased;
-            _ = cancellation.wait_for(|canceled| *canceled) => return Err(AccountError::Canceled),
-            result = run(request) => result,
+        let outcome = if native_cli {
+            // The local CLI consumes the same cancellation signal and owns a Job.
+            // Await its cleanup before releasing the process slot or completing close.
+            let outcome = run(request).await;
+            if *cancellation.borrow() {
+                return Err(AccountError::Canceled);
+            }
+            outcome
+        } else {
+            tokio::select! {
+                biased;
+                _ = cancellation.wait_for(|canceled| *canceled) => return Err(AccountError::Canceled),
+                result = run(request) => result,
+            }
         };
         drop(permit);
         account.last_attempt = Some(iso_from_ms(started));
@@ -701,12 +899,29 @@ impl AccountService {
     }
 
     pub fn refreshable(&self) -> Result<Vec<String>, AccountError> {
+        self.refreshable_ids(None)
+    }
+
+    pub fn refreshable_automatic(&self, now: i64) -> Result<Vec<String>, AccountError> {
+        self.refreshable_ids(Some(now))
+    }
+
+    fn refreshable_ids(&self, automatic_at: Option<i64>) -> Result<Vec<String>, AccountError> {
         let state = self.state()?;
         Ok(state
             .cache
             .accounts
             .iter()
             .filter(|account| state.credentials.contains_key(&account.id))
+            .filter(|account| {
+                if account.adapter.as_deref() != Some(crate::provider_antigravity_cli::ADAPTER) {
+                    return true;
+                }
+                automatic_at.is_none_or(|now| {
+                    date_millis(&json!(account.last_attempt))
+                        .is_none_or(|last| now.saturating_sub(last) >= 300_000)
+                })
+            })
             .map(|account| account.id.clone())
             .collect())
     }
@@ -722,11 +937,161 @@ impl AccountService {
             "cleanupError":null,"pendingWebsiteLogin":null,"accounts":accounts}))
     }
 
+    pub fn codex_account(&self, id: &str) -> Result<String, AccountError> {
+        let state = self.state()?;
+        let account = &state.cache.accounts[index(&state, id)?];
+        if account.adapter.is_some() {
+            return Err(AccountError::NotFound);
+        }
+        Ok(account.alias.clone())
+    }
+
+    pub fn codex_refreshable(&self, now: i64) -> Result<Vec<String>, AccountError> {
+        let state = self.state()?;
+        Ok(state
+            .cache
+            .accounts
+            .iter()
+            .filter(|row| can_refresh_codex(row, now))
+            .map(|entry| entry.id.clone())
+            .collect())
+    }
+
+    pub fn codex_refresh_due(&self, id: &str, now: i64) -> Result<bool, AccountError> {
+        let state = self.state()?;
+        let row = &state.cache.accounts[index(&state, id)?];
+        Ok(can_refresh_codex(row, now))
+    }
+
+    pub async fn acquire_codex_refresh(&self, id: &str) -> Result<RefreshPermit, AccountError> {
+        self.scheduler
+            .acquire(Scope {
+                provider: "codex".to_owned(),
+                cli: true,
+                key: Some(id.to_owned()),
+            })
+            .await
+            .map_err(|_| AccountError::Unavailable)
+    }
+
+    pub fn record_codex_failure(&self, id: &str, code: &str, at: i64) -> Result<(), AccountError> {
+        let mut state = self.state()?;
+        if state.closed {
+            return Err(AccountError::Canceled);
+        }
+        let index = index(&state, id)?;
+        let row = &state.cache.accounts[index];
+        if row.adapter.is_some() {
+            return Err(AccountError::NotFound);
+        }
+        let code = if crate::account_cache::safe_code(code) {
+            code
+        } else {
+            "CODEX_REQUEST_FAILED"
+        };
+        let mut failed = row.clone();
+        failed.error_code = Some(code.to_owned());
+        failed.last_attempt = Some(iso_from_ms(at));
+        let delay = if code == "RATE_LIMITED" {
+            900_000
+        } else {
+            60_000
+        };
+        failed.next_refresh_at = Some(iso_from_ms(at.saturating_add(delay)));
+        let before = std::mem::replace(&mut state.cache.accounts[index], failed);
+        if let Err(error) = save(&state) {
+            state.cache.accounts[index] = before;
+            return Err(error.into());
+        }
+        state.ready.remove(id);
+        Ok(())
+    }
+
+    pub fn can_add_codex(&self) -> Result<(), AccountError> {
+        let state = self.state()?;
+        if state.closed {
+            return Err(AccountError::Canceled);
+        }
+        if state
+            .cache
+            .accounts
+            .iter()
+            .filter(|entry| entry.adapter.is_none())
+            .count()
+            >= 20
+        {
+            return Err(AccountError::Action);
+        }
+        Ok(())
+    }
+
+    pub fn publish_codex(
+        &self,
+        id: &str,
+        alias: Option<&str>,
+        quota: Value,
+    ) -> Result<(), AccountError> {
+        let mut state = self.state()?;
+        if state.closed {
+            return Err(AccountError::Canceled);
+        }
+        if quota["provider"] != "codex" {
+            return Err(AccountError::Response);
+        }
+        let existing = if alias.is_none() {
+            Some(index(&state, id)?)
+        } else {
+            None
+        };
+        let alias = alias
+            .or_else(|| existing.map(|index| state.cache.accounts[index].alias.as_str()))
+            .filter(|alias| !alias.is_empty() && valid_alias(alias, 48))
+            .unwrap_or("Codex 账号");
+        if existing.is_some_and(|index| state.cache.accounts[index].adapter.is_some())
+            || existing.is_none() && state.cache.accounts.iter().any(|row| row.id == id)
+        {
+            return Err(AccountError::Action);
+        }
+        let row = StoredAccount {
+            id: id.to_owned(),
+            adapter: None,
+            provider: "codex".to_owned(),
+            alias: alias.to_owned(),
+            plan: quota["entitlement"]["plan"].as_str().map(str::to_owned),
+            last_attempt: quota["fetchedAt"].as_str().map(str::to_owned),
+            quota: Some(quota),
+            error_code: None,
+            next_refresh_at: None,
+            sealed_credential: None,
+        };
+        if let Some(index) = existing {
+            let old = std::mem::replace(&mut state.cache.accounts[index], row);
+            if let Err(error) = save(&state) {
+                state.cache.accounts[index] = old;
+                return Err(error.into());
+            }
+        } else {
+            state.cache.accounts.push(row);
+            if let Err(error) = check_accounts(&state.cache.accounts).and_then(|_| save(&state)) {
+                state.cache.accounts.pop();
+                return Err(error.into());
+            }
+        }
+        state.ready.insert(id.to_owned());
+        Ok(())
+    }
+
     pub fn quota_state(&self, version_two: bool, now: i64) -> Result<Value, AccountError> {
         let state = self.state()?;
         let mut accounts: Vec<_> = state.cache.accounts.iter().filter(|account| account.adapter.is_none()).map(|account| {
+            let status = match account.error_code.as_deref() {
+                Some("LOGIN_REQUIRED") => "login-required",
+                Some(_) => "error",
+                None if state.ready.contains(&account.id) => "ready",
+                None => "cached",
+            };
             let mut view = json!({"id":account.id,"provider":"codex","alias":account.alias,"plan":account.plan,
-                "status":"cached","lastAttempt":account.last_attempt,"errorCode":account.error_code,
+                "status":status,"lastAttempt":account.last_attempt,"errorCode":account.error_code,
                 "nextRefreshAt":account.next_refresh_at,"busy":false,"duplicateKnown":false,"duplicateAccountIds":[]});
             if version_two {
                 view["identityStatus"] = json!("unknown");
@@ -886,6 +1251,53 @@ fn provider_row(state: &Inner, account: &StoredAccount, now: i64) -> Value {
     view
 }
 
+fn login_capability(client: bool) -> &'static str {
+    if client {
+        "clientLogin"
+    } else {
+        "websiteLogin"
+    }
+}
+
+fn new_provider_account(
+    adapter: &str,
+    alias: &str,
+    route: &Value,
+) -> Result<StoredAccount, AccountError> {
+    let alias = alias.trim();
+    if alias.is_empty() || !valid_alias(alias, 48) {
+        return Err(AccountError::Action);
+    }
+    Ok(StoredAccount {
+        id: uuid::Uuid::new_v4().to_string(),
+        adapter: Some(adapter.to_owned()),
+        provider: route["provider"]
+            .as_str()
+            .ok_or(AccountError::Action)?
+            .to_owned(),
+        alias: alias.to_owned(),
+        plan: None,
+        quota: None,
+        last_attempt: None,
+        error_code: None,
+        next_refresh_at: None,
+        sealed_credential: None,
+    })
+}
+
+fn legacy_credential_portable(secret: &Secret, adapter: &str, now: i64) -> bool {
+    usable(secret, adapter, now)
+        && secret.credential.as_str() != "official-login-required"
+        && secret.context.get("deviceGrant").is_none()
+        && secret.context.get("zcode").is_none()
+        && secret.context.get("oauth").is_none()
+        && secret.context.get("clientHome").is_none()
+        && secret
+            .context
+            .get(crate::provider_antigravity_cli::PROFILE_CONTEXT)
+            .is_none()
+}
+
 pub fn message(code: &str) -> &'static str {
     match code {
         "PROVIDER_EXPERIMENTAL_OFF" => "这是试验性路线。如需使用，请先在设置的“额度”里打开。",
@@ -909,6 +1321,12 @@ pub fn message(code: &str) -> &'static str {
         "PROVIDER_SECRET_STORAGE_FAILED" => "本机登录凭据暂时无法保存或恢复，请先点击刷新重试；历史额度保留。若持续失败，再重新连接。",
         _ => "额度操作未完成，请重试。",
     }
+}
+
+fn can_refresh_codex(row: &StoredAccount, now: i64) -> bool {
+    row.adapter.is_none()
+        && row.error_code.as_deref() != Some("LOGIN_REQUIRED")
+        && date_millis(&json!(row.next_refresh_at)).is_none_or(|due| due <= now)
 }
 
 fn usable(secret: &Secret, adapter: &str, now: i64) -> bool {

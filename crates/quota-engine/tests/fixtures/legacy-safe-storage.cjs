@@ -19,10 +19,20 @@ app.whenReady().then(() => {
     schemaVersion: 'ProviderWebsiteSecretV1', id: website, adapter: 'claude-web',
     credential: 'sessionKey=synthetic-fixture-key', expiresAt: null,
   })));
+  const device = '33333333-2222-4333-8444-555555555555';
+  const expiry = new Date(Date.now() + 3600000).toISOString();
+  fs.writeFileSync(path.join(folder, device + '.bin'), safeStorage.encryptString(JSON.stringify({
+    schemaVersion: 'ProviderSecretV2', id: device, adapter: 'opencode-zen',
+    credential: 'synthetic-device-access', expiresAt: expiry,
+    context: { console: { orgId: 'org_fixture' }, deviceGrant: true, oauth: {
+      clientId: 'opencode-cli', refreshToken: 'synthetic-device-refresh', expiresAt: expiry,
+    } },
+  })));
   fs.writeFileSync(path.join(root, 'provider-quotas', 'connections.json'), JSON.stringify({
     schemaVersion: 'ProviderQuotaCacheV1', connections: [
       { id, adapter: 'deepseek-api', alias: 'Synthetic', quota: null },
       { id: website, adapter: 'claude-web', alias: 'Legacy website', quota: null },
+      { id: device, adapter: 'opencode-zen', alias: 'Legacy device', quota: null },
     ],
   }));
   app.quit();

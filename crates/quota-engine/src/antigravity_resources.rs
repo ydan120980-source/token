@@ -135,6 +135,16 @@ fn meter(id: &str, label: Option<&str>, duration: Option<u64>, value: &Value) ->
         "requiresEntitlement":true, "issues":issues})
 }
 
+fn reviewed(value: &str) -> Option<&str> {
+    version(value)
+        .filter(|(_, fields)| ([1, 1, 11]..=[1, 4, 2]).contains(fields))
+        .map(|(version, _)| version)
+}
+
+pub(crate) fn is_reviewed_version(value: &str) -> bool {
+    reviewed(value).is_some()
+}
+
 /// Project a captured CLI response after proving that it executed no model turn.
 pub fn from_antigravity(
     stdout: &str,
@@ -142,9 +152,7 @@ pub fn from_antigravity(
     cli_version: &str,
 ) -> Result<Value, CliError> {
     use CliError::*;
-    let (version, _) = version(cli_version)
-        .filter(|(_, fields)| ([1, 1, 11]..=[1, 4, 2]).contains(fields))
-        .ok_or(VersionUnsupported)?;
+    let version = reviewed(cli_version).ok_or(VersionUnsupported)?;
     instant(fetched_at).ok_or(ProtocolInvalid)?;
     let records = envelopes(stdout)?;
     if records.iter().any(model_turn) {

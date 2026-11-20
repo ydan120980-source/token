@@ -1,6 +1,7 @@
 use crate::{
     account_cache::{read_bounded, valid_id, SECRET_LIMIT},
     dpapi,
+    provider_antigravity_cli::{profile_access_token, ADAPTER as AGY, PROFILE_CONTEXT},
     provider_catalog::routes,
     provider_context as context,
     provider_credentials::normalize_credential,
@@ -114,6 +115,9 @@ fn valid_secret(adapter: &str, secret: &Secret) -> Result<(), VaultError> {
         .and_then(|routes| routes.get(adapter))
         .is_none_or(|route| route["kind"] == "passive")
         || !valid_context(&secret.context, adapter)
+        || (secret.context.get(PROFILE_CONTEXT).is_some()
+            && profile_access_token(&secret.context[PROFILE_CONTEXT])
+                != Some(secret.credential.as_str()))
         || secret
             .expires_at
             .as_ref()
@@ -154,6 +158,7 @@ fn valid_context(value: &Value, adapter: &str) -> bool {
                 | "zcode"
                 | "console"
                 | "deviceGrant"
+                | PROFILE_CONTEXT
         )
     }) {
         return false;
@@ -165,6 +170,7 @@ fn valid_context(value: &Value, adapter: &str) -> bool {
             "workspace" => context::workspace(entry).is_some(),
             "discover" => entry == true,
             "clientHome" => entry.as_str().is_some_and(valid_id),
+            PROFILE_CONTEXT => adapter == AGY && profile_access_token(entry).is_some(),
             "desktop" => context::workbuddy_account(entry).is_some(),
             "cursor" => context::cursor_subject(entry).is_some(),
             "zcode" => context::zcode_account(entry).is_some(),

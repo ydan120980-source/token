@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type * as T from "./types";
+import type { ShellBridge } from "./shell-host";
 
 // usage-data.js replaces only get/refresh with decoded snapshot methods. This
 // interface describes that renderer bridge, never the packed preload transport.
@@ -141,24 +142,67 @@ function installTauriReader(api: TauriApi) {
   const transport = {
     get: () => invoke<T.UsageState>("usage_get"),
     refresh: () => invoke<T.UsageState>("usage_refresh"),
+    performanceState: () => invoke<Awaited<ReturnType<UsageBridge["performanceState"]>>>("usage_performance_state"),
+    statisticsDiagnostics: () => invoke<Awaited<ReturnType<UsageBridge["statisticsDiagnostics"]>>>("usage_statistics_diagnostics"),
+    setRefreshInterval: (value: number) => invoke<T.UsageState>("usage_set_refresh_interval", { value }),
     sessions: (selection?: Parameters<UsageBridge["sessions"]>[0]) => invoke<T.SessionList>("usage_sessions", { selection }),
     sessionSummary: (selection: T.SessionSelection) => invoke<T.SessionSummary>("usage_session_summary", { selection }),
+    dataInfo: () => invoke<{ version: string; path: string; bytes: number }>("usage_data_info"),
+    openData: () => invoke<void>("usage_open_data"),
     sources: () => invoke<T.SourceDiscovery>("usage_sources"),
+    configState: () => invoke<Awaited<ReturnType<UsageBridge["configState"]>>>("usage_config_state"),
+    configChoose: (agent: T.ConfigAgent, scope: T.ConfigScope) =>
+      invoke<Awaited<ReturnType<UsageBridge["configChoose"]>>>("usage_config_choose", { agent, scope }),
+    configCheck: (agent: T.ConfigAgent, scope: T.ConfigScope) =>
+      invoke<Awaited<ReturnType<UsageBridge["configCheck"]>>>("usage_config_check", { agent, scope }),
+    configForget: (agent: T.ConfigAgent, scope: T.ConfigScope) =>
+      invoke<Awaited<ReturnType<UsageBridge["configForget"]>>>("usage_config_forget", { agent, scope }),
+    configCancel: () => invoke<Awaited<ReturnType<UsageBridge["configCancel"]>>>("usage_config_cancel"),
+    configManage: (...[action, agent, scope, kind, request]: Parameters<UsageBridge["configManage"]>) =>
+      invoke<Awaited<ReturnType<UsageBridge["configManage"]>>>("usage_config_manage", { action, agent, scope, kind, request }),
+    customDraft: (id?: string) => invoke<T.CustomDraft>("usage_custom_draft", { id }),
+    customChoose: (token: string) => invoke<Awaited<ReturnType<UsageBridge["customChoose"]>>>("usage_custom_choose", { token }),
+    customSample: (token: string) => invoke<Awaited<ReturnType<UsageBridge["customSample"]>>>("usage_custom_sample", { token }),
+    customPreview: (token: string, config: T.CustomDefinition) => invoke<T.CustomPreview>("usage_custom_preview", { token, config }),
+    customApply: (id: string) => invoke<T.CustomSaved>("usage_custom_apply", { id }),
+    customChange: (id: string, action: Parameters<UsageBridge["customChange"]>[1], value?: boolean) =>
+      invoke<T.CustomSaved>("usage_custom_change", { id, action, value }),
+    customImport: () => invoke<Awaited<ReturnType<UsageBridge["customImport"]>>>("usage_custom_import"),
+    customExport: (id: string) => invoke<T.SavedFile>("usage_custom_export", { id }),
     connections: () => invoke<T.Connections>("usage_connections"),
     connectionsV2: () => invoke<T.ConnectionsV2>("usage_connections_v2"),
     setEnabled: (value: boolean) => invoke<T.UsageState>("usage_set_enabled", { value }),
+    setSubscription: (agent: string, fee: number | null) => invoke<T.UsageState>("usage_subscription", { agent, fee }),
     chooseSource: (agent: string) => invoke<T.SourceChooseResult>("usage_choose_source", { agent }),
     changeSource: (name: string, agent: string | null, value?: string | boolean) =>
       invoke<T.SourceChangeResult>("usage_change_source", { name, agent, value }),
     revealSourcePath: (file: string) => invoke<{ shown: boolean }>("usage_reveal_source", { file }),
     pricing: () => invoke<T.Pricing>("usage_pricing"),
     pricingCoverage: () => invoke<T.PriceCoverage | null>("usage_pricing", { view: "coverage" }),
+    savePrice: (entry: T.PriceEntry) => invoke<T.Pricing>("usage_price_save", { entry }),
+    resetPrice: (entry: T.PriceKey) => invoke<T.Pricing>("usage_price_reset", { entry }),
+    saveBilling: (value: T.Billing) => invoke<T.Pricing>("usage_billing_save", { value }),
+    previewCodex: () => invoke<T.MaintenancePreview | null>("usage_codex_preview"),
+    applyCodex: (id: string) => invoke<T.MaintenanceApply>("usage_codex_apply", { id }),
+    syncPrices: () => invoke<T.PriceSync>("usage_price_sync"),
+    autoPrices: (enabled: boolean) => invoke<T.PriceSync>("usage_price_auto", { enabled }),
+    probePrice: (entry: T.PriceEntry) => invoke<T.PriceProbe>("usage_price_probe", { entry }),
+    tryPrice: (request: Parameters<UsageBridge["tryPrice"]>[0]) => invoke<T.PriceTry>("usage_price_try", { request }),
+    pricePlan: (request: Parameters<UsageBridge["pricePlan"]>[0]) => invoke<T.PricePlan>("usage_price_plan", { request }),
+    reprice: () => invoke<Awaited<ReturnType<UsageBridge["reprice"]>>>("usage_reprice"),
+    saveWorkbench: (value: T.WorkbenchSave) => invoke<T.Workbench>("usage_workbench_save", { value }),
     workbench: (selection?: T.WorkbenchSelection) => invoke<T.Workbench>("usage_workbench", { selection }),
     attention: () => invoke<T.Attention>("usage_attention"),
     sessionLabels: () => invoke<T.SessionLabels>("usage_session_labels"),
     // The shared shell asks for Agent admin state on mount. Report the
     // unavailable feature through the error envelope that panel handles.
-    agents: async () => ({ error: "AGENT_ADMIN_UNAVAILABLE" }),
+    agents: (action: string, ...args: unknown[]) => invoke("usage_agents", { action, args }),
+    agentSetup: (agent: string) => invoke<T.SetupReply>("usage_agent_setup", { agent }),
+    agentSetupAction: (request: Parameters<UsageBridge["agentSetupAction"]>[0]) => invoke<T.SetupReply>("usage_agent_setup_action", { request }),
+    agentUse: (request: Parameters<UsageBridge["agentUse"]>[0]) => invoke<Awaited<ReturnType<UsageBridge["agentUse"]>>>("usage_agent_use", { request }),
+    installers: () => invoke<T.InstallReply>("usage_installers"),
+    installerAction: (request: Parameters<UsageBridge["installerAction"]>[0]) => invoke<T.InstallReply>("usage_installer_action", { request }),
+    onInstallUpdate: (callback: () => void) => listen("usage:installUpdate", callback),
     setSessionLabel: (key: string, patch: Parameters<UsageBridge["setSessionLabel"]>[1]) =>
       invoke<T.SessionLabels>("usage_session_label", { key, patch }),
     transcript: (key: string, proof?: unknown) => invoke<T.Transcript>("usage_transcript", { key, proof }),
@@ -209,42 +253,60 @@ function installTauriReader(api: TauriApi) {
   Object.defineProperty(window, "windowBridge", { enumerable: true, value: Object.freeze(windowBridge) });
   const providers = () => invoke<T.QuotaReply<T.ProviderState>>("quota_providers");
   const quotaState = () => invoke<T.QuotaReply<T.QuotaState>>("quota_get", { versionTwo: false });
-  const providerUnavailable = async (): Promise<T.QuotaReply<T.ProviderState>> => {
-    const response = await providers();
-    if (!response.ok) return response;
-    return { ok: false, errorCode: "PROVIDER_LOGIN_UNAVAILABLE", error: "此连接方式尚未接通。", state: response.state };
-  };
-  const codexUnavailable = async (): Promise<T.QuotaReply<T.QuotaState>> => {
-    const response = await quotaState();
-    if (!response.ok) return response;
-    return { ok: false, errorCode: "CODEX_EXECUTABLE_REQUIRED", error: "当前没有可用的 Codex CLI 连接。", state: response.state };
-  };
   const quotaBridge: QuotaBridge = {
     providers,
     providerExperimental: enabled => invoke("quota_provider_experimental", { enabled }),
     providerConnect: request => invoke("quota_provider_connect", { request }),
     providerAction: request => invoke("quota_provider_action", { request }),
-    providerGuide: providerUnavailable,
-    providerPassiveGuide: providerUnavailable,
-    providerWebsiteLogin: providerUnavailable,
-    providerClientLogin: providerUnavailable,
-    providerWebsiteCancel: providerUnavailable,
+    providerGuide: adapter => invoke("quota_provider_guide", { adapter }),
+    providerPassiveGuide: id => invoke("quota_provider_passive_guide", { id }),
+    providerWebsiteLogin: request => invoke("quota_provider_website_login", { request }),
+    providerClientLogin: request => invoke("quota_provider_client_login", { request }),
+    providerWebsiteCancel: () => invoke("quota_provider_website_cancel"),
     onProviderUpdate: callback => listen("quota:providerUpdate", callback),
-    discoverAntigravity: async () => ({ ok: false, errorCode: "AGY_EXECUTABLE_REQUIRED", discovery: null }),
-    antigravitySetup: async () => { throw Error("AGY_SETUP_UNAVAILABLE"); },
-    antigravitySetupAction: async () => { throw Error("AGY_SETUP_UNAVAILABLE"); },
+    discoverAntigravity: () => invoke("quota_discover_antigravity"),
+    antigravitySetup: () => invoke("quota_antigravity_setup"),
+    antigravitySetupAction: request => invoke("quota_antigravity_setup_action", { request }),
     getV2: () => invoke("quota_get", { versionTwo: true }),
     get: quotaState,
-    login: codexUnavailable,
-    cancel: codexUnavailable,
-    refresh: codexUnavailable,
+    login: alias => invoke("quota_login", { alias }),
+    cancel: () => invoke("quota_cancel"),
+    refresh: id => invoke("quota_refresh", { id }),
     refreshAll: () => invoke("quota_refresh_all"),
     setAutoRefresh: value => invoke("quota_set_auto_refresh", { value }),
-    remove: codexUnavailable,
-    chooseExecutable: codexUnavailable,
+    remove: id => invoke("quota_remove", { id }),
+    chooseExecutable: () => invoke("quota_choose_executable"),
     onUpdate: callback => listen("quota:update", callback),
   };
   Object.defineProperty(window, "quotaBridge", { enumerable: true, value: Object.freeze(quotaBridge) });
+  const shellBridge: ShellBridge = {
+    get: () => invoke("shell_get"),
+    set: patch => invoke("shell_set", { patch }),
+    readHistory: id => invoke("shell_read_history", { id }),
+  };
+  Object.defineProperty(window, "shellBridge", { enumerable: true, value: Object.freeze(shellBridge) });
+  const githubBridge: NonNullable<Window["githubBridge"]> = {
+    get: () => invoke("github_get"),
+    connect: () => invoke("github_connect"),
+    cancel: () => invoke("github_cancel"),
+    disconnect: () => invoke("github_disconnect"),
+    repositories: () => invoke("github_repositories"),
+    setSync: request => invoke("github_set_sync", { request }),
+    syncNow: () => invoke("github_sync_now"),
+    copyCode: () => invoke("github_copy_code"),
+    open: url => invoke("github_open", { url }),
+    onUpdate: callback => listen("github:update", callback),
+  };
+  Object.defineProperty(window, "githubBridge", { enumerable: true, value: Object.freeze(githubBridge) });
+  const updateBridge: NonNullable<Window["updateBridge"]> = {
+    get: () => invoke("update_get"),
+    check: () => invoke("update_check"),
+    cancel: () => invoke("update_cancel"),
+    install: () => invoke("update_install"),
+    open: url => invoke("update_open", { url }),
+    onUpdate: callback => listen("update:state", callback),
+  };
+  Object.defineProperty(window, "updateBridge", { enumerable: true, value: Object.freeze(updateBridge) });
   const caption = (action: "minimize" | "toggleMaximize" | "close" | "drag") =>
     void invoke<void>("desktop_caption", { action }).catch(() => {});
   document.addEventListener("DOMContentLoaded", () => {

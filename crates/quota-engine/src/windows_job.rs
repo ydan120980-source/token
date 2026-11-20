@@ -11,7 +11,7 @@ use std::{
         fs::{MetadataExt, OpenOptionsExt},
     },
     path::{Component, Path, PathBuf, Prefix},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use windows::{
     core::{PCWSTR, PWSTR},
@@ -19,20 +19,25 @@ use windows::{
         Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT},
         System::{
             JobObjects::{
-                AssignProcessToJobObject, CreateJobObjectW, JobObjectBasicAccountingInformation,
-                JobObjectExtendedLimitInformation, QueryInformationJobObject,
-                SetInformationJobObject, TerminateJobObject,
+                AssignProcessToJobObject, CreateJobObjectW, IsProcessInJob,
+                JobObjectBasicAccountingInformation, JobObjectExtendedLimitInformation,
+                QueryInformationJobObject, SetInformationJobObject, TerminateJobObject,
                 JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
                 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
             },
             Threading::{
                 CreateProcessW, GetExitCodeProcess, ResumeThread, TerminateProcess,
-                WaitForSingleObject, CREATE_NO_WINDOW, CREATE_SUSPENDED,
-                CREATE_UNICODE_ENVIRONMENT, PROCESS_INFORMATION, STARTUPINFOW,
+                WaitForSingleObject, CREATE_NEW_CONSOLE, CREATE_NO_WINDOW, CREATE_SUSPENDED,
+                CREATE_UNICODE_ENVIRONMENT, EXTENDED_STARTUPINFO_PRESENT, PROCESS_INFORMATION,
+                STARTUPINFOW,
             },
         },
     },
 };
+
+#[path = "windows_job_capture.rs"]
+mod capture;
+pub use capture::{JobOutput, LineSession};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum JobError {
@@ -41,6 +46,9 @@ pub enum JobError {
     BinaryChanged,
     HostUnavailable,
     CleanupUnconfirmed,
+    Canceled,
+    TimedOut,
+    OutputLimit,
 }
 
 impl fmt::Display for JobError {
@@ -51,6 +59,9 @@ impl fmt::Display for JobError {
             Self::BinaryChanged => "JOB_BINARY_CHANGED",
             Self::HostUnavailable => "JOB_HOST_UNAVAILABLE",
             Self::CleanupUnconfirmed => "JOB_CLEANUP_UNCONFIRMED",
+            Self::Canceled => "JOB_CANCELED",
+            Self::TimedOut => "JOB_TIMEOUT",
+            Self::OutputLimit => "JOB_OUTPUT_LIMIT",
         })
     }
 }
@@ -72,6 +83,34 @@ pub struct ExecutablePin {
 }
 
 impl ExecutablePin {
+    pub fn from_sha256(path: &Path, sha256: &str) -> Result<Self, JobError> {
+        if !local_path(path)
+            || path
+                .extension()
+                .is_none_or(|ext| !ext.eq_ignore_ascii_case("exe"))
+            || sha256.len() != 64
+            || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Err(JobError::Invalid);
+        }
+        let mut digest = [0; 32];
+        for (index, byte) in digest.iter_mut().enumerate() {
+            *byte = u8::from_str_radix(&sha256[index * 2..index * 2 + 2], 16)
+                .map_err(|_| JobError::Invalid)?;
+        }
+        Ok(Self {
+            executable: path.to_owned(),
+            digest,
+        })
+    }
+
+    pub fn sha256(&self) -> String {
+        self.digest
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect()
+    }
+
     pub fn new(path: &Path) -> Result<Self, JobError> {
         if !local_path(path)
             || path
@@ -118,7 +157,7 @@ fn fingerprint(path: &Path) -> io::Result<(File, [u8; 32])> {
     let meta = file.metadata()?;
     if !meta.is_file()
         || meta.file_attributes() & 0x400 != 0
-        || !(1..=512 * 1024 * 1024).contains(&meta.len())
+        || !(1..=1024 * 1024 * 1024).contains(&meta.len())
     {
         return Err(io::ErrorKind::InvalidData.into());
     }
@@ -143,10 +182,85 @@ pub struct StartOptions<'a> {
 pub struct JobProcess {
     job: OwnedHandle,
     process: OwnedHandle,
+    _image_lease: File,
 }
 
 impl JobProcess {
     pub fn start(pin: &ExecutablePin, options: StartOptions<'_>) -> Result<Self, JobError> {
+        Self::start_inner(pin, options, None, false)
+    }
+
+    pub fn start_lines(
+        pin: &ExecutablePin,
+        options: StartOptions<'_>,
+    ) -> Result<LineSession, JobError> {
+        LineSession::start(pin, options)
+    }
+
+    pub fn run(
+        pin: &ExecutablePin,
+        options: StartOptions<'_>,
+        timeout: Duration,
+        output_limit: usize,
+        canceled: impl Fn() -> bool,
+    ) -> Result<JobOutput, JobError> {
+        capture::run(pin, options, timeout, output_limit, canceled)
+    }
+
+    /// Run the selected native CLI in its own visible console for an explicit login.
+    /// No console I/O is captured or sent across the app bridge.
+    pub fn run_console(
+        pin: &ExecutablePin,
+        options: StartOptions<'_>,
+        timeout: Duration,
+        canceled: impl Fn() -> bool,
+    ) -> Result<u32, JobError> {
+        if canceled() {
+            return Err(JobError::Canceled);
+        }
+        if timeout.is_zero() || timeout > Duration::from_secs(900) {
+            return Err(JobError::Invalid);
+        }
+        let job = Self::start_inner(pin, options, None, true)?;
+        let deadline = Instant::now() + timeout;
+        let result = loop {
+            if canceled() {
+                break Err(JobError::Canceled);
+            }
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                break Err(JobError::TimedOut);
+            }
+            match job.wait(remaining.min(Duration::from_millis(50))) {
+                Ok(Some(code)) => break Ok(code),
+                Ok(None) => {}
+                Err(error) => break Err(error),
+            }
+        };
+        job.reap()?;
+        result
+    }
+
+    fn reap(&self) -> Result<(), JobError> {
+        if self.active()? != 0 {
+            self.terminate()?;
+            let deadline = Instant::now() + Duration::from_secs(3);
+            while self.active()? != 0 {
+                if Instant::now() >= deadline {
+                    return Err(JobError::CleanupUnconfirmed);
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        }
+        Ok(())
+    }
+
+    fn start_inner(
+        pin: &ExecutablePin,
+        options: StartOptions<'_>,
+        capture: Option<&capture::Capture>,
+        console: bool,
+    ) -> Result<Self, JobError> {
         if !local_path(options.cwd)
             || !options.cwd.is_dir()
             || reject_links(options.cwd).is_err()
@@ -195,20 +309,39 @@ impl JobProcess {
             cb: size_of::<STARTUPINFOW>() as u32,
             ..Default::default()
         };
+        let jobs = [job.0];
+        let extended = if console {
+            Some(capture::Startup::console(&jobs)?)
+        } else {
+            capture.map(|capture| capture.startup(&jobs)).transpose()?
+        };
+        let console_flags = if console {
+            CREATE_NEW_CONSOLE
+        } else {
+            CREATE_NO_WINDOW
+        };
+        let mut flags = CREATE_SUSPENDED | console_flags | CREATE_UNICODE_ENVIRONMENT;
+        let startup = if let Some(startup) = &extended {
+            flags |= EXTENDED_STARTUPINFO_PRESENT;
+            &startup.info.StartupInfo
+        } else {
+            &start
+        };
         let mut output = PROCESS_INFORMATION::default();
         // SAFETY: Native arguments and explicit UTF-16 environment remain live
-        // for the call. No handles are inherited. The initial thread is suspended.
+        // for the call. Capture lists only the intended pipe handles explicitly.
+        // Its STARTUPINFOEXW outlives this call. The primary thread starts suspended.
         unsafe {
             CreateProcessW(
                 PCWSTR(executable.as_ptr()),
                 Some(PWSTR(command.as_mut_ptr())),
                 None,
                 None,
-                false,
-                CREATE_SUSPENDED | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
+                capture.is_some(),
+                flags,
                 Some(environment.as_ptr().cast()),
                 PCWSTR(cwd.as_ptr()),
-                &start,
+                startup,
                 &mut output,
             )
         }
@@ -216,8 +349,18 @@ impl JobProcess {
         let process = OwnedHandle(output.hProcess);
         let thread = OwnedHandle(output.hThread);
         // SAFETY: Both handles are valid and owned, and the process has not run.
-        let assigned = unsafe { AssignProcessToJobObject(job.0, process.0) };
-        if assigned.is_err() {
+        let assigned = if extended.is_some() {
+            // Production runner receives the Job at creation, including if
+            // the host dies before its first user-mode instruction resumes.
+            let mut in_job = windows::core::BOOL::default();
+            // SAFETY: Both guarded handles are valid and the output is writable.
+            unsafe { IsProcessInJob(process.0, Some(job.0), &mut in_job) }.is_ok()
+                && in_job.as_bool()
+        } else {
+            // SAFETY: Both guarded handles are valid and the process is suspended.
+            unsafe { AssignProcessToJobObject(job.0, process.0) }.is_ok()
+        };
+        if !assigned {
             // SAFETY: An unassigned, still suspended process must be explicitly
             // terminated here because closing the job alone cannot contain it.
             unsafe {
@@ -228,12 +371,15 @@ impl JobProcess {
             }
             return Err(JobError::HostUnavailable);
         }
-        drop(image_lease);
         // SAFETY: The primary thread belongs to the just-assigned process.
         if unsafe { ResumeThread(thread.0) } == u32::MAX {
             return Err(JobError::HostUnavailable);
         }
-        Ok(Self { job, process })
+        Ok(Self {
+            job,
+            process,
+            _image_lease: image_lease,
+        })
     }
 
     pub fn active(&self) -> Result<u32, JobError> {

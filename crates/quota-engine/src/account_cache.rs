@@ -125,6 +125,24 @@ impl AccountCache {
         result
     }
 
+    pub(crate) fn passive_adapter(root: &Path, id: &str) -> io::Result<String> {
+        let bytes = read_bounded(&root.join("quota-accounts.json"), STORAGE_LIMIT)?
+            .ok_or(io::ErrorKind::NotFound)?;
+        decode_cache(&bytes)
+            .map_err(io::Error::other)?
+            .accounts
+            .into_iter()
+            .find(|row| row.id == id)
+            .and_then(|row| row.adapter)
+            .filter(|adapter| {
+                matches!(
+                    adapter.as_str(),
+                    "claude-statusline" | "antigravity-statusline"
+                )
+            })
+            .ok_or_else(|| io::ErrorKind::InvalidInput.into())
+    }
+
     pub fn save(
         &self,
         accounts: &[StoredAccount],
@@ -228,11 +246,14 @@ pub(crate) fn valid_alias(alias: &str, length: usize) -> bool {
     alias.encode_utf16().count() <= length && !alias.bytes().any(|byte| byte < 0x20)
 }
 
-fn safe_code(code: &str) -> bool {
+pub(crate) fn safe_code(code: &str) -> bool {
     code.len() <= 64
         && (code.starts_with("PROVIDER_")
             || code.starts_with("CODEX_")
-            || matches!(code, "RATE_LIMITED" | "CANCELED"))
+            || matches!(
+                code,
+                "RATE_LIMITED" | "CANCELED" | "LOGIN_REQUIRED" | "SYSTEM_CREDENTIAL_STORE_REQUIRED"
+            ))
         && code
             .bytes()
             .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')

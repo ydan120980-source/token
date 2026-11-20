@@ -84,6 +84,29 @@ fn atomic_failure_keeps_previous_bytes_and_removes_temp() {
 }
 
 #[test]
+fn refresh_interval_matches_electron_and_survives_reopen() -> Result<(), Box<dyn std::error::Error>> {
+    use usage_engine::store::Store;
+
+    let root = temp_root("refresh-interval");
+    let dir = root.to_str().ok_or("Fixture path is not UTF-8")?;
+    let mut store = Store::new(dir, &json!({}))?;
+    assert_eq!(store.refresh_interval_ms(), 15_000);
+    for interval in [5_000, 15_000, 30_000, 60_000, 300_000, 0] {
+        store.set_refresh_interval_ms(&json!(interval))?;
+        assert_eq!(Store::new(dir, &json!({}))?.refresh_interval_ms(), interval);
+    }
+    let file = root.join("preferences.json");
+    let before = fs::read(&file)?;
+    for invalid in [json!(-1), json!(1), json!("5000"), json!(true), Value::Null] {
+        assert_eq!(store.set_refresh_interval_ms(&invalid), Err("REFRESH_INTERVAL_INVALID".into()));
+        assert_eq!(store.refresh_interval_ms(), 0);
+        assert_eq!(fs::read(&file)?, before);
+    }
+    fs::remove_dir_all(root)?;
+    Ok(())
+}
+
+#[test]
 fn load_quarantines_corrupt_files() {
     let root = temp_root("quarantine");
     let file = root.join("preferences.json");
@@ -113,5 +136,36 @@ fn quarantine_failure_reports_code() {
     let recovery = quarantine_file(&file, "INVALID_JSON");
     assert_eq!(recovery.code, "QUARANTINE_FAILED");
     assert_eq!(recovery.quarantined, None);
+    fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn replacing_a_synced_ledger_preserves_open_readers_and_exact_values() {
+    use std::io::Read;
+
+    let root = temp_root("durable-replace");
+    let file = root.join("statistics.json");
+    let mut before = ledger_value(2);
+    before["records"]["r0"]["cacheRead"] = Value::Null;
+    before["records"]["r0"]["amount"] = json!("9007199254740993.000000000000000001");
+    let mut after = before.clone();
+    after["sequence"] = json!(6);
+    after["records"]["r0"]["amount"] = json!("9007199254740993.000000000000000002");
+    atomic(&file, &before, true).unwrap();
+
+    let mut open_reader = fs::File::open(&file).unwrap();
+    atomic(&file, &after, true).unwrap();
+    let mut old_bytes = String::new();
+    open_reader.read_to_string(&mut old_bytes).unwrap();
+    assert_eq!(old_bytes, stringify(&before));
+    drop(open_reader);
+    assert_eq!(fs::read_to_string(&file).unwrap(), stringify(&after));
+    let reopened = read_statistics(&file, 7, 1).unwrap();
+    assert_eq!(reopened, after);
+    assert_eq!(reopened["records"]["r0"]["cacheRead"], Value::Null);
+    assert_eq!(
+        reopened["records"]["r0"]["amount"],
+        "9007199254740993.000000000000000002"
+    );
     fs::remove_dir_all(&root).unwrap();
 }

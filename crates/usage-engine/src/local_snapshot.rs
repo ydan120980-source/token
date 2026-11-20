@@ -56,7 +56,7 @@ fn safe_positive(value: &Value) -> bool {
     value.as_f64().map(|n| n.is_finite() && n >= 0.0 && n.fract() == 0.0 && n <= 9_007_199_254_740_991.0 && n > 0.0).unwrap_or(false)
 }
 
-fn date_shape(value: Option<&Value>) -> bool {
+pub(crate) fn date_shape(value: Option<&Value>) -> bool {
     match value {
         Some(Value::String(s)) => {
             let b = s.as_bytes();
